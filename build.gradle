@@ -1,0 +1,104 @@
+plugins {
+    id 'java'
+    id 'org.jetbrains.intellij' version '1.17.2'
+}
+
+group 'com.triagemate'
+version '1.0-SNAPSHOT'
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    // JetBrains recommended test framework dependencies
+    testImplementation 'org.junit.jupiter:junit-jupiter-api:5.10.2'
+    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.10.2'
+    testImplementation 'org.mockito:mockito-core:5.3.1'
+    testImplementation 'org.mockito:mockito-junit-jupiter:5.3.1'
+    
+    // JUnit4 runtime dependency (JetBrains recommendation for IntelliJ Platform)
+    testRuntimeOnly 'junit:junit:4.13.2'
+    
+    // Assertions
+    testImplementation 'org.assertj:assertj-core:3.25.3'
+}
+
+// Configure Gradle IntelliJ Plugin
+// Read more: https://plugins.jetbrains.com/docs/intellij/tools-gradle-intellij-plugin.html
+intellij {
+    version = '2024.1'
+    type = 'IC' // IntelliJ IDEA Community Edition
+
+    plugins = ['java']
+    
+    // Enable coroutines javaagent for proper IntelliJ Platform testing
+    instrumentCode = true
+}
+
+patchPluginXml {
+    sinceBuild = '241'
+    untilBuild = '241.*'
+}
+
+// Test configuration following JetBrains best practices
+test {
+    useJUnitPlatform()
+    
+    // JetBrains recommended system properties
+    systemProperty 'idea.log.debug.categories', 'com.triagemate'
+    systemProperty 'idea.split.test.logs', 'true'
+    
+    testLogging {
+        events "passed", "skipped", "failed"
+        exceptionFormat = 'full'
+        showStandardStreams = true
+    }
+}
+
+// Task for running only pure unit tests (no IntelliJ Platform dependencies)
+task unitTest(type: Test) {
+    useJUnitPlatform()
+    
+    // Only include tests that don't extend IntelliJ Platform test classes
+    include '**/FailureParsingStrategyTest.class'
+    include '**/FailureInfoTest.class'
+    include '**/PromptFormatterServiceTest.class'
+    include '**/ConfigurationErrorStrategyUnitTest.class'
+    include '**/JUnitComparisonFailureStrategyUnitTest.class'
+    include '**/CucumberErrorStrategyUnitTest.class'
+    
+    // Exclude IntelliJ Platform integration tests
+    exclude '**/BasePlatformTestCase.class'
+    exclude '**/LightPlatformCodeInsightTestCase.class'
+    exclude '**/HeavyPlatformTestCase.class'
+    exclude '**/IntegrationTest.class'
+    
+    testLogging {
+        events "passed", "skipped", "failed"
+        exceptionFormat = 'full'
+        showStandardStreams = true
+    }
+}
+
+// Task for running IntelliJ Platform integration tests separately
+task integrationTest(type: Test) {
+    useJUnitPlatform()
+    
+    // Include tests that extend IntelliJ Platform test classes
+    include '**/*IntegrationTest.class'
+    include '**/*Integration.class'
+    
+    // Apply same configuration as main test task
+    systemProperty 'idea.log.debug.categories', 'com.triagemate'
+    systemProperty 'idea.split.test.logs', 'true'
+    
+    testLogging {
+        events "passed", "skipped", "failed"
+        exceptionFormat = 'full'
+        showStandardStreams = true
+    }
+}
+
+sourceCompatibility = JavaVersion.VERSION_17
+targetCompatibility = JavaVersion.VERSION_17 

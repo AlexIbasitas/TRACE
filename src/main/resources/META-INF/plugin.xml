@@ -1,0 +1,34 @@
+<!-- TriageMate: Cucumber Test Failure Triage Assistant -->
+<idea-plugin>
+    <id>com.triagemate</id>
+    <name>TriageMate</name>
+    <vendor>TriageMate</vendor>
+    <description><![CDATA[
+        IntelliJ plugin to assist SDETs with triaging Cucumber Java test failures.
+        Automatically extracts failure information and formats it for analysis.
+    ]]></description>
+
+    <idea-version since-build="243.0" until-build="251.*"/>
+
+    <depends>com.intellij.modules.platform</depends>
+    <depends>com.intellij.modules.java</depends>
+    <depends>org.jetbrains.plugins.cucumber.java</depends>
+
+    <extensions defaultExtensionNs="com.intellij">
+        <!-- Tool Window -->
+        <toolWindow id="TriagePanel" 
+                   secondary="false" 
+                   icon="AllIcons.General.Information" 
+                   anchor="bottom" 
+                   factoryClass="com.triagemate.ui.TriagePanelToolWindowFactory"/>
+
+        <!-- Services -->
+        <applicationService serviceImplementation="com.triagemate.services.PromptFormatterService"/>
+    </extensions>
+
+    <applicationListeners>
+        <!-- Test Execution Listeners -->
+        <listener class="com.triagemate.listeners.CucumberTestExecutionListener"
+                  topic="com.intellij.execution.testframework.sm.runner.SMTRunnerEventsListener"/>
+    </applicationListeners>
+</idea-plugin> 
