@@ -65,13 +65,23 @@ public class ConfigurationErrorStrategy implements FailureParsingStrategy {
         if (testOutput == null || testOutput.isEmpty()) {
             return false;
         }
-        
-        // Use only regex patterns for detection - no PSI operations
-        return CONFIGURATION_ERROR_PATTERN.matcher(testOutput).find() ||
-               testOutput.toLowerCase().contains("configuration") ||
-               testOutput.toLowerCase().contains("resource") ||
-               testOutput.toLowerCase().contains("file") ||
-               testOutput.toLowerCase().contains("property");
+        // First, check for known configuration error exception classes
+        if (CONFIGURATION_ERROR_PATTERN.matcher(testOutput).find()) {
+            return true;
+        }
+        // Prevent false positives: do NOT match generic words if handled by other strategies
+        String lower = testOutput.toLowerCase();
+        if (lower.contains("org.openqa.selenium") || lower.contains("webdriver") ||
+            lower.contains("io.cucumber") || lower.contains("cucumber") ||
+            lower.contains("junit") || lower.contains("comparisonfailure") ||
+            lower.contains("runtimeexception")) {
+            return false;
+        }
+        // Only as a fallback, match generic config-related words
+        return lower.contains("configuration") ||
+               lower.contains("resource") ||
+               lower.contains("file") ||
+               lower.contains("property");
     }
 
     @Override
@@ -79,6 +89,8 @@ public class ConfigurationErrorStrategy implements FailureParsingStrategy {
         if (testOutput == null) {
             throw new IllegalArgumentException("testOutput cannot be null");
         }
+        
+        long startTime = System.currentTimeMillis();
         
         if (!canHandle(testOutput)) {
             throw new RuntimeException("No configuration error found in test output");
@@ -96,6 +108,7 @@ public class ConfigurationErrorStrategy implements FailureParsingStrategy {
                 .withLineNumber(errorInfo.getLineNumber())
                 .withFailedStepText(errorInfo.getFailedStepText())
                 .withParsingStrategy(getStrategyName())
+                .withParsingTime(System.currentTimeMillis() - startTime)
                 .build();
     }
 

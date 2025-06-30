@@ -27,7 +27,7 @@ public class CucumberTestExecutionListener extends SMTRunnerEventsAdapter {
      */
     public CucumberTestExecutionListener(Project project) {
         this.project = project;
-        this.stackTraceExtractor = new StackTraceExtractor();
+        this.stackTraceExtractor = new StackTraceExtractor(project);
         this.stepDefinitionExtractor = new StepDefinitionExtractor(project);
         this.gherkinScenarioExtractor = new GherkinScenarioExtractor(project);
     }

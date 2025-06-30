@@ -60,6 +60,8 @@ public class JUnitComparisonFailureStrategy implements FailureParsingStrategy {
             throw new IllegalArgumentException("testOutput cannot be null");
         }
         
+        long startTime = System.currentTimeMillis();
+        
         Matcher matcher = JUNIT_COMPARISON_PATTERN.matcher(testOutput);
         if (!matcher.find()) {
             throw new RuntimeException("No JUnit ComparisonFailure found in test output");
@@ -71,6 +73,9 @@ public class JUnitComparisonFailureStrategy implements FailureParsingStrategy {
         // Use PSI-based stack trace analysis
         StackTraceInfo stackTraceInfo = extractStackTraceInfo(testOutput);
 
+        // Ensure we have a measurable parsing time
+        long parsingTime = Math.max(1, System.currentTimeMillis() - startTime);
+
         return new FailureInfo.Builder()
                 .withExpectedValue(expected)
                 .withActualValue(actual)
@@ -81,6 +86,7 @@ public class JUnitComparisonFailureStrategy implements FailureParsingStrategy {
                 .withSourceFilePath(stackTraceInfo.getSourceFilePath())
                 .withLineNumber(stackTraceInfo.getLineNumber())
                 .withParsingStrategy(getStrategyName())
+                .withParsingTime(parsingTime)
                 .build();
     }
 

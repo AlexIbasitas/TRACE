@@ -48,7 +48,7 @@ class JUnitComparisonFailureStrategyIntegrationTest extends BasePlatformTestCase
     void shouldEnrichWithPsiInformationWhenSourceFilesExist() {
         // Create a real Java file in the test project with unique name
         PsiFile javaFile = myFixture.addFileToProject(
-            "src/test/java/com/example/shouldEnrichWithPsiInformation_MyTest.java",
+            "src/test/java/com/example/shouldEnrichWithPsiInformation_MyTest_JUnitComparison.java",
             """
             package com.example;
             
@@ -118,7 +118,7 @@ class JUnitComparisonFailureStrategyIntegrationTest extends BasePlatformTestCase
     void shouldExtractStackTraceInformationCorrectly() {
         // Create a unique file for this test to avoid conflicts
         PsiFile javaFile = myFixture.addFileToProject(
-            "src/test/java/com/example/shouldExtractStackTraceInformation_StackTraceTest.java",
+            "src/test/java/com/example/shouldExtractStackTraceInformation_StackTraceTest_JUnitComparison.java",
             """
             package com.example;
             
