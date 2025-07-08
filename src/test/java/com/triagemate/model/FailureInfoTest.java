@@ -1,4 +1,4 @@
-package com.triagemate.core.model;
+package com.triagemate.model;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.DisplayName;
@@ -87,10 +87,12 @@ class FailureInfoTest {
             "Test Scenario",
             "Test step",
             "Test stack trace",
-            "Test method",
-            "Test gherkin",
             "Test file",
             42,
+            null, // stepDefinitionInfo
+            null, // gherkinScenarioInfo
+            "Test method",
+            "Test gherkin",
             "expected",
             "actual",
             "JUNIT",

@@ -12,18 +12,19 @@
 
     <depends>com.intellij.modules.platform</depends>
     <depends>com.intellij.modules.java</depends>
-    <depends>org.jetbrains.plugins.cucumber.java</depends>
+    <!-- <depends>org.jetbrains.plugins.cucumber.java</depends> -->
 
     <extensions defaultExtensionNs="com.intellij">
         <!-- Tool Window -->
         <toolWindow id="TriagePanel" 
                    secondary="false" 
                    icon="AllIcons.General.Information" 
-                   anchor="bottom" 
+                   anchor="right" 
                    factoryClass="com.triagemate.ui.TriagePanelToolWindowFactory"/>
 
         <!-- Services -->
-        <applicationService serviceImplementation="com.triagemate.services.PromptFormatterService"/>
+        <applicationService serviceImplementation="com.triagemate.services.BackendCommunicationService"/>
+        <applicationService serviceImplementation="com.triagemate.services.LocalPromptGenerationService"/>
     </extensions>
 
     <applicationListeners>

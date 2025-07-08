@@ -12,10 +12,9 @@ package com.triagemate.models;
  *   <li><strong>Debugging:</strong> Stores parsing strategy and performance metrics</li>
  * </ul>
  * 
- * <p>While this class serves multiple responsibilities, it represents a cohesive domain concept:
- * "A test failure with all its context and metadata." This design choice prioritizes simplicity
- * and performance over strict adherence to the Single Responsibility Principle, which is
- * appropriate for a focused IntelliJ plugin.</p>
+ * <p>This class uses composition to maintain rich structured data while providing
+ * a cohesive domain concept: "A test failure with all its context and metadata."
+ * The design prioritizes data integrity and extensibility over simplicity.</p>
  */
 public class FailureInfo {
     
@@ -23,10 +22,16 @@ public class FailureInfo {
     private final String scenarioName;
     private final String failedStepText;
     private final String stackTrace;
-    private final String stepDefinitionMethod;
-    private final String gherkinScenario;
     private final String sourceFilePath;
     private final int lineNumber;
+    
+    // Rich structured data (composed objects)
+    private final StepDefinitionInfo stepDefinitionInfo;
+    private final GherkinScenarioInfo gherkinScenarioInfo;
+    
+    // Legacy string fields for backward compatibility
+    private final String stepDefinitionMethod;
+    private final String gherkinScenario;
     
     // Assertion details (extracted from test output)
     private final String expectedValue;
@@ -44,10 +49,12 @@ public class FailureInfo {
      * @param scenarioName the name of the failed scenario
      * @param failedStepText the text of the step that failed
      * @param stackTrace the stack trace of the failure
-     * @param stepDefinitionMethod the Java method implementing the step definition
-     * @param gherkinScenario the full Gherkin scenario text
      * @param sourceFilePath path to the source file containing the step definition
      * @param lineNumber line number of the step definition in the source file
+     * @param stepDefinitionInfo the step definition information (can be null)
+     * @param gherkinScenarioInfo the Gherkin scenario information (can be null)
+     * @param stepDefinitionMethod legacy string field for backward compatibility
+     * @param gherkinScenario legacy string field for backward compatibility
      * @param expectedValue the expected value from the assertion
      * @param actualValue the actual value from the assertion
      * @param assertionType the type of assertion (e.g., "HAMCREST", "JUNIT")
@@ -56,17 +63,20 @@ public class FailureInfo {
      * @param parsingTime the time taken to parse the test output in milliseconds
      */
     public FailureInfo(String scenarioName, String failedStepText, String stackTrace,
-                      String stepDefinitionMethod, String gherkinScenario,
                       String sourceFilePath, int lineNumber,
+                      StepDefinitionInfo stepDefinitionInfo, GherkinScenarioInfo gherkinScenarioInfo,
+                      String stepDefinitionMethod, String gherkinScenario,
                       String expectedValue, String actualValue, String assertionType,
                       String errorMessage, String parsingStrategy, long parsingTime) {
         this.scenarioName = scenarioName;
         this.failedStepText = failedStepText;
         this.stackTrace = stackTrace;
-        this.stepDefinitionMethod = stepDefinitionMethod;
-        this.gherkinScenario = gherkinScenario;
         this.sourceFilePath = sourceFilePath;
         this.lineNumber = lineNumber;
+        this.stepDefinitionInfo = stepDefinitionInfo;
+        this.gherkinScenarioInfo = gherkinScenarioInfo;
+        this.stepDefinitionMethod = stepDefinitionMethod;
+        this.gherkinScenario = gherkinScenario;
         this.expectedValue = expectedValue;
         this.actualValue = actualValue;
         this.assertionType = assertionType;
@@ -89,20 +99,50 @@ public class FailureInfo {
         return stackTrace;
     }
     
-    public String getStepDefinitionMethod() {
-        return stepDefinitionMethod;
-    }
-    
-    public String getGherkinScenario() {
-        return gherkinScenario;
-    }
-    
     public String getSourceFilePath() {
         return sourceFilePath;
     }
     
     public int getLineNumber() {
         return lineNumber;
+    }
+    
+    // Getters for rich structured data
+    
+    /**
+     * Gets the step definition information as a structured object.
+     * 
+     * @return StepDefinitionInfo object, or null if not available
+     */
+    public StepDefinitionInfo getStepDefinitionInfo() {
+        return stepDefinitionInfo;
+    }
+    
+    /**
+     * Gets the Gherkin scenario information as a structured object.
+     * 
+     * @return GherkinScenarioInfo object, or null if not available
+     */
+    public GherkinScenarioInfo getGherkinScenarioInfo() {
+        return gherkinScenarioInfo;
+    }
+    
+    // Legacy getters for backward compatibility
+    
+    /**
+     * @deprecated Use getStepDefinitionInfo().getMethodText() instead for better type safety
+     */
+    @Deprecated
+    public String getStepDefinitionMethod() {
+        return stepDefinitionMethod;
+    }
+    
+    /**
+     * @deprecated Use getGherkinScenarioInfo() instead for better type safety and rich data
+     */
+    @Deprecated
+    public String getGherkinScenario() {
+        return gherkinScenario;
     }
     
     // Getters for assertion details
@@ -141,10 +181,12 @@ public class FailureInfo {
         private String scenarioName;
         private String failedStepText;
         private String stackTrace;
-        private String stepDefinitionMethod;
-        private String gherkinScenario;
         private String sourceFilePath;
         private int lineNumber = -1;
+        private StepDefinitionInfo stepDefinitionInfo;
+        private GherkinScenarioInfo gherkinScenarioInfo;
+        private String stepDefinitionMethod;
+        private String gherkinScenario;
         private String expectedValue;
         private String actualValue;
         private String assertionType;
@@ -167,16 +209,6 @@ public class FailureInfo {
             return this;
         }
         
-        public Builder withStepDefinitionMethod(String stepDefinitionMethod) {
-            this.stepDefinitionMethod = stepDefinitionMethod;
-            return this;
-        }
-        
-        public Builder withGherkinScenario(String gherkinScenario) {
-            this.gherkinScenario = gherkinScenario;
-            return this;
-        }
-        
         public Builder withSourceFilePath(String sourceFilePath) {
             this.sourceFilePath = sourceFilePath;
             return this;
@@ -184,6 +216,34 @@ public class FailureInfo {
         
         public Builder withLineNumber(int lineNumber) {
             this.lineNumber = lineNumber;
+            return this;
+        }
+        
+        public Builder withStepDefinitionInfo(StepDefinitionInfo stepDefinitionInfo) {
+            this.stepDefinitionInfo = stepDefinitionInfo;
+            // Auto-populate legacy field for backward compatibility
+            if (stepDefinitionInfo != null) {
+                this.stepDefinitionMethod = stepDefinitionInfo.getMethodText();
+            }
+            return this;
+        }
+        
+        public Builder withGherkinScenarioInfo(GherkinScenarioInfo gherkinScenarioInfo) {
+            this.gherkinScenarioInfo = gherkinScenarioInfo;
+            // Auto-populate legacy field for backward compatibility
+            if (gherkinScenarioInfo != null) {
+                this.gherkinScenario = buildGherkinScenarioText(gherkinScenarioInfo);
+            }
+            return this;
+        }
+        
+        public Builder withStepDefinitionMethod(String stepDefinitionMethod) {
+            this.stepDefinitionMethod = stepDefinitionMethod;
+            return this;
+        }
+        
+        public Builder withGherkinScenario(String gherkinScenario) {
+            this.gherkinScenario = gherkinScenario;
             return this;
         }
         
@@ -224,10 +284,39 @@ public class FailureInfo {
          */
         public FailureInfo build() {
             return new FailureInfo(scenarioName, failedStepText, stackTrace,
-                                 stepDefinitionMethod, gherkinScenario,
                                  sourceFilePath, lineNumber,
+                                 stepDefinitionInfo, gherkinScenarioInfo,
+                                 stepDefinitionMethod, gherkinScenario,
                                  expectedValue, actualValue, assertionType,
                                  errorMessage, parsingStrategy, parsingTime);
+        }
+        
+        /**
+         * Builds a formatted Gherkin scenario text from GherkinScenarioInfo.
+         * 
+         * @param scenarioInfo The scenario information
+         * @return Formatted scenario text
+         */
+        private String buildGherkinScenarioText(GherkinScenarioInfo scenarioInfo) {
+            StringBuilder scenarioText = new StringBuilder();
+            
+            // Add feature name
+            scenarioText.append("Feature: ").append(scenarioInfo.getFeatureName()).append("\n\n");
+            
+            // Add tags if present
+            if (!scenarioInfo.getTags().isEmpty()) {
+                scenarioText.append(String.join(" ", scenarioInfo.getTags())).append("\n");
+            }
+            
+            // Add scenario name
+            scenarioText.append("Scenario: ").append(scenarioInfo.getScenarioName()).append("\n");
+            
+            // Add steps
+            for (String step : scenarioInfo.getSteps()) {
+                scenarioText.append("  ").append(step).append("\n");
+            }
+            
+            return scenarioText.toString();
         }
     }
 } 

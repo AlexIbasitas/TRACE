@@ -19,6 +19,9 @@ repositories {
 // ============================================================================
 
 dependencies {
+    // JSON serialization for backend communication
+    implementation 'com.google.code.gson:gson:2.10.1'
+    
     // Test Framework Dependencies (JetBrains recommended)
     testImplementation 'org.junit.jupiter:junit-jupiter-api:5.10.2'
     testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.10.2'
@@ -42,8 +45,11 @@ dependencies {
 
 intellij {
     version = '2024.1'
-    type = 'IC' // IntelliJ IDEA Community Edition
-    plugins = ['java']
+    type = 'IU' // IntelliJ IDEA Ultimate Edition
+    plugins = [
+        'java'
+        // 'CucumberJava' // Temporarily disabled - will be added back when needed
+    ]
     instrumentCode = true // Required for proper IntelliJ Platform testing
 }
 

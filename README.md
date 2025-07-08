@@ -31,7 +31,7 @@ The plugin is organized into the following modules:
 
 ### Services Module
 - Provides services for formatting and analysis
-- `PromptFormatterService` - Formats failure information into structured prompts
+- `BackendCommunicationService` - Communicates with backend API for AI analysis
 
 ### UI Module
 - Contains UI components for the plugin
