@@ -32,6 +32,7 @@ public class CucumberTestExecutionListener extends SMTRunnerEventsAdapter {
      * IntelliJ creates listeners using the default constructor.
      */
     public CucumberTestExecutionListener() {
+        System.out.println("TriageMate: CucumberTestExecutionListener default constructor called - plugin registration working!");
         this.project = null;
         this.stackTraceExtractor = null;
         this.stepDefinitionExtractor = null;
@@ -83,7 +84,7 @@ public class CucumberTestExecutionListener extends SMTRunnerEventsAdapter {
     }
 
     /**
-     * Determines if a test is a Cucumber test
+     * Determines if a test is a Cucumber test using proper IntelliJ test framework detection
      *
      * @param test The test proxy to check
      * @return true if the test is a Cucumber test, false otherwise
@@ -93,16 +94,55 @@ public class CucumberTestExecutionListener extends SMTRunnerEventsAdapter {
             return false;
         }
         
-        // Check test name patterns (defensive programming - handle null values)
-        String testName = test.getName();
-        boolean hasCucumberName = testName != null && 
-            (testName.contains("Scenario:") || testName.contains("Feature:"));
+        System.out.println("TriageMate: Checking if test is Cucumber - Name: " + test.getName());
         
-        // Check error message patterns (defensive programming - handle null values)
+        // Method 1: Check test location (most reliable)
+        String testLocation = test.getLocationUrl();
+        if (testLocation != null) {
+            System.out.println("TriageMate: Test location: " + testLocation);
+            
+            // Check if test is in a feature file
+            if (testLocation.contains(".feature") || testLocation.contains("features/")) {
+                System.out.println("TriageMate: Detected Cucumber test via feature file location");
+                return true;
+            }
+            
+            // Check if test is in a Cucumber runner class
+            if (testLocation.contains("Cucumber") || testLocation.contains("cucumber")) {
+                System.out.println("TriageMate: Detected Cucumber test via runner class location");
+                return true;
+            }
+        }
+        
+        // Method 2: Check test hierarchy for Cucumber indicators
+        SMTestProxy parent = test.getParent();
+        while (parent != null) {
+            String parentName = parent.getName();
+            if (parentName != null && (
+                parentName.contains("Cucumber") ||
+                parentName.contains("Feature:") ||
+                parentName.contains("Scenario:") ||
+                parentName.contains("cucumber.runtime"))) {
+                System.out.println("TriageMate: Detected Cucumber test via parent hierarchy: " + parentName);
+                return true;
+            }
+            parent = parent.getParent();
+        }
+        
+        // Method 3: Check error message for Cucumber-specific exceptions (fallback)
         String errorMessage = test.getErrorMessage();
-        boolean hasCucumberError = errorMessage != null && errorMessage.contains("io.cucumber");
+        if (errorMessage != null && (
+            errorMessage.contains("io.cucumber") ||
+            errorMessage.contains("cucumber.runtime") ||
+            errorMessage.contains("UndefinedStepException") ||
+            errorMessage.contains("AmbiguousStepDefinitionsException") ||
+            errorMessage.contains("PendingException"))) {
+            System.out.println("TriageMate: Detected Cucumber test via error message");
+            return true;
+        }
         
-        return hasCucumberName || hasCucumberError;
+        System.out.println("TriageMate: Test does not appear to be a Cucumber test");
+        return false;
     }
 
     /**
