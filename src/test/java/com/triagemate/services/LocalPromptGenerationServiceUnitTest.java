@@ -84,7 +84,6 @@ class LocalPromptGenerationServiceUnitTest {
             .withActualValue("false")
             .withAssertionType("WEBDRIVER_ERROR")
             .withErrorMessage("Unable to locate element")
-            .withParsingStrategy("WebDriverErrorStrategy")
             .withParsingTime(150L)
             .build();
 
@@ -102,7 +101,6 @@ class LocalPromptGenerationServiceUnitTest {
         assertTrue(prompt.contains("userEntersCredentials"));
         assertTrue(prompt.contains("username, password"));
         assertTrue(prompt.contains("Unable to locate element"));
-        assertTrue(prompt.contains("WebDriverErrorStrategy"));
         assertTrue(prompt.contains("150ms"));
     }
 
@@ -293,7 +291,6 @@ class LocalPromptGenerationServiceUnitTest {
             .withScenarioName("Test Scenario")
             .withFailedStepText("When something fails")
             .withErrorMessage("Test failed")
-            .withParsingStrategy("JUnitComparisonFailureStrategy")
             .withParsingTime(250L)
             .build();
 
@@ -302,7 +299,6 @@ class LocalPromptGenerationServiceUnitTest {
 
         // Assert
         assertNotNull(prompt);
-        assertTrue(prompt.contains("**Parsing Strategy:** JUnitComparisonFailureStrategy"));
         assertTrue(prompt.contains("**Parsing Time:** 250ms"));
     }
 } 

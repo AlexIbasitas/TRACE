@@ -119,7 +119,6 @@ class BackendCommunicationServiceTest {
             .withActualValue("false")
             .withAssertionType("AssertionError")
             .withErrorMessage("Expected true but was false")
-            .withParsingStrategy("JUnitComparisonFailureStrategy")
             .withParsingTime(150L)
             .build();
             

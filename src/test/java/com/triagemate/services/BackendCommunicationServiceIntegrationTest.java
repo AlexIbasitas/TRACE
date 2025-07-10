@@ -226,7 +226,6 @@ class BackendCommunicationServiceIntegrationTest {
             .withActualValue("false")
             .withAssertionType("WEBDRIVER_ERROR")
             .withErrorMessage("Unable to locate element")
-            .withParsingStrategy("WebDriverErrorStrategy")
             .withParsingTime(150L)
             .build();
     }

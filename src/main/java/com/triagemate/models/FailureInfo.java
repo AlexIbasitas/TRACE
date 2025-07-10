@@ -40,7 +40,6 @@ public class FailureInfo {
     private final String errorMessage;
     
     // Parsing metadata (for debugging and performance monitoring)
-    private final String parsingStrategy;
     private final long parsingTime;
     
     /**
@@ -59,7 +58,6 @@ public class FailureInfo {
      * @param actualValue the actual value from the assertion
      * @param assertionType the type of assertion (e.g., "HAMCREST", "JUNIT")
      * @param errorMessage the error message from the assertion
-     * @param parsingStrategy the name of the parsing strategy used
      * @param parsingTime the time taken to parse the test output in milliseconds
      */
     public FailureInfo(String scenarioName, String failedStepText, String stackTrace,
@@ -67,7 +65,7 @@ public class FailureInfo {
                       StepDefinitionInfo stepDefinitionInfo, GherkinScenarioInfo gherkinScenarioInfo,
                       String stepDefinitionMethod, String gherkinScenario,
                       String expectedValue, String actualValue, String assertionType,
-                      String errorMessage, String parsingStrategy, long parsingTime) {
+                      String errorMessage, long parsingTime) {
         this.scenarioName = scenarioName;
         this.failedStepText = failedStepText;
         this.stackTrace = stackTrace;
@@ -81,7 +79,6 @@ public class FailureInfo {
         this.actualValue = actualValue;
         this.assertionType = assertionType;
         this.errorMessage = errorMessage;
-        this.parsingStrategy = parsingStrategy;
         this.parsingTime = parsingTime;
     }
     
@@ -165,10 +162,6 @@ public class FailureInfo {
     
     // Getters for parsing metadata
     
-    public String getParsingStrategy() {
-        return parsingStrategy;
-    }
-    
     public long getParsingTime() {
         return parsingTime;
     }
@@ -191,7 +184,6 @@ public class FailureInfo {
         private String actualValue;
         private String assertionType;
         private String errorMessage;
-        private String parsingStrategy;
         private long parsingTime;
         
         public Builder withScenarioName(String scenarioName) {
@@ -267,11 +259,6 @@ public class FailureInfo {
             return this;
         }
         
-        public Builder withParsingStrategy(String parsingStrategy) {
-            this.parsingStrategy = parsingStrategy;
-            return this;
-        }
-        
         public Builder withParsingTime(long parsingTime) {
             this.parsingTime = parsingTime;
             return this;
@@ -288,7 +275,7 @@ public class FailureInfo {
                                  stepDefinitionInfo, gherkinScenarioInfo,
                                  stepDefinitionMethod, gherkinScenario,
                                  expectedValue, actualValue, assertionType,
-                                 errorMessage, parsingStrategy, parsingTime);
+                                 errorMessage, parsingTime);
         }
         
         /**

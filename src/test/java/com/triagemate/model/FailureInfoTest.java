@@ -30,7 +30,6 @@ class FailureInfoTest {
             .withActualValue("Welcome to the-internet")
             .withAssertionType("HAMCREST")
             .withErrorMessage("Expected: is \"Welcome to the-internet delete me\" but: was \"Welcome to the-internet\"")
-            .withParsingStrategy("HamcrestAssertionStrategy")
             .withParsingTime(150L)
             .build();
         
@@ -46,7 +45,6 @@ class FailureInfoTest {
         assertThat(failureInfo.getActualValue()).isEqualTo("Welcome to the-internet");
         assertThat(failureInfo.getAssertionType()).isEqualTo("HAMCREST");
         assertThat(failureInfo.getErrorMessage()).isEqualTo("Expected: is \"Welcome to the-internet delete me\" but: was \"Welcome to the-internet\"");
-        assertThat(failureInfo.getParsingStrategy()).isEqualTo("HamcrestAssertionStrategy");
         assertThat(failureInfo.getParsingTime()).isEqualTo(150L);
     }
     
@@ -58,14 +56,13 @@ class FailureInfoTest {
             .withScenarioName("Test Scenario")
             .withStackTrace("java.lang.Exception: Test failed")
             .withAssertionType("GENERIC")
-            .withParsingStrategy("GenericStrategy")
+            .withParsingTime(0L) // Default value
             .build();
         
         // Assert
         assertThat(failureInfo.getScenarioName()).isEqualTo("Test Scenario");
         assertThat(failureInfo.getStackTrace()).isEqualTo("java.lang.Exception: Test failed");
         assertThat(failureInfo.getAssertionType()).isEqualTo("GENERIC");
-        assertThat(failureInfo.getParsingStrategy()).isEqualTo("GenericStrategy");
         
         // Optional fields should be null or default values
         assertThat(failureInfo.getFailedStepText()).isNull();
@@ -97,7 +94,6 @@ class FailureInfoTest {
             "actual",
             "JUNIT",
             "Test error",
-            "TestStrategy",
             100L
         );
         
@@ -113,7 +109,6 @@ class FailureInfoTest {
         assertThat(failureInfo.getActualValue()).isEqualTo("actual");
         assertThat(failureInfo.getAssertionType()).isEqualTo("JUNIT");
         assertThat(failureInfo.getErrorMessage()).isEqualTo("Test error");
-        assertThat(failureInfo.getParsingStrategy()).isEqualTo("TestStrategy");
         assertThat(failureInfo.getParsingTime()).isEqualTo(100L);
     }
     
@@ -129,7 +124,7 @@ class FailureInfoTest {
             .withActualValue(null)
             .withAssertionType(null)
             .withErrorMessage(null)
-            .withParsingStrategy(null)
+            .withParsingTime(0L) // Default value
             .build();
         
         // Assert
@@ -140,7 +135,7 @@ class FailureInfoTest {
         assertThat(failureInfo.getActualValue()).isNull();
         assertThat(failureInfo.getAssertionType()).isNull();
         assertThat(failureInfo.getErrorMessage()).isNull();
-        assertThat(failureInfo.getParsingStrategy()).isNull();
+        assertThat(failureInfo.getParsingTime()).isEqualTo(0L); // Default value
     }
     
     @Test

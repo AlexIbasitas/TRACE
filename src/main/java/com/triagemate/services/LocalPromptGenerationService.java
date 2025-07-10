@@ -100,11 +100,6 @@ public final class LocalPromptGenerationService implements PromptGenerationServi
             prompt.append("**Failed Step:** ").append(failureInfo.getFailedStepText()).append("\n");
         }
         
-        // Add parsing metadata
-        if (failureInfo.getParsingStrategy() != null) {
-            prompt.append("**Parsing Strategy:** ").append(failureInfo.getParsingStrategy()).append("\n");
-        }
-        
         if (failureInfo.getParsingTime() > 0) {
             prompt.append("**Parsing Time:** ").append(failureInfo.getParsingTime()).append("ms\n");
         }

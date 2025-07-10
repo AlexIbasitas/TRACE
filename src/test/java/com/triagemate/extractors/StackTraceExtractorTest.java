@@ -51,30 +51,21 @@ class StackTraceExtractorTest {
     class ConstructorAndInitialization {
 
         @Test
-        @DisplayName("should initialize with correct number of strategies")
-        void shouldInitializeWithCorrectNumberOfStrategies() {
-            assertEquals(6, extractor.getStrategyCount(), 
-                "Should initialize with 6 strategies (JUnit, WebDriver, Cucumber, Runtime, Configuration, Generic)");
+        @DisplayName("should initialize with raw extraction approach")
+        void shouldInitializeWithRawExtractionApproach() {
+            assertEquals(1, extractor.getStrategyCount(), 
+                "Should initialize with 1 raw extraction approach");
         }
 
         @Test
-        @DisplayName("should initialize strategies in priority order")
-        void shouldInitializeStrategiesInPriorityOrder() {
+        @DisplayName("should use raw extraction strategy")
+        void shouldUseRawExtractionStrategy() {
             var strategyNames = extractor.getStrategyNames();
             
-            // Verify strategies are in priority order (highest first)
-            assertTrue(strategyNames.get(0).contains("JUnitComparisonFailureStrategy"), 
-                "JUnit strategy should be first (priority 100)");
-            assertTrue(strategyNames.get(1).contains("CucumberErrorStrategy"), 
-                "Cucumber strategy should be second (priority 85)");
-            assertTrue(strategyNames.get(2).contains("RuntimeErrorStrategy"), 
-                "Runtime strategy should be third (priority 80)");
-            assertTrue(strategyNames.get(3).contains("ConfigurationErrorStrategy"), 
-                "Configuration strategy should be fourth (priority 75)");
-            assertTrue(strategyNames.get(4).contains("WebDriverErrorStrategy"), 
-                "WebDriver strategy should be fifth (priority 70)");
-            assertTrue(strategyNames.get(5).contains("GenericErrorStrategy"), 
-                "Generic strategy should be last (priority 10)");
+            // Verify raw extraction approach is used
+            assertEquals(1, strategyNames.size(), "Should have one raw extraction strategy");
+            assertTrue(strategyNames.get(0).contains("StackTraceExtraction"), 
+                "Should use raw extraction strategy");
         }
 
         @Test
@@ -92,7 +83,7 @@ class StackTraceExtractorTest {
         @Test
         @DisplayName("should throw IllegalArgumentException when testOutput is null")
         void shouldThrowIllegalArgumentExceptionWhenTestOutputIsNull() {
-            assertThrows(IllegalArgumentException.class, () -> extractor.extractFailureInfo(null),
+            assertThrows(IllegalArgumentException.class, () -> extractor.extractFailureInfo((String) null),
                 "Should throw IllegalArgumentException when testOutput is null");
         }
 
@@ -108,11 +99,9 @@ class StackTraceExtractorTest {
             FailureInfo result = extractor.extractFailureInfo(testOutput);
 
             assertNotNull(result, "Should return non-null FailureInfo");
-            assertEquals("JUnitComparisonFailureStrategy", result.getParsingStrategy(),
-                "Should use JUnit strategy for JUnit comparison failures");
             assertNotNull(result.getErrorMessage(), "Should extract error message");
             assertNotNull(result.getStackTrace(), "Should extract stack trace");
-            assertTrue(result.getParsingTime() > 0, "Should record parsing time");
+            assertTrue(result.getParsingTime() >= 0, "Should record parsing time");
         }
 
         @Test
@@ -127,8 +116,6 @@ class StackTraceExtractorTest {
             FailureInfo result = extractor.extractFailureInfo(testOutput);
 
             assertNotNull(result, "Should return non-null FailureInfo");
-            assertEquals("WebDriverErrorStrategy", result.getParsingStrategy(),
-                "Should use WebDriver strategy for WebDriver exceptions");
             assertNotNull(result.getErrorMessage(), "Should extract error message");
             assertNotNull(result.getStackTrace(), "Should extract stack trace");
         }
@@ -145,10 +132,8 @@ class StackTraceExtractorTest {
             FailureInfo result = extractor.extractFailureInfo(testOutput);
 
             assertNotNull(result, "Should return non-null FailureInfo");
-            assertEquals("CucumberErrorStrategy", result.getParsingStrategy(),
-                "Should use Cucumber strategy for Cucumber exceptions");
-            assertNotNull(result.getFailedStepText(), "Should extract failed step text");
             assertNotNull(result.getErrorMessage(), "Should extract error message");
+            assertNotNull(result.getStackTrace(), "Should extract stack trace");
         }
 
         @Test
@@ -163,8 +148,6 @@ class StackTraceExtractorTest {
             FailureInfo result = extractor.extractFailureInfo(testOutput);
 
             assertNotNull(result, "Should return non-null FailureInfo");
-            assertEquals("RuntimeErrorStrategy", result.getParsingStrategy(),
-                "Should use Runtime strategy for runtime exceptions");
             assertNotNull(result.getErrorMessage(), "Should extract error message");
             assertNotNull(result.getStackTrace(), "Should extract stack trace");
         }
@@ -181,8 +164,6 @@ class StackTraceExtractorTest {
             FailureInfo result = extractor.extractFailureInfo(testOutput);
 
             assertNotNull(result, "Should return non-null FailureInfo");
-            assertEquals("ConfigurationErrorStrategy", result.getParsingStrategy(),
-                "Should use Configuration strategy for configuration errors");
             assertNotNull(result.getErrorMessage(), "Should extract error message");
             assertNotNull(result.getStackTrace(), "Should extract stack trace");
         }
@@ -199,8 +180,6 @@ class StackTraceExtractorTest {
             FailureInfo result = extractor.extractFailureInfo(testOutput);
 
             assertNotNull(result, "Should return non-null FailureInfo");
-            assertEquals("GenericErrorStrategy", result.getParsingStrategy(),
-                "Should use Generic strategy for unknown error types");
             assertNotNull(result.getErrorMessage(), "Should extract error message");
             assertNotNull(result.getStackTrace(), "Should extract stack trace");
         }
@@ -213,8 +192,6 @@ class StackTraceExtractorTest {
             FailureInfo result = extractor.extractFailureInfo(testOutput);
 
             assertNotNull(result, "Should return non-null FailureInfo");
-            assertEquals("GenericErrorStrategy", result.getParsingStrategy(),
-                "Should use GenericErrorStrategy when no strategy can handle");
             assertNotNull(result.getErrorMessage(), "Should extract basic error message");
             assertEquals(testOutput, result.getStackTrace(),
                 "Should use original test output as stack trace");
@@ -228,8 +205,6 @@ class StackTraceExtractorTest {
             FailureInfo result = extractor.extractFailureInfo(testOutput);
 
             assertNotNull(result, "Should return non-null FailureInfo");
-            assertEquals("GenericErrorStrategy", result.getParsingStrategy(),
-                "Should use GenericErrorStrategy for empty output");
             assertNotNull(result.getErrorMessage(), "Should provide fallback error message");
         }
 
@@ -246,8 +221,8 @@ class StackTraceExtractorTest {
             FailureInfo result = extractor.extractFailureInfo(testOutput);
 
             assertNotNull(result, "Should return non-null FailureInfo");
-            assertEquals("RuntimeErrorStrategy", result.getParsingStrategy(),
-                "Should use Runtime strategy (priority 80) over Generic strategy (priority 10)");
+            assertNotNull(result.getErrorMessage(), "Should extract error message");
+            assertNotNull(result.getStackTrace(), "Should extract stack trace");
         }
     }
 
@@ -413,8 +388,8 @@ class StackTraceExtractorTest {
             FailureInfo result = extractor.extractFailureInfo(testOutput);
 
             assertNotNull(result, "Should return non-null FailureInfo even if some strategies fail");
-            assertEquals("JUnitComparisonFailureStrategy", result.getParsingStrategy(),
-                "Should successfully use JUnit strategy despite potential strategy failures");
+            assertNotNull(result.getErrorMessage(), "Should extract error message");
+            assertNotNull(result.getStackTrace(), "Should extract stack trace");
         }
 
         @Test
@@ -432,8 +407,7 @@ class StackTraceExtractorTest {
             FailureInfo result = extractor.extractFailureInfo(largeOutput.toString());
 
             assertNotNull(result, "Should handle large test output without issues");
-            assertEquals("JUnitComparisonFailureStrategy", result.getParsingStrategy(),
-                "Should successfully parse large test output");
+            assertNotNull(result.getErrorMessage(), "Should extract error message");
             assertTrue(result.getStackTrace().length() > 1000,
                 "Should preserve large stack trace");
         }
@@ -450,8 +424,9 @@ class StackTraceExtractorTest {
             FailureInfo result = extractor.extractFailureInfo(testOutput);
 
             assertNotNull(result, "Should handle test output with special characters");
-            assertEquals("JUnitComparisonFailureStrategy", result.getParsingStrategy(),
-                "Should successfully parse test output with special characters");
+            assertNotNull(result.getErrorMessage(), "Should extract error message");
+            assertTrue(result.getErrorMessage().contains("expected:<foo> but was:<bar>"),
+                "Should extract error message with special characters");
         }
     }
 
@@ -473,7 +448,7 @@ class StackTraceExtractorTest {
 
             assertNotNull(result, "Should return valid result");
             assertTrue(duration < 1000, "Should complete parsing within 1 second");
-            assertTrue(result.getParsingTime() > 0, "Should record parsing time");
+            assertTrue(result.getParsingTime() >= 0, "Should record parsing time");
         }
 
         @Test

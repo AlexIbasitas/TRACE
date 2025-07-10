@@ -8,6 +8,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import com.intellij.openapi.project.Project;
+import com.intellij.testFramework.fixtures.BasePlatformTestCase;
 
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.Mockito.*;
@@ -21,18 +22,24 @@ import static org.mockito.Mockito.*;
  * 
  * <p>Integration tests with real PSI operations are in separate integration test classes.</p>
  */
-@ExtendWith(MockitoExtension.class)
-@DisplayName("StepDefinitionExtractor Unit Tests")
-class StepDefinitionExtractorUnitTest {
+class StepDefinitionExtractorUnitTest extends BasePlatformTestCase {
 
-    @Mock
-    private Project mockProject;
-    
     private StepDefinitionExtractor extractor;
 
     @BeforeEach
-    void setUp() {
-        extractor = new StepDefinitionExtractor(mockProject);
+    @Override
+    protected void setUp() throws Exception {
+        super.setUp();
+        extractor = new StepDefinitionExtractor(getProject());
+    }
+
+    @Override
+    protected void tearDown() throws Exception {
+        try {
+            // Add any additional cleanup here if needed
+        } finally {
+            super.tearDown();
+        }
     }
 
     @Test

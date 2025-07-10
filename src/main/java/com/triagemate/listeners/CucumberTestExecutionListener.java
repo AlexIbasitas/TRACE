@@ -15,6 +15,7 @@ import com.triagemate.services.BackendCommunicationService;
 import com.triagemate.services.PromptGenerationService;
 import com.triagemate.ui.TriagePanelView;
 import com.triagemate.ui.TriagePanelToolWindowFactory;
+import com.triagemate.listeners.TestOutputCaptureListener;
 
 /**
  * Listener for Cucumber test execution events.
@@ -66,6 +67,12 @@ public class CucumberTestExecutionListener extends SMTRunnerEventsAdapter {
     @Override
     public void onTestFailed(SMTestProxy test) {
         System.out.println("TriageMate: onTestFailed called for test: " + (test != null ? test.getName() : "null"));
+        
+        // Capture test output immediately when test fails
+        if (test != null) {
+            TestOutputCaptureListener.captureTestErrorOutput(test);
+            System.out.println("TriageMate: Captured test output for failed test: " + test.getName());
+        }
         
         // Get the current project if not set
         Project currentProject = getCurrentProject();
@@ -171,15 +178,9 @@ public class CucumberTestExecutionListener extends SMTRunnerEventsAdapter {
                 return;
             }
             
-            // Extract basic failure information
-            String testOutput = test.getErrorMessage();
-            if (testOutput == null || testOutput.trim().isEmpty()) {
-                System.out.println("TriageMate: No error message to process");
-                return; // No error message to process
-            }
-            
-            System.out.println("TriageMate: Extracting failure info from: " + testOutput.substring(0, Math.min(100, testOutput.length())) + "...");
-            FailureInfo basicFailureInfo = localStackTraceExtractor.extractFailureInfo(testOutput);
+            // Extract basic failure information using the test proxy directly
+            System.out.println("TriageMate: Extracting failure info from test proxy...");
+            FailureInfo basicFailureInfo = localStackTraceExtractor.extractFailureInfo(test);
             
             if (basicFailureInfo == null) {
                 System.out.println("TriageMate: Could not extract basic failure info");
@@ -230,7 +231,6 @@ public class CucumberTestExecutionListener extends SMTRunnerEventsAdapter {
                 .withActualValue(basicFailureInfo.getActualValue())
                 .withAssertionType(basicFailureInfo.getAssertionType())
                 .withErrorMessage(basicFailureInfo.getErrorMessage())
-                .withParsingStrategy(basicFailureInfo.getParsingStrategy())
                 .withParsingTime(basicFailureInfo.getParsingTime())
                 .build();
             

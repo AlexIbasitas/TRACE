@@ -114,7 +114,6 @@ public class TriagePanelViewTest extends BasePlatformTestCase {
             .withActualValue("false")
             .withAssertionType(errorType)
             .withErrorMessage("Element not found: #login-form")
-            .withParsingStrategy("WebDriverErrorStrategy")
             .withParsingTime(150)
             .build();
     }
