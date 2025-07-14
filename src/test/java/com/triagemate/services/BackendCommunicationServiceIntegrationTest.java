@@ -224,7 +224,7 @@ class BackendCommunicationServiceIntegrationTest {
             .withGherkinScenarioInfo(scenarioInfo)
             .withExpectedValue("true")
             .withActualValue("false")
-            .withAssertionType("WEBDRIVER_ERROR")
+            .withErrorMessage("WebDriver error occurred")
             .withErrorMessage("Unable to locate element")
             .withParsingTime(150L)
             .build();

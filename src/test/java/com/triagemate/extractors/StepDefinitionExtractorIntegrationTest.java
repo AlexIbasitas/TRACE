@@ -17,39 +17,13 @@ public class StepDefinitionExtractorIntegrationTest extends LightJavaCodeInsight
     protected void setUp() throws Exception {
         super.setUp();
         addAnnotationStubs();
-        extractor = new StepDefinitionExtractor(getProject());
-    }
-
-    private void addAnnotationStubs() {
-        myFixture.addFileToProject("src/test/java/io/cucumber/java/en/Given.java", "package io.cucumber.java.en; public @interface Given { String value(); }");
-        myFixture.addFileToProject("src/test/java/io/cucumber/java/en/When.java", "package io.cucumber.java.en; public @interface When { String value(); }");
-        myFixture.addFileToProject("src/test/java/io/cucumber/java/en/Then.java", "package io.cucumber.java.en; public @interface Then { String value(); }");
-        myFixture.addFileToProject("src/test/java/io/cucumber/java/en/And.java", "package io.cucumber.java.en; public @interface And { String value(); }");
-        myFixture.addFileToProject("src/test/java/io/cucumber/java/en/But.java", "package io.cucumber.java.en; public @interface But { String value(); }");
+        extractor = new StepDefinitionExtractor(myFixture.getProject());
     }
 
     @Override
     protected void tearDown() throws Exception {
         try {
-            String[] annotationFiles = {
-                "src/test/java/io/cucumber/java/en/Given.java",
-                "src/test/java/io/cucumber/java/en/When.java",
-                "src/test/java/io/cucumber/java/en/Then.java",
-                "src/test/java/io/cucumber/java/en/And.java",
-                "src/test/java/io/cucumber/java/en/But.java"
-            };
-            for (String file : annotationFiles) {
-                try {
-                    var vFile = myFixture.findFileInTempDir(file);
-                    if (vFile != null && vFile.exists()) {
-                        vFile.delete(this);
-                    }
-                } catch (Exception e) {
-                    // Ignore if file does not exist or cannot be deleted
-                }
-            }
-        } catch (Exception e) {
-            addSuppressedException(e);
+            // Add any additional cleanup here if needed
         } finally {
             super.tearDown();
         }
@@ -67,28 +41,36 @@ public class StepDefinitionExtractorIntegrationTest extends LightJavaCodeInsight
             
             public class LoginStepDefinitions {
                 
-                @Given(\"I am on the login page\")
+                @Given("I am on the login page")
                 public void iAmOnTheLoginPage() {
                     // Implementation here
-                    System.out.println(\"Navigating to login page\");
+                    System.out.println("Navigating to login page");
                 }
                 
-                @When(\"I enter {string} in the username field\")
+                @When("I enter {string} in the username field")
                 public void iEnterInTheUsernameField(String username) {
                     // Implementation here
-                    System.out.println(\"Entering username: \" + username);
+                    System.out.println("Entering username: " + username);
                 }
                 
-                @Then(\"I should see the dashboard\")
+                @Then("I should see the dashboard")
                 public void iShouldSeeTheDashboard() {
                     // Implementation here
-                    System.out.println(\"Verifying dashboard is displayed\");
+                    System.out.println("Verifying dashboard is displayed");
                 }
             }
             """
         );
-        String failedStepText = "Given I am on the login page";
-        StepDefinitionInfo result = extractor.extractStepDefinition(failedStepText);
+        
+        // Test stack trace-based extraction for the Given method
+        String stackTrace = """
+            java.lang.AssertionError: Login page not found
+                at com.example.steps.LoginStepDefinitions.iAmOnTheLoginPage(LoginStepDefinitions.java:12)
+                at ✽.I am on the login page(file:///path/to/login.feature:3)
+            """;
+        
+        StepDefinitionInfo result = extractor.extractStepDefinition(stackTrace);
+        
         assertNotNull(result);
         assertEquals("iAmOnTheLoginPage", result.getMethodName());
         assertEquals("LoginStepDefinitions", result.getClassName());
@@ -111,22 +93,30 @@ public class StepDefinitionExtractorIntegrationTest extends LightJavaCodeInsight
             
             public class UserInputStepDefinitions {
                 
-                @When(\"I enter {string} in the {string} field\")
+                @When("I enter {string} in the {string} field")
                 public void iEnterInTheField(String value, String fieldName) {
                     // Implementation here
-                    System.out.println(\"Entering \" + value + \" in \" + fieldName + \" field\");
+                    System.out.println("Entering " + value + " in " + fieldName + " field");
                 }
                 
-                @When(\"I click on the {string} button\")
+                @When("I click on the {string} button")
                 public void iClickOnTheButton(String buttonText) {
                     // Implementation here
-                    System.out.println(\"Clicking on \" + buttonText + \" button\");
+                    System.out.println("Clicking on " + buttonText + " button");
                 }
             }
             """
         );
-        String failedStepText = "When I enter \"test@example.com\" in the email field";
-        StepDefinitionInfo result = extractor.extractStepDefinition(failedStepText);
+        
+        // Test stack trace-based extraction for the first When method
+        String stackTrace = """
+            java.lang.AssertionError: Field not found
+                at com.example.steps.UserInputStepDefinitions.iEnterInTheField(UserInputStepDefinitions.java:8)
+                at ✽.I enter "testuser" in the "username" field(file:///path/to/input.feature:5)
+            """;
+        
+        StepDefinitionInfo result = extractor.extractStepDefinition(stackTrace);
+        
         assertNotNull(result);
         assertEquals("iEnterInTheField", result.getMethodName());
         assertEquals("UserInputStepDefinitions", result.getClassName());
@@ -138,27 +128,174 @@ public class StepDefinitionExtractorIntegrationTest extends LightJavaCodeInsight
         assertTrue(result.getParameters().contains("value"));
         assertTrue(result.getParameters().contains("fieldName"));
         assertNotNull(result.getMethodText());
+        assertTrue(result.getMethodText().contains("iEnterInTheField"));
     }
 
-    public void testReturnNullForNonExistentStep() {
+    public void testExtractStepDefinitionForThenStep() {
         PsiFile javaFile = myFixture.addFileToProject(
-            "src/test/java/com/example/steps/SomeStepDefinitions.java",
+            "src/test/java/com/example/steps/HomePageTestStep.java",
+            """
+            package com.example.steps;
+            
+            import io.cucumber.java.en.Then;
+            import org.junit.Assert;
+            
+            public class HomePageTestStep {
+                
+                @Then("I should see title as {string}")
+                public void i_should_see_title_as(String expectedTitle) {
+                    // Implementation here
+                    String actualTitle = "Welcome to the-internet";
+                    Assert.assertEquals(expectedTitle, actualTitle);
+                }
+                
+                @Then("I should see a link with text {string}")
+                public void i_should_see_a_link_with_text(String linkText) {
+                    // Implementation here
+                    System.out.println("Looking for link with text: " + linkText);
+                }
+            }
+            """
+        );
+        
+        // Test stack trace-based extraction for the Then method
+        String stackTrace = """
+            java.lang.AssertionError: 
+            Expected: is "Welcome to the-internet delete me"
+                 but: was "Welcome to the-internet"
+                at org.hamcrest.MatcherAssert.assertThat(MatcherAssert.java:20)
+                at org.hamcrest.MatcherAssert.assertThat(MatcherAssert.java:6)
+                at com.example.steps.HomePageTestStep.i_should_see_title_as(HomePageTestStep.java:28)
+                at ✽.I should see title as "Welcome to the-internet delete me"(file:///path/to/feature.feature:8)
+            """;
+        
+        StepDefinitionInfo result = extractor.extractStepDefinition(stackTrace);
+        
+        assertNotNull(result);
+        assertEquals("i_should_see_title_as", result.getMethodName());
+        assertEquals("HomePageTestStep", result.getClassName());
+        assertEquals("com.example.steps", result.getPackageName());
+        assertEquals("HomePageTestStep.java", result.getSourceFilePath());
+        assertTrue(result.getLineNumber() > 0);
+        assertEquals("I should see title as {string}", result.getStepPattern());
+        assertEquals(1, result.getParameters().size());
+        assertTrue(result.getParameters().contains("expectedTitle"));
+        assertNotNull(result.getMethodText());
+        assertTrue(result.getMethodText().contains("i_should_see_title_as"));
+    }
+
+    public void testExtractStepDefinitionWithMultipleClassesInStackTrace() {
+        PsiFile javaFile = myFixture.addFileToProject(
+            "src/test/java/com/example/steps/LoginStepDefinitions.java",
             """
             package com.example.steps;
             
             import io.cucumber.java.en.Given;
             
-            public class SomeStepDefinitions {
+            public class LoginStepDefinitions {
                 
-                @Given(\"I am on the home page\")
-                public void iAmOnTheHomePage() {
+                @Given("I am on the login page")
+                public void iAmOnTheLoginPage() {
                     // Implementation here
+                    System.out.println("Navigating to login page");
                 }
             }
             """
         );
-        String failedStepText = "Given I am on a page that does not exist";
-        StepDefinitionInfo result = extractor.extractStepDefinition(failedStepText);
+        
+        // Test stack trace with multiple classes - should find the first step definition class
+        String stackTrace = """
+            java.lang.AssertionError: Test failed
+                at org.junit.Assert.fail(Assert.java:86)
+                at com.example.utils.TestUtils.validate(TestUtils.java:15)
+                at com.example.steps.LoginStepDefinitions.iAmOnTheLoginPage(LoginStepDefinitions.java:12)
+                at ✽.I am on the login page(file:///path/to/login.feature:3)
+            """;
+        
+        StepDefinitionInfo result = extractor.extractStepDefinition(stackTrace);
+        
+        assertNotNull(result);
+        assertEquals("iAmOnTheLoginPage", result.getMethodName());
+        assertEquals("LoginStepDefinitions", result.getClassName());
+    }
+
+    public void testExtractStepDefinitionWithNoStepDefinitionClasses() {
+        // Test stack trace with no step definition classes
+        String stackTrace = """
+            java.lang.AssertionError: Test failed
+                at org.junit.Assert.fail(Assert.java:86)
+                at org.junit.Assert.assertTrue(Assert.java:41)
+                at com.example.utils.TestUtils.validate(TestUtils.java:15)
+            """;
+        
+        StepDefinitionInfo result = extractor.extractStepDefinition(stackTrace);
+        
         assertNull(result);
+    }
+
+    public void testExtractStepDefinitionWithMalformedStackTrace() {
+        // Test malformed stack trace
+        String stackTrace = "This is not a valid stack trace";
+        
+        StepDefinitionInfo result = extractor.extractStepDefinition(stackTrace);
+        
+        assertNull(result);
+    }
+
+    private void addAnnotationStubs() {
+        // Add stub files for Cucumber annotations
+        myFixture.addFileToProject(
+            "src/test/java/io/cucumber/java/en/Given.java",
+            """
+            package io.cucumber.java.en;
+            
+            import java.lang.annotation.ElementType;
+            import java.lang.annotation.Retention;
+            import java.lang.annotation.RetentionPolicy;
+            import java.lang.annotation.Target;
+            
+            @Retention(RetentionPolicy.RUNTIME)
+            @Target(ElementType.METHOD)
+            public @interface Given {
+                String value();
+            }
+            """
+        );
+        
+        myFixture.addFileToProject(
+            "src/test/java/io/cucumber/java/en/When.java",
+            """
+            package io.cucumber.java.en;
+            
+            import java.lang.annotation.ElementType;
+            import java.lang.annotation.Retention;
+            import java.lang.annotation.RetentionPolicy;
+            import java.lang.annotation.Target;
+            
+            @Retention(RetentionPolicy.RUNTIME)
+            @Target(ElementType.METHOD)
+            public @interface When {
+                String value();
+            }
+            """
+        );
+        
+        myFixture.addFileToProject(
+            "src/test/java/io/cucumber/java/en/Then.java",
+            """
+            package io.cucumber.java.en;
+            
+            import java.lang.annotation.ElementType;
+            import java.lang.annotation.Retention;
+            import java.lang.annotation.RetentionPolicy;
+            import java.lang.annotation.Target;
+            
+            @Retention(RetentionPolicy.RUNTIME)
+            @Target(ElementType.METHOD)
+            public @interface Then {
+                String value();
+            }
+            """
+        );
     }
 } 

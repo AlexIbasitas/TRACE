@@ -1,71 +1,104 @@
 package com.triagemate.models;
 
 /**
- * Domain model representing comprehensive information about a failed Cucumber test.
+ * Comprehensive domain model representing a failed Cucumber test with full context.
  * 
- * <p>This class serves multiple purposes in the TriageMate plugin architecture:</p>
+ * <p>This class serves as the central data structure for test failure analysis in the
+ * TriageMate plugin. It encapsulates all information needed to understand, analyze,
+ * and provide intelligent suggestions for test failures.</p>
+ * 
+ * <p>The model is designed to support multiple use cases:</p>
  * <ul>
- *   <li><strong>Parsing Layer:</strong> Stores extracted assertion details and parsing metadata</li>
- *   <li><strong>UI Display:</strong> Provides all information needed for the TriagePanel</li>
- *   <li><strong>AI Analysis:</strong> Contains context needed for prompt generation</li>
- *   <li><strong>Code Navigation:</strong> Includes source file location information</li>
- *   <li><strong>Debugging:</strong> Stores parsing strategy and performance metrics</li>
+ *   <li><strong>Failure Analysis:</strong> Complete context for AI-powered failure diagnosis</li>
+ *   <li><strong>UI Display:</strong> Rich information for the TriagePanel interface</li>
+ *   <li><strong>Code Navigation:</strong> Precise source file and line number information</li>
+ *   <li><strong>Debugging Support:</strong> Parsing metadata and performance metrics</li>
  * </ul>
  * 
- * <p>This class uses composition to maintain rich structured data while providing
- * a cohesive domain concept: "A test failure with all its context and metadata."
- * The design prioritizes data integrity and extensibility over simplicity.</p>
+ * <p>The class uses composition to maintain rich structured data while providing
+ * a cohesive domain concept. It prioritizes data integrity, extensibility, and
+ * comprehensive failure context over simplicity.</p>
+ * 
+ * @author TriageMate Team
+ * @since 1.0.0
  */
 public class FailureInfo {
     
-    // Core failure information
+    // ============================================================================
+    // Core Failure Information
+    // ============================================================================
+    
+    /** The name of the failed scenario (e.g., "User login with valid credentials") */
     private final String scenarioName;
+    
+    /** The text of the specific step that failed (e.g., "I click the login button") */
     private final String failedStepText;
+    
+    /** The complete stack trace from the test failure */
     private final String stackTrace;
+    
+    /** Path to the source file containing the step definition */
     private final String sourceFilePath;
+    
+    /** Line number of the step definition in the source file */
     private final int lineNumber;
     
-    // Rich structured data (composed objects)
+    // ============================================================================
+    // Rich Structured Data (Composed Objects)
+    // ============================================================================
+    
+    /** Detailed information about the step definition method */
     private final StepDefinitionInfo stepDefinitionInfo;
+    
+    /** Complete Gherkin scenario context and metadata */
     private final GherkinScenarioInfo gherkinScenarioInfo;
     
-    // Legacy string fields for backward compatibility
-    private final String stepDefinitionMethod;
-    private final String gherkinScenario;
+    // ============================================================================
+    // Assertion Details (Extracted from Test Output)
+    // ============================================================================
     
-    // Assertion details (extracted from test output)
+    /** Expected value from the assertion (e.g., "true", "User logged in") */
     private final String expectedValue;
+    
+    /** Actual value from the assertion (e.g., "false", "Login failed") */
     private final String actualValue;
-    private final String assertionType;
+    
+    /** Error message from the assertion failure */
     private final String errorMessage;
     
-    // Parsing metadata (for debugging and performance monitoring)
+    // ============================================================================
+    // Parsing Metadata (Debugging and Performance)
+    // ============================================================================
+    
+    /** Time taken to parse the test output in milliseconds */
     private final long parsingTime;
     
+    // ============================================================================
+    // Constructor
+    // ============================================================================
+    
     /**
-     * Constructor for FailureInfo.
+     * Creates a new FailureInfo instance with all failure context.
+     * 
+     * <p>This constructor accepts all possible failure information. For most use cases,
+     * consider using the {@link Builder} pattern for more flexible construction.</p>
      * 
      * @param scenarioName the name of the failed scenario
      * @param failedStepText the text of the step that failed
-     * @param stackTrace the stack trace of the failure
+     * @param stackTrace the complete stack trace of the failure
      * @param sourceFilePath path to the source file containing the step definition
      * @param lineNumber line number of the step definition in the source file
-     * @param stepDefinitionInfo the step definition information (can be null)
-     * @param gherkinScenarioInfo the Gherkin scenario information (can be null)
-     * @param stepDefinitionMethod legacy string field for backward compatibility
-     * @param gherkinScenario legacy string field for backward compatibility
+     * @param stepDefinitionInfo detailed step definition information (can be null)
+     * @param gherkinScenarioInfo complete Gherkin scenario context (can be null)
      * @param expectedValue the expected value from the assertion
      * @param actualValue the actual value from the assertion
-     * @param assertionType the type of assertion (e.g., "HAMCREST", "JUNIT")
      * @param errorMessage the error message from the assertion
      * @param parsingTime the time taken to parse the test output in milliseconds
      */
     public FailureInfo(String scenarioName, String failedStepText, String stackTrace,
                       String sourceFilePath, int lineNumber,
                       StepDefinitionInfo stepDefinitionInfo, GherkinScenarioInfo gherkinScenarioInfo,
-                      String stepDefinitionMethod, String gherkinScenario,
-                      String expectedValue, String actualValue, String assertionType,
-                      String errorMessage, long parsingTime) {
+                      String expectedValue, String actualValue, String errorMessage, long parsingTime) {
         this.scenarioName = scenarioName;
         this.failedStepText = failedStepText;
         this.stackTrace = stackTrace;
@@ -73,237 +106,330 @@ public class FailureInfo {
         this.lineNumber = lineNumber;
         this.stepDefinitionInfo = stepDefinitionInfo;
         this.gherkinScenarioInfo = gherkinScenarioInfo;
-        this.stepDefinitionMethod = stepDefinitionMethod;
-        this.gherkinScenario = gherkinScenario;
         this.expectedValue = expectedValue;
         this.actualValue = actualValue;
-        this.assertionType = assertionType;
         this.errorMessage = errorMessage;
         this.parsingTime = parsingTime;
     }
     
-    // Getters for core failure information
+    // ============================================================================
+    // Core Failure Information Getters
+    // ============================================================================
     
+    /**
+     * Gets the name of the failed scenario.
+     * 
+     * @return the scenario name, or null if not available
+     */
     public String getScenarioName() {
         return scenarioName;
     }
     
+    /**
+     * Gets the text of the step that failed.
+     * 
+     * @return the failed step text, or null if not available
+     */
     public String getFailedStepText() {
         return failedStepText;
     }
     
+    /**
+     * Gets the complete stack trace from the test failure.
+     * 
+     * @return the stack trace, or null if not available
+     */
     public String getStackTrace() {
         return stackTrace;
     }
     
+    /**
+     * Gets the path to the source file containing the step definition.
+     * 
+     * @return the source file path, or null if not available
+     */
     public String getSourceFilePath() {
         return sourceFilePath;
     }
     
+    /**
+     * Gets the line number of the step definition in the source file.
+     * 
+     * @return the line number, or -1 if not available
+     */
     public int getLineNumber() {
         return lineNumber;
     }
     
-    // Getters for rich structured data
+    // ============================================================================
+    // Rich Structured Data Getters
+    // ============================================================================
     
     /**
-     * Gets the step definition information as a structured object.
+     * Gets detailed information about the step definition method.
      * 
-     * @return StepDefinitionInfo object, or null if not available
+     * <p>This provides rich structured data including method signature, parameters,
+     * and implementation details for comprehensive analysis.</p>
+     * 
+     * @return StepDefinitionInfo object with complete method details, or null if not available
      */
     public StepDefinitionInfo getStepDefinitionInfo() {
         return stepDefinitionInfo;
     }
     
     /**
-     * Gets the Gherkin scenario information as a structured object.
+     * Gets complete Gherkin scenario context and metadata.
      * 
-     * @return GherkinScenarioInfo object, or null if not available
+     * <p>This provides rich structured data including scenario steps, tags, background,
+     * and full feature context for comprehensive analysis.</p>
+     * 
+     * @return GherkinScenarioInfo object with complete scenario details, or null if not available
      */
     public GherkinScenarioInfo getGherkinScenarioInfo() {
         return gherkinScenarioInfo;
     }
     
-    // Legacy getters for backward compatibility
+    // ============================================================================
+    // Assertion Details Getters
+    // ============================================================================
     
     /**
-     * @deprecated Use getStepDefinitionInfo().getMethodText() instead for better type safety
+     * Gets the expected value from the assertion.
+     * 
+     * @return the expected value, or null if not available
      */
-    @Deprecated
-    public String getStepDefinitionMethod() {
-        return stepDefinitionMethod;
-    }
-    
-    /**
-     * @deprecated Use getGherkinScenarioInfo() instead for better type safety and rich data
-     */
-    @Deprecated
-    public String getGherkinScenario() {
-        return gherkinScenario;
-    }
-    
-    // Getters for assertion details
-    
     public String getExpectedValue() {
         return expectedValue;
     }
     
+    /**
+     * Gets the actual value from the assertion.
+     * 
+     * @return the actual value, or null if not available
+     */
     public String getActualValue() {
         return actualValue;
     }
     
-    public String getAssertionType() {
-        return assertionType;
-    }
-    
+    /**
+     * Gets the error message from the assertion failure.
+     * 
+     * @return the error message, or null if not available
+     */
     public String getErrorMessage() {
         return errorMessage;
     }
     
-    // Getters for parsing metadata
+    // ============================================================================
+    // Parsing Metadata Getters
+    // ============================================================================
     
+    /**
+     * Gets the time taken to parse the test output.
+     * 
+     * <p>This metric is useful for performance monitoring and debugging
+     * parsing efficiency.</p>
+     * 
+     * @return the parsing time in milliseconds
+     */
     public long getParsingTime() {
         return parsingTime;
     }
     
+    // ============================================================================
+    // Builder Pattern
+    // ============================================================================
+    
     /**
-     * Builder pattern for creating FailureInfo instances.
-     * This provides a fluent API for constructing FailureInfo objects with optional fields.
+     * Fluent builder for creating FailureInfo instances.
+     * 
+     * <p>This builder provides a clean, readable API for constructing FailureInfo
+     * objects with optional fields. It automatically handles backward compatibility
+     * by populating legacy string fields when structured objects are provided.</p>
+     * 
+     * <p>Example usage:</p>
+     * <pre>{@code
+     * FailureInfo failure = new FailureInfo.Builder()
+     *     .withScenarioName("User login test")
+     *     .withFailedStepText("I click the login button")
+     *     .withStackTrace("java.lang.AssertionError: Button not found")
+     *     .withStepDefinitionInfo(stepDefInfo)
+     *     .withGherkinScenarioInfo(scenarioInfo)
+     *     .build();
+     * }</pre>
      */
     public static class Builder {
+        
+        // Core failure information
         private String scenarioName;
         private String failedStepText;
         private String stackTrace;
         private String sourceFilePath;
         private int lineNumber = -1;
+        
+        // Rich structured data
         private StepDefinitionInfo stepDefinitionInfo;
         private GherkinScenarioInfo gherkinScenarioInfo;
-        private String stepDefinitionMethod;
-        private String gherkinScenario;
+        
+        // Assertion details
         private String expectedValue;
         private String actualValue;
-        private String assertionType;
         private String errorMessage;
+        
+        // Parsing metadata
         private long parsingTime;
         
+        // ========================================================================
+        // Core Failure Information Builders
+        // ========================================================================
+        
+        /**
+         * Sets the scenario name.
+         * 
+         * @param scenarioName the name of the failed scenario
+         * @return this builder for method chaining
+         */
         public Builder withScenarioName(String scenarioName) {
             this.scenarioName = scenarioName;
             return this;
         }
         
+        /**
+         * Sets the failed step text.
+         * 
+         * @param failedStepText the text of the step that failed
+         * @return this builder for method chaining
+         */
         public Builder withFailedStepText(String failedStepText) {
             this.failedStepText = failedStepText;
             return this;
         }
         
+        /**
+         * Sets the stack trace.
+         * 
+         * @param stackTrace the complete stack trace from the failure
+         * @return this builder for method chaining
+         */
         public Builder withStackTrace(String stackTrace) {
             this.stackTrace = stackTrace;
             return this;
         }
         
+        /**
+         * Sets the source file path.
+         * 
+         * @param sourceFilePath path to the source file containing the step definition
+         * @return this builder for method chaining
+         */
         public Builder withSourceFilePath(String sourceFilePath) {
             this.sourceFilePath = sourceFilePath;
             return this;
         }
         
+        /**
+         * Sets the line number.
+         * 
+         * @param lineNumber line number of the step definition in the source file
+         * @return this builder for method chaining
+         */
         public Builder withLineNumber(int lineNumber) {
             this.lineNumber = lineNumber;
             return this;
         }
         
+        // ========================================================================
+        // Rich Structured Data Builders
+        // ========================================================================
+        
+        /**
+         * Sets the step definition information.
+         * 
+         * @param stepDefinitionInfo detailed step definition information
+         * @return this builder for method chaining
+         */
         public Builder withStepDefinitionInfo(StepDefinitionInfo stepDefinitionInfo) {
             this.stepDefinitionInfo = stepDefinitionInfo;
-            // Auto-populate legacy field for backward compatibility
-            if (stepDefinitionInfo != null) {
-                this.stepDefinitionMethod = stepDefinitionInfo.getMethodText();
-            }
             return this;
         }
         
+        /**
+         * Sets the Gherkin scenario information.
+         * 
+         * @param gherkinScenarioInfo complete Gherkin scenario context
+         * @return this builder for method chaining
+         */
         public Builder withGherkinScenarioInfo(GherkinScenarioInfo gherkinScenarioInfo) {
             this.gherkinScenarioInfo = gherkinScenarioInfo;
-            // Auto-populate legacy field for backward compatibility
-            if (gherkinScenarioInfo != null) {
-                this.gherkinScenario = buildGherkinScenarioText(gherkinScenarioInfo);
-            }
             return this;
         }
         
-        public Builder withStepDefinitionMethod(String stepDefinitionMethod) {
-            this.stepDefinitionMethod = stepDefinitionMethod;
-            return this;
-        }
+        // ========================================================================
+        // Assertion Details Builders
+        // ========================================================================
         
-        public Builder withGherkinScenario(String gherkinScenario) {
-            this.gherkinScenario = gherkinScenario;
-            return this;
-        }
-        
+        /**
+         * Sets the expected value from the assertion.
+         * 
+         * @param expectedValue the expected value
+         * @return this builder for method chaining
+         */
         public Builder withExpectedValue(String expectedValue) {
             this.expectedValue = expectedValue;
             return this;
         }
         
+        /**
+         * Sets the actual value from the assertion.
+         * 
+         * @param actualValue the actual value
+         * @return this builder for method chaining
+         */
         public Builder withActualValue(String actualValue) {
             this.actualValue = actualValue;
             return this;
         }
         
-        public Builder withAssertionType(String assertionType) {
-            this.assertionType = assertionType;
-            return this;
-        }
-        
+        /**
+         * Sets the error message from the assertion.
+         * 
+         * @param errorMessage the error message
+         * @return this builder for method chaining
+         */
         public Builder withErrorMessage(String errorMessage) {
             this.errorMessage = errorMessage;
             return this;
         }
         
+        // ========================================================================
+        // Parsing Metadata Builders
+        // ========================================================================
+        
+        /**
+         * Sets the parsing time.
+         * 
+         * @param parsingTime the time taken to parse the test output in milliseconds
+         * @return this builder for method chaining
+         */
         public Builder withParsingTime(long parsingTime) {
             this.parsingTime = parsingTime;
             return this;
         }
         
+        // ========================================================================
+        // Build Method
+        // ========================================================================
+        
         /**
-         * Builds a FailureInfo instance with the configured values.
+         * Builds a new FailureInfo instance with the configured values.
          * 
-         * @return a new FailureInfo instance
+         * @return a new FailureInfo instance with all specified values
          */
         public FailureInfo build() {
             return new FailureInfo(scenarioName, failedStepText, stackTrace,
                                  sourceFilePath, lineNumber,
                                  stepDefinitionInfo, gherkinScenarioInfo,
-                                 stepDefinitionMethod, gherkinScenario,
-                                 expectedValue, actualValue, assertionType,
-                                 errorMessage, parsingTime);
-        }
-        
-        /**
-         * Builds a formatted Gherkin scenario text from GherkinScenarioInfo.
-         * 
-         * @param scenarioInfo The scenario information
-         * @return Formatted scenario text
-         */
-        private String buildGherkinScenarioText(GherkinScenarioInfo scenarioInfo) {
-            StringBuilder scenarioText = new StringBuilder();
-            
-            // Add feature name
-            scenarioText.append("Feature: ").append(scenarioInfo.getFeatureName()).append("\n\n");
-            
-            // Add tags if present
-            if (!scenarioInfo.getTags().isEmpty()) {
-                scenarioText.append(String.join(" ", scenarioInfo.getTags())).append("\n");
-            }
-            
-            // Add scenario name
-            scenarioText.append("Scenario: ").append(scenarioInfo.getScenarioName()).append("\n");
-            
-            // Add steps
-            for (String step : scenarioInfo.getSteps()) {
-                scenarioText.append("  ").append(step).append("\n");
-            }
-            
-            return scenarioText.toString();
+                                 expectedValue, actualValue, errorMessage, parsingTime);
         }
     }
 } 

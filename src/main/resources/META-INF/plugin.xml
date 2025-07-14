@@ -15,10 +15,14 @@
     <!-- <depends>org.jetbrains.plugins.cucumber.java</depends> -->
 
     <extensions defaultExtensionNs="com.intellij">
+        <!-- Custom Icon -->
+        <icon path="/icons/triagemate_logo.png" id="TriageMate.Icon"/>
+        
         <!-- Tool Window -->
-        <toolWindow id="TriagePanel" 
+        <toolWindow id="AI Assistant"
+                   name=""
                    secondary="false" 
-                   icon="AllIcons.General.Information" 
+                   icon="icons/logo_16.png" 
                    anchor="right" 
                    factoryClass="com.triagemate.ui.TriagePanelToolWindowFactory"/>
 

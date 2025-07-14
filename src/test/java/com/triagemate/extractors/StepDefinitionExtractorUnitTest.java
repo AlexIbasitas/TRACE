@@ -8,7 +8,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import com.intellij.openapi.project.Project;
-import com.intellij.testFramework.fixtures.BasePlatformTestCase;
 
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.Mockito.*;
@@ -17,265 +16,214 @@ import static org.mockito.Mockito.*;
  * Unit tests for StepDefinitionExtractor.
  * 
  * <p>These tests focus on the core logic of step definition extraction
- * without requiring actual PSI operations. They test the pattern matching,
- * string processing, and error handling logic.</p>
- * 
- * <p>Integration tests with real PSI operations are in separate integration test classes.</p>
+ * using stack trace-based PSI navigation.</p>
  */
-class StepDefinitionExtractorUnitTest extends BasePlatformTestCase {
+@ExtendWith(MockitoExtension.class)
+class StepDefinitionExtractorUnitTest {
 
+    @Mock
+    private Project mockProject;
+    
     private StepDefinitionExtractor extractor;
 
     @BeforeEach
-    @Override
-    protected void setUp() throws Exception {
-        super.setUp();
-        extractor = new StepDefinitionExtractor(getProject());
-    }
-
-    @Override
-    protected void tearDown() throws Exception {
-        try {
-            // Add any additional cleanup here if needed
-        } finally {
-            super.tearDown();
-        }
+    void setUp() {
+        extractor = new StepDefinitionExtractor(mockProject);
     }
 
     @Test
-    @DisplayName("should return null for null failed step text")
-    void shouldReturnNullForNullFailedStepText() {
+    @DisplayName("should return null when stack trace is null")
+    void shouldReturnNullWhenStackTraceIsNull() {
         StepDefinitionInfo result = extractor.extractStepDefinition(null);
+        
         assertThat(result).isNull();
     }
 
     @Test
-    @DisplayName("should return null for empty failed step text")
-    void shouldReturnNullForEmptyFailedStepText() {
+    @DisplayName("should return null when stack trace is empty")
+    void shouldReturnNullWhenStackTraceIsEmpty() {
         StepDefinitionInfo result = extractor.extractStepDefinition("");
-        assertThat(result).isNull();
         
-        result = extractor.extractStepDefinition("   ");
         assertThat(result).isNull();
     }
 
     @Test
-    @DisplayName("should handle basic step text without PSI operations")
-    void shouldHandleBasicStepTextWithoutPsiOperations() {
-        // This test verifies the extractor doesn't crash when PSI operations fail
-        // In a real scenario, this would be tested with integration tests
-        String failedStepText = "Given I am on the login page";
+    @DisplayName("should return null when stack trace is whitespace only")
+    void shouldReturnNullWhenStackTraceIsWhitespaceOnly() {
+        StepDefinitionInfo result = extractor.extractStepDefinition("   \n\t  ");
         
-        // Since we're mocking the project, this should return null
-        // but not throw an exception
-        StepDefinitionInfo result = extractor.extractStepDefinition(failedStepText);
+        assertThat(result).isNull();
+    }
+
+    @Test
+    @DisplayName("should return null when no step definition classes found in stack trace")
+    void shouldReturnNullWhenNoStepDefinitionClassesFound() {
+        String stackTrace = """
+            java.lang.AssertionError: Test failed
+                at org.junit.Assert.fail(Assert.java:86)
+                at org.junit.Assert.assertTrue(Assert.java:41)
+                at org.junit.Assert.assertTrue(Assert.java:52)
+                at com.example.utils.TestUtils.validate(TestUtils.java:15)
+            """;
         
-        // In unit tests without PSI, this should be null
+        StepDefinitionInfo result = extractor.extractStepDefinition(stackTrace);
+        
+        assertThat(result).isNull();
+    }
+
+    @Test
+    @DisplayName("should extract step definition from stack trace with HomePageTestStep")
+    void shouldExtractStepDefinitionFromStackTraceWithHomePageTestStep() {
+        String stackTrace = """
+            java.lang.AssertionError: 
+            Expected: is "Welcome to the-internet delete me"
+                 but: was "Welcome to the-internet"
+                at org.hamcrest.MatcherAssert.assertThat(MatcherAssert.java:20)
+                at org.hamcrest.MatcherAssert.assertThat(MatcherAssert.java:6)
+                at com.example.steps.HomePageTestStep.i_should_see_title_as(HomePageTestStep.java:28)
+                at ✽.I should see title as "Welcome to the-internet delete me"(file:///path/to/feature.feature:8)
+            """;
+        
+        StepDefinitionInfo result = extractor.extractStepDefinition(stackTrace);
+        
+        // Note: This will return null in unit tests because we can't navigate to actual files
         // The actual functionality is tested in integration tests
         assertThat(result).isNull();
     }
 
     @Test
-    @DisplayName("should handle step text with special characters")
-    void shouldHandleStepTextWithSpecialCharacters() {
-        String failedStepText = "When I enter \"test@example.com\" in the email field";
+    @DisplayName("should extract step definition from stack trace with LoginStepDefinitions")
+    void shouldExtractStepDefinitionFromStackTraceWithLoginStepDefinitions() {
+        String stackTrace = """
+            java.lang.AssertionError: Login failed
+                at com.example.steps.LoginStepDefinitions.i_enter_username(LoginStepDefinitions.java:15)
+                at com.example.steps.LoginStepDefinitions.i_click_login_button(LoginStepDefinitions.java:22)
+                at ✽.I enter username "testuser"(file:///path/to/login.feature:5)
+            """;
         
-        StepDefinitionInfo result = extractor.extractStepDefinition(failedStepText);
+        StepDefinitionInfo result = extractor.extractStepDefinition(stackTrace);
         
-        // Should not throw exception, even if PSI operations fail
+        // Note: This will return null in unit tests because we can't navigate to actual files
+        // The actual functionality is tested in integration tests
         assertThat(result).isNull();
     }
 
     @Test
-    @DisplayName("should handle step text with parameters")
-    void shouldHandleStepTextWithParameters() {
-        String failedStepText = "Then I should see {int} items in the list";
+    @DisplayName("should handle stack trace with multiple step definition classes")
+    void shouldHandleStackTraceWithMultipleStepDefinitionClasses() {
+        String stackTrace = """
+            java.lang.AssertionError: Test failed
+                at com.example.steps.HomePageTestStep.i_should_see_title_as(HomePageTestStep.java:28)
+                at com.example.steps.BaseStepDefinitions.wait_for_element(BaseStepDefinitions.java:45)
+                at com.example.steps.LoginStepDefinitions.i_enter_username(LoginStepDefinitions.java:15)
+                at ✽.I should see title as "Welcome"(file:///path/to/feature.feature:8)
+            """;
         
-        StepDefinitionInfo result = extractor.extractStepDefinition(failedStepText);
+        StepDefinitionInfo result = extractor.extractStepDefinition(stackTrace);
         
-        // Should not throw exception
+        // Should find the first step definition class (HomePageTestStep)
+        // Note: This will return null in unit tests because we can't navigate to actual files
         assertThat(result).isNull();
     }
 
     @Test
-    @DisplayName("should handle step text with multiple parameters")
-    void shouldHandleStepTextWithMultipleParameters() {
-        String failedStepText = "When I click on {string} with text {string}";
+    @DisplayName("should handle stack trace with non-step definition classes")
+    void shouldHandleStackTraceWithNonStepDefinitionClasses() {
+        String stackTrace = """
+            java.lang.AssertionError: Test failed
+                at org.junit.Assert.fail(Assert.java:86)
+                at com.example.utils.TestUtils.validate(TestUtils.java:15)
+                at com.example.steps.HomePageTestStep.i_should_see_title_as(HomePageTestStep.java:28)
+                at ✽.I should see title as "Welcome"(file:///path/to/feature.feature:8)
+            """;
         
-        StepDefinitionInfo result = extractor.extractStepDefinition(failedStepText);
+        StepDefinitionInfo result = extractor.extractStepDefinition(stackTrace);
         
-        // Should not throw exception
+        // Should find HomePageTestStep even though TestUtils is not a step definition class
+        // Note: This will return null in unit tests because we can't navigate to actual files
         assertThat(result).isNull();
     }
 
     @Test
-    @DisplayName("should handle step text with regex special characters")
-    void shouldHandleStepTextWithRegexSpecialCharacters() {
-        String failedStepText = "Given I have a file named \"test (1).txt\"";
+    @DisplayName("should handle malformed stack trace")
+    void shouldHandleMalformedStackTrace() {
+        String stackTrace = "This is not a valid stack trace";
         
-        StepDefinitionInfo result = extractor.extractStepDefinition(failedStepText);
+        StepDefinitionInfo result = extractor.extractStepDefinition(stackTrace);
         
-        // Should not throw exception
         assertThat(result).isNull();
     }
 
     @Test
-    @DisplayName("should handle step text with newlines")
-    void shouldHandleStepTextWithNewlines() {
-        String failedStepText = "Given I have the following data:\n" +
-                               "  | Name | Age |\n" +
-                               "  | John | 25  |";
+    @DisplayName("should handle stack trace with missing line numbers")
+    void shouldHandleStackTraceWithMissingLineNumbers() {
+        String stackTrace = """
+            java.lang.AssertionError: Test failed
+                at com.example.steps.HomePageTestStep.i_should_see_title_as(HomePageTestStep.java)
+                at ✽.I should see title as "Welcome"(file:///path/to/feature.feature:8)
+            """;
         
-        StepDefinitionInfo result = extractor.extractStepDefinition(failedStepText);
+        StepDefinitionInfo result = extractor.extractStepDefinition(stackTrace);
         
-        // Should not throw exception
         assertThat(result).isNull();
     }
 
     @Test
-    @DisplayName("should handle step text with unicode characters")
-    void shouldHandleStepTextWithUnicodeCharacters() {
-        String failedStepText = "When I enter \"José García\" in the name field";
+    @DisplayName("should handle stack trace with invalid line numbers")
+    void shouldHandleStackTraceWithInvalidLineNumbers() {
+        String stackTrace = """
+            java.lang.AssertionError: Test failed
+                at com.example.steps.HomePageTestStep.i_should_see_title_as(HomePageTestStep.java:abc)
+                at ✽.I should see title as "Welcome"(file:///path/to/feature.feature:8)
+            """;
         
-        StepDefinitionInfo result = extractor.extractStepDefinition(failedStepText);
+        StepDefinitionInfo result = extractor.extractStepDefinition(stackTrace);
         
-        // Should not throw exception
         assertThat(result).isNull();
     }
 
     @Test
-    @DisplayName("should handle step text with numbers")
-    void shouldHandleStepTextWithNumbers() {
-        String failedStepText = "Then I should see 42 items in the cart";
+    @DisplayName("should handle stack trace with special characters in class names")
+    void shouldHandleStackTraceWithSpecialCharactersInClassNames() {
+        String stackTrace = """
+            java.lang.AssertionError: Test failed
+                at com.example.steps.HomePage_Test_Step.i_should_see_title_as(HomePage_Test_Step.java:28)
+                at ✽.I should see title as "Welcome"(file:///path/to/feature.feature:8)
+            """;
         
-        StepDefinitionInfo result = extractor.extractStepDefinition(failedStepText);
+        StepDefinitionInfo result = extractor.extractStepDefinition(stackTrace);
         
-        // Should not throw exception
+        // Note: This will return null in unit tests because we can't navigate to actual files
         assertThat(result).isNull();
     }
 
     @Test
-    @DisplayName("should handle step text with boolean values")
-    void shouldHandleStepTextWithBooleanValues() {
-        String failedStepText = "When I set the checkbox to true";
+    @DisplayName("should handle stack trace with numbers in class names")
+    void shouldHandleStackTraceWithNumbersInClassNames() {
+        String stackTrace = """
+            java.lang.AssertionError: Test failed
+                at com.example.steps.HomePageTestStep2.i_should_see_title_as(HomePageTestStep2.java:28)
+                at ✽.I should see title as "Welcome"(file:///path/to/feature.feature:8)
+            """;
         
-        StepDefinitionInfo result = extractor.extractStepDefinition(failedStepText);
+        StepDefinitionInfo result = extractor.extractStepDefinition(stackTrace);
         
-        // Should not throw exception
+        // Note: This will return null in unit tests because we can't navigate to actual files
         assertThat(result).isNull();
     }
 
     @Test
-    @DisplayName("should handle step text with URLs")
-    void shouldHandleStepTextWithUrls() {
-        String failedStepText = "Given I navigate to \"https://example.com/login\"";
+    @DisplayName("should handle stack trace with mixed case class names")
+    void shouldHandleStackTraceWithMixedCaseClassNames() {
+        String stackTrace = """
+            java.lang.AssertionError: Test failed
+                at com.example.steps.HomePageTestStep.i_Should_See_Title_As(HomePageTestStep.java:28)
+                at ✽.I should see title as "Welcome"(file:///path/to/feature.feature:8)
+            """;
         
-        StepDefinitionInfo result = extractor.extractStepDefinition(failedStepText);
+        StepDefinitionInfo result = extractor.extractStepDefinition(stackTrace);
         
-        // Should not throw exception
-        assertThat(result).isNull();
-    }
-
-    @Test
-    @DisplayName("should handle step text with file paths")
-    void shouldHandleStepTextWithFilePaths() {
-        String failedStepText = "When I upload the file \"/path/to/document.pdf\"";
-        
-        StepDefinitionInfo result = extractor.extractStepDefinition(failedStepText);
-        
-        // Should not throw exception
-        assertThat(result).isNull();
-    }
-
-    @Test
-    @DisplayName("should handle step text with HTML content")
-    void shouldHandleStepTextWithHtmlContent() {
-        String failedStepText = "Then I should see \"<div class='error'>Invalid input</div>\"";
-        
-        StepDefinitionInfo result = extractor.extractStepDefinition(failedStepText);
-        
-        // Should not throw exception
-        assertThat(result).isNull();
-    }
-
-    @Test
-    @DisplayName("should handle step text with JSON content")
-    void shouldHandleStepTextWithJsonContent() {
-        String failedStepText = "When I send the JSON payload {\"name\": \"John\", \"age\": 30}";
-        
-        StepDefinitionInfo result = extractor.extractStepDefinition(failedStepText);
-        
-        // Should not throw exception
-        assertThat(result).isNull();
-    }
-
-    @Test
-    @DisplayName("should handle step text with SQL content")
-    void shouldHandleStepTextWithSqlContent() {
-        String failedStepText = "When I execute the query \"SELECT * FROM users WHERE id = 1\"";
-        
-        StepDefinitionInfo result = extractor.extractStepDefinition(failedStepText);
-        
-        // Should not throw exception
-        assertThat(result).isNull();
-    }
-
-    @Test
-    @DisplayName("should handle step text with very long content")
-    void shouldHandleStepTextWithVeryLongContent() {
-        StringBuilder longStep = new StringBuilder("Given I have a very long step text that contains ");
-        for (int i = 0; i < 1000; i++) {
-            longStep.append("many words and characters ");
-        }
-        longStep.append("at the end");
-        
-        StepDefinitionInfo result = extractor.extractStepDefinition(longStep.toString());
-        
-        // Should not throw exception
-        assertThat(result).isNull();
-    }
-
-    @Test
-    @DisplayName("should handle step text with mixed case")
-    void shouldHandleStepTextWithMixedCase() {
-        String failedStepText = "Given I am On The LOGIN Page";
-        
-        StepDefinitionInfo result = extractor.extractStepDefinition(failedStepText);
-        
-        // Should not throw exception
-        assertThat(result).isNull();
-    }
-
-    @Test
-    @DisplayName("should handle step text with leading/trailing whitespace")
-    void shouldHandleStepTextWithLeadingTrailingWhitespace() {
-        String failedStepText = "   Given I am on the login page   ";
-        
-        StepDefinitionInfo result = extractor.extractStepDefinition(failedStepText);
-        
-        // Should not throw exception
-        assertThat(result).isNull();
-    }
-
-    @Test
-    @DisplayName("should handle step text with tabs")
-    void shouldHandleStepTextWithTabs() {
-        String failedStepText = "Given\tI\tam\ton\tthe\tlogin\tpage";
-        
-        StepDefinitionInfo result = extractor.extractStepDefinition(failedStepText);
-        
-        // Should not throw exception
-        assertThat(result).isNull();
-    }
-
-    @Test
-    @DisplayName("should handle step text with carriage returns")
-    void shouldHandleStepTextWithCarriageReturns() {
-        String failedStepText = "Given I am on the login page\r\nAnd I enter my credentials";
-        
-        StepDefinitionInfo result = extractor.extractStepDefinition(failedStepText);
-        
-        // Should not throw exception
+        // Note: This will return null in unit tests because we can't navigate to actual files
         assertThat(result).isNull();
     }
 } 

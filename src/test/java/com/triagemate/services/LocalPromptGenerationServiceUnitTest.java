@@ -35,7 +35,6 @@ class LocalPromptGenerationServiceUnitTest {
             .withScenarioName("Login Test")
             .withFailedStepText("When user enters credentials")
             .withErrorMessage("Element not found")
-            .withAssertionType("WEBDRIVER_ERROR")
             .build();
 
         // Act
@@ -45,10 +44,18 @@ class LocalPromptGenerationServiceUnitTest {
         assertNotNull(prompt);
         assertTrue(prompt.contains("Login Test"));
         assertTrue(prompt.contains("When user enters credentials"));
-        assertTrue(prompt.contains("Element not found"));
-        assertTrue(prompt.contains("WEBDRIVER_ERROR"));
-        assertTrue(prompt.contains("Comprehensive Test Failure Analysis"));
-        assertTrue(prompt.contains("Root Cause Analysis"));
+        // Note: Error message and assertion type are no longer included in the optimized prompt
+        assertTrue(prompt.contains("### Instruction ###"));
+        assertTrue(prompt.contains("### Test Failure Context ###"));
+        assertTrue(prompt.contains("### Error Details ###"));
+        assertTrue(prompt.contains("### Code Context ###"));
+        assertTrue(prompt.contains("### Analysis Request ###"));
+        assertTrue(prompt.contains("Failure Analysis"));
+        assertTrue(prompt.contains("Technical Details"));
+        assertTrue(prompt.contains("Recommended Actions"));
+        // Conditional sections should not appear for minimal data
+        assertFalse(prompt.contains("### Gherkin Scenario ###"));
+        assertFalse(prompt.contains("### Step Definition ###"));
     }
 
     @Test
@@ -82,7 +89,6 @@ class LocalPromptGenerationServiceUnitTest {
             .withGherkinScenarioInfo(scenarioInfo)
             .withExpectedValue("true")
             .withActualValue("false")
-            .withAssertionType("WEBDRIVER_ERROR")
             .withErrorMessage("Unable to locate element")
             .withParsingTime(150L)
             .build();
@@ -92,16 +98,32 @@ class LocalPromptGenerationServiceUnitTest {
 
         // Assert
         assertNotNull(prompt);
-        assertTrue(prompt.contains("Comprehensive Test Failure Analysis"));
-        assertTrue(prompt.contains("Login Feature"));
+        assertTrue(prompt.contains("### Instruction ###"));
+        assertTrue(prompt.contains("### Test Failure Context ###"));
         assertTrue(prompt.contains("Successful Login"));
-        assertTrue(prompt.contains("@smoke @login"));
+        assertTrue(prompt.contains("When user enters credentials"));
+        assertTrue(prompt.contains("### Error Details ###"));
+        assertTrue(prompt.contains("**Expected Value:** true"));
+        assertTrue(prompt.contains("**Actual Value:** false"));
+        assertTrue(prompt.contains("### Gherkin Scenario ###"));
+        assertTrue(prompt.contains("**Feature:** Login Feature"));
+        assertTrue(prompt.contains("**Scenario:** Successful Login"));
+        assertTrue(prompt.contains("@smoke, @login"));
         assertTrue(prompt.contains("Given user is on login page"));
-        assertTrue(prompt.contains("LoginStepDefinitions"));
-        assertTrue(prompt.contains("userEntersCredentials"));
+        assertTrue(prompt.contains("Then user should be logged in"));
+        assertTrue(prompt.contains("### Step Definition ###"));
+        assertTrue(prompt.contains("**Class:** LoginStepDefinitions"));
+        assertTrue(prompt.contains("**Method:** userEntersCredentials"));
+        assertTrue(prompt.contains("**Pattern:** user enters credentials"));
         assertTrue(prompt.contains("username, password"));
-        assertTrue(prompt.contains("Unable to locate element"));
-        assertTrue(prompt.contains("150ms"));
+        assertTrue(prompt.contains("**Implementation:**"));
+        assertTrue(prompt.contains("```java"));
+        assertTrue(prompt.contains("### Code Context ###"));
+        assertTrue(prompt.contains("LoginStepDefinitions.java"));
+        assertTrue(prompt.contains("### Analysis Request ###"));
+        assertTrue(prompt.contains("Failure Analysis"));
+        assertTrue(prompt.contains("Technical Details"));
+        assertTrue(prompt.contains("Recommended Actions"));
     }
 
     @Test
@@ -121,14 +143,17 @@ class LocalPromptGenerationServiceUnitTest {
 
         // Assert
         assertNotNull(prompt);
-        assertTrue(prompt.contains("Test Failure Summary"));
+        assertTrue(prompt.contains("### Instruction ###"));
+        assertTrue(prompt.contains("### Context ###"));
+        assertTrue(prompt.contains("### Output Format ###"));
         assertTrue(prompt.contains("Login Test"));
         assertTrue(prompt.contains("When user enters credentials"));
         assertTrue(prompt.contains("Element not found"));
         assertTrue(prompt.contains("**Expected:** true"));
         assertTrue(prompt.contains("**Actual:** false"));
-        assertTrue(prompt.contains("Likely cause of the failure"));
-        assertTrue(prompt.contains("Suggested fix"));
+        assertTrue(prompt.contains("**Issue:**"));
+        assertTrue(prompt.contains("**Likely Cause:**"));
+        assertTrue(prompt.contains("**Suggested Fix:**"));
     }
 
     @Test
@@ -149,7 +174,6 @@ class LocalPromptGenerationServiceUnitTest {
             .withErrorMessage("JUnit ComparisonFailure: expected:<true> but was:<false>")
             .withExpectedValue("true")
             .withActualValue("false")
-            .withAssertionType("JUNIT_COMPARISON")
             .build();
 
         // Act
@@ -157,25 +181,34 @@ class LocalPromptGenerationServiceUnitTest {
 
         // Assert
         assertNotNull(prompt);
+        assertTrue(prompt.contains("### Error Details ###"));
         assertTrue(prompt.contains("**Expected Value:** true"));
         assertTrue(prompt.contains("**Actual Value:** false"));
-        assertTrue(prompt.contains("JUNIT_COMPARISON"));
-        assertTrue(prompt.contains("JUnit ComparisonFailure"));
+        // Note: Error message is no longer included in the optimized prompt structure
     }
 
     @Test
-    @DisplayName("should generate prompt with stack trace")
-    void shouldGeneratePromptWithStackTrace() {
+    @DisplayName("should generate prompt with cleaned stack trace")
+    void shouldGeneratePromptWithCleanedStackTrace() {
         // Arrange
-        String stackTrace = "org.openqa.selenium.NoSuchElementException: Unable to locate element\n" +
-                           "    at com.example.MyTest.testSomething(MyTest.java:42)\n" +
-                           "    at org.openqa.selenium.remote.RemoteWebDriver.findElement(RemoteWebDriver.java:315)";
+        String rawStackTrace = "=== SOURCE INFORMATION ===\n" +
+                              "Primary source: stack trace\n" +
+                              "Test name: I should see title\n" +
+                              "Test location: file:///path/to/test.feature:8\n" +
+                              "=== ERROR MESSAGE ===\n" +
+                              "Step failed\n" +
+                              "=== PRIMARY OUTPUT ===\n" +
+                              "java.lang.AssertionError: \n" +
+                              "Expected: is \"Welcome to the-internet delete me\"\n" +
+                              "     but: was \"Welcome to the-internet\"\n" +
+                              "\tat org.hamcrest.MatcherAssert.assertThat(MatcherAssert.java:20)\n" +
+                              "\tat com.example.steps.HomePageTestStep.i_should_see_title_as(HomePageTestStep.java:28)";
 
         FailureInfo failureInfo = new FailureInfo.Builder()
             .withScenarioName("Element Test")
             .withFailedStepText("When I click the button")
             .withErrorMessage("Unable to locate element")
-            .withStackTrace(stackTrace)
+            .withStackTrace(rawStackTrace)
             .build();
 
         // Act
@@ -183,10 +216,19 @@ class LocalPromptGenerationServiceUnitTest {
 
         // Assert
         assertNotNull(prompt);
-        assertTrue(prompt.contains("Stack Trace:"));
+        assertTrue(prompt.contains("### Error Details ###"));
+        assertTrue(prompt.contains("**Stack Trace:**"));
         assertTrue(prompt.contains("```"));
-        assertTrue(prompt.contains("org.openqa.selenium.NoSuchElementException"));
-        assertTrue(prompt.contains("com.example.MyTest.testSomething"));
+        assertTrue(prompt.contains("java.lang.AssertionError"));
+        assertTrue(prompt.contains("com.example.steps.HomePageTestStep.i_should_see_title_as"));
+        // Should not contain the metadata that was cleaned
+        assertFalse(prompt.contains("=== SOURCE INFORMATION ==="));
+        assertFalse(prompt.contains("Primary source: stack trace"));
+        assertFalse(prompt.contains("Test name:"));
+        assertFalse(prompt.contains("Test location:"));
+        assertFalse(prompt.contains("=== ERROR MESSAGE ==="));
+        assertFalse(prompt.contains("Step failed"));
+        assertFalse(prompt.contains("=== PRIMARY OUTPUT ==="));
     }
 
     @Test
@@ -216,13 +258,16 @@ class LocalPromptGenerationServiceUnitTest {
 
         // Assert
         assertNotNull(prompt);
-        assertTrue(prompt.contains("MyStepDefinitions"));
-        assertTrue(prompt.contains("iClickTheButton"));
-        assertTrue(prompt.contains("I click the button"));
+        assertTrue(prompt.contains("### Step Definition ###"));
+        assertTrue(prompt.contains("**Class:** MyStepDefinitions"));
+        assertTrue(prompt.contains("**Method:** iClickTheButton"));
+        assertTrue(prompt.contains("**Pattern:** I click the button"));
         assertTrue(prompt.contains("buttonName"));
         assertTrue(prompt.contains("@When(\"I click the {string} button\")"));
-        assertTrue(prompt.contains("Method Implementation:"));
+        assertTrue(prompt.contains("**Implementation:**"));
         assertTrue(prompt.contains("```java"));
+        assertTrue(prompt.contains("### Code Context ###"));
+        assertTrue(prompt.contains("MyStepDefinitions.java"));
     }
 
     @Test
@@ -251,12 +296,16 @@ class LocalPromptGenerationServiceUnitTest {
 
         // Assert
         assertNotNull(prompt);
-        assertTrue(prompt.contains("Shopping Cart Feature"));
+        assertTrue(prompt.contains("### Test Failure Context ###"));
         assertTrue(prompt.contains("Add Item to Cart"));
-        assertTrue(prompt.contains("@shopping @regression"));
-        assertTrue(prompt.contains("Given I am on the product page"));
         assertTrue(prompt.contains("When I click add to cart"));
+        assertTrue(prompt.contains("### Gherkin Scenario ###"));
+        assertTrue(prompt.contains("**Feature:** Shopping Cart Feature"));
+        assertTrue(prompt.contains("**Scenario:** Add Item to Cart"));
+        assertTrue(prompt.contains("@shopping, @regression"));
+        assertTrue(prompt.contains("Given I am on the product page"));
         assertTrue(prompt.contains("Then the item should be in my cart"));
+        assertTrue(prompt.contains("```gherkin"));
     }
 
     @Test
@@ -274,24 +323,29 @@ class LocalPromptGenerationServiceUnitTest {
 
         // Assert
         assertNotNull(prompt);
+        assertTrue(prompt.contains("### Test Failure Context ###"));
         assertTrue(prompt.contains("Basic Test"));
         assertTrue(prompt.contains("When something happens"));
-        assertTrue(prompt.contains("Something went wrong"));
+        assertTrue(prompt.contains("### Error Details ###"));
+        // Note: Error message is no longer included in the optimized prompt structure
+        // Conditional sections should not appear when data is missing
+        assertFalse(prompt.contains("### Gherkin Scenario ###"));
+        assertFalse(prompt.contains("### Step Definition ###"));
         // Should not contain sections for missing data
-        assertFalse(prompt.contains("Expected Value:"));
-        assertFalse(prompt.contains("Actual Value:"));
-        assertFalse(prompt.contains("Step Definition Class:"));
+        assertFalse(prompt.contains("**Expected Value:**"));
+        assertFalse(prompt.contains("**Actual Value:**"));
     }
 
     @Test
-    @DisplayName("should include parsing metadata in detailed prompt")
-    void shouldIncludeParsingMetadataInDetailedPrompt() {
+    @DisplayName("should extract filename from full path")
+    void shouldExtractFilenameFromFullPath() {
         // Arrange
         FailureInfo failureInfo = new FailureInfo.Builder()
             .withScenarioName("Test Scenario")
             .withFailedStepText("When something fails")
             .withErrorMessage("Test failed")
-            .withParsingTime(250L)
+            .withSourceFilePath("/Users/alexibasitas/Projects/TriageMate/src/test/java/MyTest.java")
+            .withLineNumber(42)
             .build();
 
         // Act
@@ -299,6 +353,10 @@ class LocalPromptGenerationServiceUnitTest {
 
         // Assert
         assertNotNull(prompt);
-        assertTrue(prompt.contains("**Parsing Time:** 250ms"));
+        assertTrue(prompt.contains("### Code Context ###"));
+        assertTrue(prompt.contains("**Source File:** MyTest.java"));
+        assertTrue(prompt.contains("**Line Number:** 42"));
+        // Should not contain the full path
+        assertFalse(prompt.contains("/Users/alexibasitas/Projects/TriageMate/src/test/java/MyTest.java"));
     }
 } 

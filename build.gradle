@@ -48,10 +48,11 @@ intellij {
     type = 'IU' // IntelliJ IDEA Ultimate Edition
     plugins = [
         'java'
-        // 'CucumberJava' // Temporarily disabled - will be added back when needed
     ]
     instrumentCode = true // Required for proper IntelliJ Platform testing
 }
+
+
 
 patchPluginXml {
     sinceBuild = '241'

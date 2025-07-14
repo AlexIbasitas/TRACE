@@ -1,97 +1,315 @@
 package com.triagemate.listeners;
 
-import com.intellij.execution.testframework.sm.runner.SMTRunnerEventsAdapter;
+import com.intellij.execution.testframework.sm.runner.SMTRunnerEventsListener;
 import com.intellij.execution.testframework.sm.runner.SMTestProxy;
-import com.intellij.openapi.components.ServiceManager;
 import com.intellij.openapi.project.Project;
-import com.intellij.openapi.application.ApplicationManager;
+import com.intellij.openapi.diagnostic.Logger;
+import com.triagemate.extractors.GherkinScenarioExtractor;
+import com.triagemate.extractors.StackTraceExtractor;
+import com.triagemate.extractors.StepDefinitionExtractor;
 import com.triagemate.models.FailureInfo;
 import com.triagemate.models.StepDefinitionInfo;
 import com.triagemate.models.GherkinScenarioInfo;
-import com.triagemate.extractors.StackTraceExtractor;
-import com.triagemate.extractors.StepDefinitionExtractor;
-import com.triagemate.extractors.GherkinScenarioExtractor;
-import com.triagemate.services.BackendCommunicationService;
-import com.triagemate.services.PromptGenerationService;
+import com.triagemate.services.LocalPromptGenerationService;
 import com.triagemate.ui.TriagePanelView;
-import com.triagemate.ui.TriagePanelToolWindowFactory;
-import com.triagemate.listeners.TestOutputCaptureListener;
+
+import java.io.ByteArrayOutputStream;
+import java.io.PrintStream;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 
 /**
- * Listener for Cucumber test execution events.
- * Detects test failures and triggers the extraction and processing pipeline.
+ * Listener for Cucumber test execution events that captures test failures
+ * and generates AI prompts for analysis.
+ * 
+ * <p>This listener implements the IntelliJ test runner events interface to
+ * intercept test execution and extract failure information for Cucumber tests.
+ * It coordinates with various extractors to gather comprehensive failure context
+ * and updates the TriagePanel UI with the results.</p>
+ * 
+ * <p>The listener supports both unit testing (with null project) and production
+ * usage (with project context) through different constructors.</p>
+ * 
+ * @author TriageMate Team
+ * @since 1.0.0
  */
-public class CucumberTestExecutionListener extends SMTRunnerEventsAdapter {
+public class CucumberTestExecutionListener implements SMTRunnerEventsListener {
+    
+    private static final Logger LOG = Logger.getInstance(CucumberTestExecutionListener.class);
+    
     private final Project project;
     private final StackTraceExtractor stackTraceExtractor;
     private final StepDefinitionExtractor stepDefinitionExtractor;
     private final GherkinScenarioExtractor gherkinScenarioExtractor;
-    private final PromptGenerationService promptGenerationService;
+    private final LocalPromptGenerationService promptGenerationService;
+    
+    // Stream capture for test output analysis
+    private static final ConcurrentMap<SMTestProxy, ByteArrayOutputStream> testOutputStreams = new ConcurrentHashMap<>();
+    private static final ConcurrentMap<SMTestProxy, ByteArrayOutputStream> testErrorStreams = new ConcurrentHashMap<>();
+    private static PrintStream originalOut;
+    private static PrintStream originalErr;
 
     /**
      * Default constructor for IntelliJ plugin registration.
-     * IntelliJ creates listeners using the default constructor.
+     * Creates a listener without project context for basic event handling.
      */
     public CucumberTestExecutionListener() {
-        System.out.println("TriageMate: CucumberTestExecutionListener default constructor called - plugin registration working!");
         this.project = null;
         this.stackTraceExtractor = null;
         this.stepDefinitionExtractor = null;
         this.gherkinScenarioExtractor = null;
-        this.promptGenerationService = null;
+        this.promptGenerationService = new LocalPromptGenerationService();
     }
 
     /**
-     * Constructor for CucumberTestExecutionListener with project context.
-     * Used for testing and manual instantiation.
-     *
-     * @param project The current IntelliJ project (can be null for testing)
+     * Constructor with project context for testing and production usage.
+     * Initializes extractors for comprehensive failure analysis.
+     * 
+     * @param project The IntelliJ project context for file system access
      */
     public CucumberTestExecutionListener(Project project) {
         this.project = project;
+        this.promptGenerationService = new LocalPromptGenerationService();
         
-        // Initialize extractors with defensive programming
-        this.stackTraceExtractor = project != null ? new StackTraceExtractor(project) : null;
-        this.stepDefinitionExtractor = project != null ? new StepDefinitionExtractor(project) : null;
-        this.gherkinScenarioExtractor = project != null ? new GherkinScenarioExtractor(project) : null;
-        
-        // Get prompt generation service
-        this.promptGenerationService = ServiceManager.getService(PromptGenerationService.class);
+        // Initialize extractors only if project is available
+        if (project != null) {
+            this.stackTraceExtractor = new StackTraceExtractor(project);
+            this.stepDefinitionExtractor = new StepDefinitionExtractor(project);
+            this.gherkinScenarioExtractor = new GherkinScenarioExtractor(project);
+        } else {
+            this.stackTraceExtractor = null;
+            this.stepDefinitionExtractor = null;
+            this.gherkinScenarioExtractor = null;
+        }
     }
 
     /**
-     * Called when a test fails
+     * Captures test output during execution.
+     * Called by the test framework when tests produce output.
      *
-     * @param test The test proxy object representing the failed test
+     * @param test The test proxy object
+     * @param outputLine The output line from the test
      */
+    public void onTestOutput(SMTestProxy test, String outputLine) {
+        if (test != null && outputLine != null) {
+            LOG.debug("Capturing test output for: " + test.getName());
+            TestOutputCaptureListener.captureTestOutput(test, outputLine);
+        }
+    }
+
+    /**
+     * Captures test output with additional context information.
+     * 
+     * @param test The test proxy object
+     * @param outputLine The output line from the test
+     * @param context Additional context information
+     */
+    public void captureTestOutputWithContext(SMTestProxy test, String outputLine, String context) {
+        if (test != null && outputLine != null) {
+            String contextualOutput = "[" + context + "] " + outputLine;
+            TestOutputCaptureListener.captureTestOutput(test, contextualOutput);
+            LOG.debug("Captured contextual output for: " + test.getName() + " - " + context);
+        }
+    }
+
+    /**
+     * Sets up output stream capture for a specific test.
+     * Redirects System.out and System.err to capture test output.
+     * 
+     * @param test The test to capture output for
+     */
+    public static void setupTestOutputCapture(SMTestProxy test) {
+        if (test == null) return;
+        
+        try {
+            // Create capture streams for this test
+            ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+            ByteArrayOutputStream errorStream = new ByteArrayOutputStream();
+            
+            testOutputStreams.put(test, outputStream);
+            testErrorStreams.put(test, errorStream);
+            
+            // Store original streams if not already stored
+            if (originalOut == null) {
+                originalOut = System.out;
+                originalErr = System.err;
+            }
+            
+            // Create custom print streams that capture output
+            PrintStream capturedOut = new PrintStream(outputStream, true) {
+                @Override
+                public void write(byte[] buf, int off, int len) {
+                    super.write(buf, off, len);
+                    originalOut.write(buf, off, len); // Also write to original
+                }
+            };
+            
+            PrintStream capturedErr = new PrintStream(errorStream, true) {
+                @Override
+                public void write(byte[] buf, int off, int len) {
+                    super.write(buf, off, len);
+                    originalErr.write(buf, off, len); // Also write to original
+                }
+            };
+            
+            // Redirect system streams
+            System.setOut(capturedOut);
+            System.setErr(capturedErr);
+            
+            LOG.debug("Output capture started for test: " + test.getName());
+            
+        } catch (Exception e) {
+            LOG.warn("Error setting up output capture: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Captures and stores the output streams for a test.
+     * Restores original streams and cleans up capture resources.
+     * 
+     * @param test The test to capture streams for
+     */
+    public static void captureTestStreams(SMTestProxy test) {
+        if (test == null) return;
+        
+        try {
+            ByteArrayOutputStream outputStream = testOutputStreams.get(test);
+            ByteArrayOutputStream errorStream = testErrorStreams.get(test);
+            
+            if (outputStream != null) {
+                String capturedOutput = outputStream.toString();
+                if (!capturedOutput.trim().isEmpty()) {
+                    TestOutputCaptureListener.captureTestOutput(test, "=== CAPTURED STDOUT ===\n" + capturedOutput);
+                }
+            }
+            
+            if (errorStream != null) {
+                String capturedError = errorStream.toString();
+                if (!capturedError.trim().isEmpty()) {
+                    TestOutputCaptureListener.captureTestOutput(test, "=== CAPTURED STDERR ===\n" + capturedError);
+                }
+            }
+            
+            // Restore original streams
+            if (originalOut != null) {
+                System.setOut(originalOut);
+            }
+            if (originalErr != null) {
+                System.setErr(originalErr);
+            }
+            
+            // Clean up
+            testOutputStreams.remove(test);
+            testErrorStreams.remove(test);
+            
+        } catch (Exception e) {
+            LOG.warn("Error capturing test streams: " + e.getMessage());
+        }
+    }
+
+    // Required interface methods - minimal implementation for unused events
+    @Override
+    public void onTestingStarted(SMTestProxy.SMRootTestProxy root) {
+        // Not needed for our use case
+    }
+
+    @Override
+    public void onTestingFinished(SMTestProxy.SMRootTestProxy root) {
+        // Not needed for our use case
+    }
+
+    @Override
+    public void onTestsCountInSuite(int count) {
+        // Not needed for our use case
+    }
+
+    @Override
+    public void onTestIgnored(SMTestProxy test) {
+        // Not needed for our use case
+    }
+
+    @Override
+    public void onSuiteStarted(SMTestProxy suite) {
+        // Not needed for our use case
+    }
+
+    @Override
+    public void onSuiteFinished(SMTestProxy suite) {
+        // Not needed for our use case
+    }
+
+    @Override
+    public void onSuiteTreeNodeAdded(SMTestProxy test) {
+        // Not needed for our use case
+    }
+
+    @Override
+    public void onCustomProgressTestStarted() {
+        // Not needed for our use case
+    }
+
+    @Override
+    public void onCustomProgressTestFinished() {
+        // Not needed for our use case
+    }
+
+    @Override
+    public void onCustomProgressTestFailed() {
+        // Not needed for our use case
+    }
+
+    @Override
+    public void onCustomProgressTestsCategory(String categoryName, int count) {
+        // Not needed for our use case
+    }
+
+    @Override
+    public void onSuiteTreeStarted(SMTestProxy suite) {
+        // Not needed for our use case
+    }
+
+    @Override
+    public void onTestStarted(SMTestProxy test) {
+        if (test != null) {
+            LOG.debug("Test started: " + test.getName());
+            
+            // Initialize output capture for this test
+            TestOutputCaptureListener.captureTestOutput(test, "=== Test Started ===\n");
+            setupTestOutputCapture(test);
+        }
+    }
+
+    @Override
+    public void onTestFinished(SMTestProxy test) {
+        if (test != null) {
+            LOG.debug("Test finished: " + test.getName() + " (Status: " + test.getMagnitudeInfo() + ")");
+            
+            // Capture any streams before finishing
+            captureTestStreams(test);
+            
+            // Add final output marker
+            TestOutputCaptureListener.captureTestOutput(test, "=== Test Finished ===\n");
+        }
+    }
+
     @Override
     public void onTestFailed(SMTestProxy test) {
-        System.out.println("TriageMate: onTestFailed called for test: " + (test != null ? test.getName() : "null"));
+        LOG.debug("Test failed: " + (test != null ? test.getName() : "null"));
         
-        // Capture test output immediately when test fails
+        // Capture comprehensive test output for failed test
         if (test != null) {
-            TestOutputCaptureListener.captureTestErrorOutput(test);
-            System.out.println("TriageMate: Captured test output for failed test: " + test.getName());
+            TestOutputCaptureListener.captureComprehensiveTestOutput(test);
         }
         
-        // Get the current project if not set
-        Project currentProject = getCurrentProject();
-        if (currentProject == null) {
-            System.out.println("TriageMate: No current project found, skipping");
-            return;
+        // Check if this is a Cucumber test
+        if (isCucumberTest(test)) {
+            LOG.info("Processing Cucumber test failure: " + test.getName());
+            processFailedCucumberTest(test, project);
         }
-        
-        if (!isCucumberTest(test)) {
-            System.out.println("TriageMate: Test is not a Cucumber test, skipping");
-            return;
-        }
-        
-        System.out.println("TriageMate: Processing Cucumber test failure");
-        processFailedCucumberTest(test, currentProject);
     }
 
     /**
-     * Determines if a test is a Cucumber test using proper IntelliJ test framework detection
+     * Determines if a test is a Cucumber test using multiple detection methods.
      *
      * @param test The test proxy to check
      * @return true if the test is a Cucumber test, false otherwise
@@ -101,22 +319,18 @@ public class CucumberTestExecutionListener extends SMTRunnerEventsAdapter {
             return false;
         }
         
-        System.out.println("TriageMate: Checking if test is Cucumber - Name: " + test.getName());
-        
         // Method 1: Check test location (most reliable)
         String testLocation = test.getLocationUrl();
         if (testLocation != null) {
-            System.out.println("TriageMate: Test location: " + testLocation);
-            
             // Check if test is in a feature file
             if (testLocation.contains(".feature") || testLocation.contains("features/")) {
-                System.out.println("TriageMate: Detected Cucumber test via feature file location");
+                LOG.debug("Detected Cucumber test via feature file location");
                 return true;
             }
             
             // Check if test is in a Cucumber runner class
             if (testLocation.contains("Cucumber") || testLocation.contains("cucumber")) {
-                System.out.println("TriageMate: Detected Cucumber test via runner class location");
+                LOG.debug("Detected Cucumber test via runner class location");
                 return true;
             }
         }
@@ -130,7 +344,7 @@ public class CucumberTestExecutionListener extends SMTRunnerEventsAdapter {
                 parentName.contains("Feature:") ||
                 parentName.contains("Scenario:") ||
                 parentName.contains("cucumber.runtime"))) {
-                System.out.println("TriageMate: Detected Cucumber test via parent hierarchy: " + parentName);
+                LOG.debug("Detected Cucumber test via parent hierarchy: " + parentName);
                 return true;
             }
             parent = parent.getParent();
@@ -144,24 +358,27 @@ public class CucumberTestExecutionListener extends SMTRunnerEventsAdapter {
             errorMessage.contains("UndefinedStepException") ||
             errorMessage.contains("AmbiguousStepDefinitionsException") ||
             errorMessage.contains("PendingException"))) {
-            System.out.println("TriageMate: Detected Cucumber test via error message");
+            LOG.debug("Detected Cucumber test via error message");
             return true;
         }
         
-        System.out.println("TriageMate: Test does not appear to be a Cucumber test");
         return false;
     }
 
     /**
-     * Process a failed Cucumber test by extracting relevant information
-     * and generating AI prompts for analysis
+     * Processes a failed Cucumber test by extracting relevant information
+     * and generating AI prompts for analysis.
      *
      * @param test The failed test proxy
      * @param currentProject The current project context
      */
     private void processFailedCucumberTest(SMTestProxy test, Project currentProject) {
         try {
-            System.out.println("TriageMate: Starting to process failed Cucumber test");
+            // Check if we have a valid project for extraction
+            if (currentProject == null) {
+                LOG.warn("Project is null, cannot process test failure");
+                return;
+            }
             
             // Create extractors for this project if not already created
             StackTraceExtractor localStackTraceExtractor = stackTraceExtractor;
@@ -174,35 +391,48 @@ public class CucumberTestExecutionListener extends SMTRunnerEventsAdapter {
             
             // Defensive programming: check if extractors are available
             if (localStackTraceExtractor == null) {
-                System.out.println("TriageMate: StackTraceExtractor is null, cannot process");
+                LOG.warn("StackTraceExtractor is null, cannot process");
                 return;
             }
             
             // Extract basic failure information using the test proxy directly
-            System.out.println("TriageMate: Extracting failure info from test proxy...");
+            LOG.debug("Extracting failure info from test proxy...");
             FailureInfo basicFailureInfo = localStackTraceExtractor.extractFailureInfo(test);
             
             if (basicFailureInfo == null) {
-                System.out.println("TriageMate: Could not extract basic failure info");
-                return; // Could not extract basic failure info
+                LOG.warn("Could not extract basic failure info");
+                return;
             }
             
-            System.out.println("TriageMate: Successfully extracted failure info for scenario: " + basicFailureInfo.getScenarioName());
-
-            // Enhance with step definition information
+            LOG.debug("Successfully extracted failure info for scenario: " + basicFailureInfo.getScenarioName());
+            
+            // Enhance with step definition information using stack trace-based extraction
             StepDefinitionInfo stepDefInfo = null;
             String sourceFilePath = basicFailureInfo.getSourceFilePath();
             int lineNumber = basicFailureInfo.getLineNumber();
+            String stackTrace = basicFailureInfo.getStackTrace();
             
-            if (basicFailureInfo.getFailedStepText() != null) {
+            if (stackTrace != null && basicFailureInfo.getFailedStepText() != null) {
+                LOG.debug("Attempting step definition extraction from stack trace");
+                
+                // Create step definition extractor if needed
+                final StepDefinitionExtractor finalStepDefinitionExtractor;
                 if (localStepDefinitionExtractor == null) {
-                    localStepDefinitionExtractor = new StepDefinitionExtractor(currentProject);
+                    finalStepDefinitionExtractor = new StepDefinitionExtractor(currentProject);
+                } else {
+                    finalStepDefinitionExtractor = localStepDefinitionExtractor;
                 }
-                stepDefInfo = localStepDefinitionExtractor.extractStepDefinition(basicFailureInfo.getFailedStepText());
+                
+                // Use stack trace-based extraction (most reliable approach)
+                stepDefInfo = finalStepDefinitionExtractor.extractStepDefinition(stackTrace);
+                
                 if (stepDefInfo != null) {
+                    LOG.debug("Step definition extraction successful - Method: " + stepDefInfo.getMethodName());
                     // Use step definition info for better source location
                     sourceFilePath = stepDefInfo.getSourceFilePath();
                     lineNumber = stepDefInfo.getLineNumber();
+                } else {
+                    LOG.debug("Step definition extraction failed - no step definition found");
                 }
             }
             
@@ -229,19 +459,16 @@ public class CucumberTestExecutionListener extends SMTRunnerEventsAdapter {
                 .withGherkinScenarioInfo(scenarioInfo)
                 .withExpectedValue(basicFailureInfo.getExpectedValue())
                 .withActualValue(basicFailureInfo.getActualValue())
-                .withAssertionType(basicFailureInfo.getAssertionType())
                 .withErrorMessage(basicFailureInfo.getErrorMessage())
                 .withParsingTime(basicFailureInfo.getParsingTime())
                 .build();
             
             // Notify the TriagePanel about the new failure
-            System.out.println("TriageMate: Notifying TriagePanel about failure");
+            LOG.debug("Notifying TriagePanel about failure");
             notifyTriagePanel(enhancedFailureInfo, currentProject);
             
         } catch (Exception e) {
-            // Log the error - will implement proper logging
-            System.err.println("TriageMate: Error processing failed test: " + e.getMessage());
-            e.printStackTrace();
+            LOG.error("Error processing failed test: " + e.getMessage(), e);
         }
     }
     
@@ -254,28 +481,25 @@ public class CucumberTestExecutionListener extends SMTRunnerEventsAdapter {
      */
     private void notifyTriagePanel(FailureInfo failureInfo, Project currentProject) {
         if (currentProject == null) {
-            System.out.println("TriageMate: Project is null, cannot notify panel");
+            LOG.warn("Project is null, cannot notify panel");
             return;
         }
         
-        System.out.println("TriageMate: Attempting to notify TriagePanel for project: " + currentProject.getName());
+        LOG.debug("Attempting to notify TriagePanel for project: " + currentProject.getName());
         
         // Run on EDT to ensure thread safety
-        ApplicationManager.getApplication().invokeLater(() -> {
+        com.intellij.openapi.application.ApplicationManager.getApplication().invokeLater(() -> {
             try {
                 // Get the TriagePanel instance for this project
                 TriagePanelView triagePanel = getTriagePanelForProject(currentProject);
                 if (triagePanel != null) {
-                    System.out.println("TriageMate: Found TriagePanel, updating with failure info");
+                    LOG.debug("Found TriagePanel, updating with failure info");
                     triagePanel.updateFailure(failureInfo);
                 } else {
-                    System.out.println("TriageMate: TriagePanel not found for project: " + currentProject.getName());
-                    System.out.println("TriageMate: Make sure the TriagePanel tool window is open");
+                    LOG.debug("TriagePanel not found for project: " + currentProject.getName());
                 }
             } catch (Exception e) {
-                // Log error but don't crash the listener
-                System.err.println("TriageMate: Error notifying panel: " + e.getMessage());
-                e.printStackTrace();
+                LOG.error("Error notifying panel: " + e.getMessage(), e);
             }
         });
     }
@@ -287,19 +511,9 @@ public class CucumberTestExecutionListener extends SMTRunnerEventsAdapter {
      * @return The TriagePanel instance or null if not found
      */
     private TriagePanelView getTriagePanelForProject(Project project) {
-        return TriagePanelToolWindowFactory.getPanelForProject(project);
+        return com.triagemate.ui.TriagePanelToolWindowFactory.getPanelForProject(project);
     }
     
-    /**
-     * Displays the generated prompt in the UI.
-     * 
-     * @param prompt The generated prompt to display
-     */
-    private void displayPrompt(String prompt) {
-        // TODO: Implement UI display in Phase 4
-        // This will update the TriagePanel with the generated prompt
-    }
-
     /**
      * Gets the current project from the application context.
      * 
@@ -314,7 +528,7 @@ public class CucumberTestExecutionListener extends SMTRunnerEventsAdapter {
         try {
             return com.intellij.openapi.project.ProjectManager.getInstance().getOpenProjects()[0];
         } catch (Exception e) {
-            System.out.println("TriageMate: Could not get current project: " + e.getMessage());
+            LOG.warn("Could not get current project: " + e.getMessage());
             return null;
         }
     }

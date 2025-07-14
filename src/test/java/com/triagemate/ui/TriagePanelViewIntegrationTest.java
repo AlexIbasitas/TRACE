@@ -8,10 +8,10 @@ import com.triagemate.models.GherkinScenarioInfo;
 import java.util.List;
 
 /**
- * Unit tests for TriagePanelView.
- * Tests the chat interface functionality and failure display.
+ * Integration tests for TriagePanelView.
+ * Tests the chat interface functionality and failure display with IntelliJ Platform integration.
  */
-public class TriagePanelViewTest extends BasePlatformTestCase {
+public class TriagePanelViewIntegrationTest extends BasePlatformTestCase {
 
     private TriagePanelView triagePanelView;
 
@@ -97,6 +97,10 @@ public class TriagePanelViewTest extends BasePlatformTestCase {
             scenarioName,
             List.of("Given the user is on the home page", "When the user clicks the login button", "Then the user should see the login form"),
             List.of("@smoke", "@regression"),
+            List.of(), // backgroundSteps
+            List.of(), // dataTable
+            "Feature: Sample Feature\nScenario: " + scenarioName + "\n  Given the user is on the home page\n  When the user clicks the login button\n  Then the user should see the login form",
+            false, // isScenarioOutline
             "src/test/resources/features/sample.feature",
             10,
             "Feature: Sample Feature\nScenario: " + scenarioName + "\n  Given the user is on the home page\n  When the user clicks the login button\n  Then the user should see the login form"
@@ -112,7 +116,7 @@ public class TriagePanelViewTest extends BasePlatformTestCase {
             .withGherkinScenarioInfo(scenarioInfo)
             .withExpectedValue("true")
             .withActualValue("false")
-            .withAssertionType(errorType)
+            .withErrorMessage("Test failure occurred")
             .withErrorMessage("Element not found: #login-form")
             .withParsingTime(150)
             .build();

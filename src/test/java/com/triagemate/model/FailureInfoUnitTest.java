@@ -12,7 +12,7 @@ import com.triagemate.models.FailureInfo;
  * Tests the comprehensive model that serves multiple architectural layers.
  */
 @DisplayName("FailureInfo Domain Model")
-class FailureInfoTest {
+class FailureInfoUnitTest {
     
     @Test
     @DisplayName("should create FailureInfo with all fields using builder pattern")
@@ -22,13 +22,10 @@ class FailureInfoTest {
             .withScenarioName("Verify Home Page title")
             .withFailedStepText("I should see title as \"Welcome to the-internet delete me\"")
             .withStackTrace("java.lang.AssertionError: Expected: is \"Welcome to the-internet delete me\" but: was \"Welcome to the-internet\"")
-            .withStepDefinitionMethod("public void i_should_see_title_as(String expectedTitle)")
-            .withGherkinScenario("Scenario: Verify Home Page title is present and correct")
             .withSourceFilePath("com/example/steps/HomePageTestStep.java")
             .withLineNumber(28)
             .withExpectedValue("Welcome to the-internet delete me")
             .withActualValue("Welcome to the-internet")
-            .withAssertionType("HAMCREST")
             .withErrorMessage("Expected: is \"Welcome to the-internet delete me\" but: was \"Welcome to the-internet\"")
             .withParsingTime(150L)
             .build();
@@ -37,13 +34,10 @@ class FailureInfoTest {
         assertThat(failureInfo.getScenarioName()).isEqualTo("Verify Home Page title");
         assertThat(failureInfo.getFailedStepText()).isEqualTo("I should see title as \"Welcome to the-internet delete me\"");
         assertThat(failureInfo.getStackTrace()).contains("java.lang.AssertionError");
-        assertThat(failureInfo.getStepDefinitionMethod()).isEqualTo("public void i_should_see_title_as(String expectedTitle)");
-        assertThat(failureInfo.getGherkinScenario()).isEqualTo("Scenario: Verify Home Page title is present and correct");
         assertThat(failureInfo.getSourceFilePath()).isEqualTo("com/example/steps/HomePageTestStep.java");
         assertThat(failureInfo.getLineNumber()).isEqualTo(28);
         assertThat(failureInfo.getExpectedValue()).isEqualTo("Welcome to the-internet delete me");
         assertThat(failureInfo.getActualValue()).isEqualTo("Welcome to the-internet");
-        assertThat(failureInfo.getAssertionType()).isEqualTo("HAMCREST");
         assertThat(failureInfo.getErrorMessage()).isEqualTo("Expected: is \"Welcome to the-internet delete me\" but: was \"Welcome to the-internet\"");
         assertThat(failureInfo.getParsingTime()).isEqualTo(150L);
     }
@@ -55,19 +49,15 @@ class FailureInfoTest {
         FailureInfo failureInfo = new FailureInfo.Builder()
             .withScenarioName("Test Scenario")
             .withStackTrace("java.lang.Exception: Test failed")
-            .withAssertionType("GENERIC")
             .withParsingTime(0L) // Default value
             .build();
         
         // Assert
         assertThat(failureInfo.getScenarioName()).isEqualTo("Test Scenario");
         assertThat(failureInfo.getStackTrace()).isEqualTo("java.lang.Exception: Test failed");
-        assertThat(failureInfo.getAssertionType()).isEqualTo("GENERIC");
         
         // Optional fields should be null or default values
         assertThat(failureInfo.getFailedStepText()).isNull();
-        assertThat(failureInfo.getStepDefinitionMethod()).isNull();
-        assertThat(failureInfo.getGherkinScenario()).isNull();
         assertThat(failureInfo.getSourceFilePath()).isNull();
         assertThat(failureInfo.getLineNumber()).isEqualTo(-1); // Default value
         assertThat(failureInfo.getExpectedValue()).isNull();
@@ -88,11 +78,8 @@ class FailureInfoTest {
             42,
             null, // stepDefinitionInfo
             null, // gherkinScenarioInfo
-            "Test method",
-            "Test gherkin",
             "expected",
             "actual",
-            "JUNIT",
             "Test error",
             100L
         );
@@ -101,13 +88,10 @@ class FailureInfoTest {
         assertThat(failureInfo.getScenarioName()).isEqualTo("Test Scenario");
         assertThat(failureInfo.getFailedStepText()).isEqualTo("Test step");
         assertThat(failureInfo.getStackTrace()).isEqualTo("Test stack trace");
-        assertThat(failureInfo.getStepDefinitionMethod()).isEqualTo("Test method");
-        assertThat(failureInfo.getGherkinScenario()).isEqualTo("Test gherkin");
         assertThat(failureInfo.getSourceFilePath()).isEqualTo("Test file");
         assertThat(failureInfo.getLineNumber()).isEqualTo(42);
         assertThat(failureInfo.getExpectedValue()).isEqualTo("expected");
         assertThat(failureInfo.getActualValue()).isEqualTo("actual");
-        assertThat(failureInfo.getAssertionType()).isEqualTo("JUNIT");
         assertThat(failureInfo.getErrorMessage()).isEqualTo("Test error");
         assertThat(failureInfo.getParsingTime()).isEqualTo(100L);
     }
@@ -122,7 +106,6 @@ class FailureInfoTest {
             .withStackTrace(null)
             .withExpectedValue(null)
             .withActualValue(null)
-            .withAssertionType(null)
             .withErrorMessage(null)
             .withParsingTime(0L) // Default value
             .build();
@@ -133,7 +116,6 @@ class FailureInfoTest {
         assertThat(failureInfo.getStackTrace()).isNull();
         assertThat(failureInfo.getExpectedValue()).isNull();
         assertThat(failureInfo.getActualValue()).isNull();
-        assertThat(failureInfo.getAssertionType()).isNull();
         assertThat(failureInfo.getErrorMessage()).isNull();
         assertThat(failureInfo.getParsingTime()).isEqualTo(0L); // Default value
     }

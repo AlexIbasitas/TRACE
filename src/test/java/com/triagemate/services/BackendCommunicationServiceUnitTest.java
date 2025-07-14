@@ -23,7 +23,7 @@ import static org.mockito.Mockito.*;
  * Unit tests for BackendCommunicationService.
  */
 @ExtendWith(MockitoExtension.class)
-class BackendCommunicationServiceTest {
+class BackendCommunicationServiceUnitTest {
 
     private BackendCommunicationService service;
     
@@ -117,7 +117,7 @@ class BackendCommunicationServiceTest {
             .withGherkinScenarioInfo(scenarioInfo)
             .withExpectedValue("true")
             .withActualValue("false")
-            .withAssertionType("AssertionError")
+            .withErrorMessage("Test assertion failed")
             .withErrorMessage("Expected true but was false")
             .withParsingTime(150L)
             .build();
