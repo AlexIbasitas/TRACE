@@ -167,91 +167,71 @@ public class TriagePanelView {
     }
 
     /**
-     * Sets up the chat panel for message display
+     * Sets up the chat panel for message display using proper layout
      */
     private void setupChatPanel() {
-        chatPanel.removeAll();
+        // Use a vertical BoxLayout for proper message stacking
         chatPanel.setLayout(new BoxLayout(chatPanel, BoxLayout.Y_AXIS));
-        Color panelBg = javax.swing.UIManager.getColor("Panel.background");
-        if (panelBg == null) panelBg = new java.awt.Color(43,43,43);
+        
+        // Get theme-aware background color
+        Color panelBg = UIManager.getColor("Panel.background");
+        if (panelBg == null) {
+            panelBg = new Color(43, 43, 43);
+        }
+        
         chatPanel.setBackground(panelBg);
         chatPanel.setOpaque(true);
-        chatPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10)); // Add 10px padding around chat
+        chatPanel.setBorder(BorderFactory.createEmptyBorder(8, 16, 8, 16));
+        
+        // Add initial vertical glue to push messages to top
+        chatPanel.add(Box.createVerticalGlue());
     }
 
     /**
-     * Sets up the input panel with text area and send button
+     * Sets up the input panel with modern styling
      */
     private void setupInputPanel() {
-        inputPanel.removeAll();
-        inputPanel.setLayout(new GridBagLayout());
-        GridBagConstraints gbc = new GridBagConstraints();
-        gbc.gridx = 0;
-        gbc.gridy = 0;
-        gbc.weightx = 1.0;
-        gbc.fill = GridBagConstraints.HORIZONTAL;
-        gbc.insets = new Insets(12, 16, 12, 16); // More vertical and horizontal margin
-
-        // Custom panel to hold text area and send button together
-        JPanel inputBoxPanel = new JPanel(new BorderLayout());
-        inputBoxPanel.setBackground(new Color(38, 38, 38));
-        inputBoxPanel.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createEmptyBorder(0, 0, 0, 0),
-            BorderFactory.createLineBorder(new Color(60, 60, 60), 1, true)
+        inputPanel.setBorder(BorderFactory.createEmptyBorder(8, 16, 16, 16));
+        
+        // Create input container with rounded border
+        JPanel inputContainer = new JPanel(new BorderLayout());
+        inputContainer.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(new Color(60, 60, 60), 1, true),
+            BorderFactory.createEmptyBorder(8, 12, 8, 8)
         ));
-        inputBoxPanel.setOpaque(true);
-        // Remove drop shadow
-
-        // Text area with placeholder
+        inputContainer.setBackground(new Color(50, 50, 50));
+        inputContainer.setOpaque(true);
+        
+        // Configure text area
         inputArea.setFont(new Font("Segoe UI", Font.PLAIN, 14));
         inputArea.setRows(1);
-        inputArea.setBorder(BorderFactory.createEmptyBorder(8, 12, 8, 0));
-        inputArea.setBackground(new Color(38, 38, 38));
+        inputArea.setBorder(BorderFactory.createEmptyBorder(0, 0, 0, 0));
+        inputArea.setBackground(new Color(50, 50, 50));
         inputArea.setForeground(Color.WHITE);
         inputArea.setCaretColor(Color.WHITE);
         inputArea.setOpaque(false);
-        inputArea.setText("");
-        inputArea.putClientProperty("JTextField.placeholderText", "Ask Anything");
-        inputArea.addFocusListener(new java.awt.event.FocusAdapter() {
-            public void focusGained(java.awt.event.FocusEvent e) {
-                if (inputArea.getText().isEmpty()) inputArea.repaint();
-            }
-            public void focusLost(java.awt.event.FocusEvent e) {
-                if (inputArea.getText().isEmpty()) inputArea.repaint();
-            }
-        });
-        inputBoxPanel.add(inputArea, BorderLayout.CENTER);
-
-        // Send button as small icon inside the text box, encapsulated in a lighter grey box with rounded corners
-        JPanel sendButtonPanel = new JPanel(new BorderLayout());
-        sendButtonPanel.setBackground(new Color(60, 60, 60)); // lighter grey
-        sendButtonPanel.setBorder(BorderFactory.createEmptyBorder(2, 8, 2, 8));
-        sendButtonPanel.setOpaque(true);
-        sendButtonPanel.setMaximumSize(new Dimension(32, 32));
-        sendButtonPanel.setPreferredSize(new Dimension(32, 32));
-        sendButtonPanel.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createLineBorder(new Color(60, 60, 60), 1, true),
-            BorderFactory.createEmptyBorder(2, 8, 2, 8)
-        ));
+        inputArea.putClientProperty("JTextField.placeholderText", "Ask anything about the test failure...");
+        
+        // Create send button
         JButton sendIconButton = new JButton("→");
         sendIconButton.setFont(new Font("Segoe UI", Font.BOLD, 16));
-        sendIconButton.setBackground(new Color(60, 60, 60));
-        sendIconButton.setForeground(new Color(180, 180, 180));
+        sendIconButton.setBackground(new Color(70, 70, 70));
+        sendIconButton.setForeground(Color.WHITE);
         sendIconButton.setFocusPainted(false);
-        sendIconButton.setBorder(BorderFactory.createEmptyBorder(0, 0, 0, 0));
+        sendIconButton.setBorder(BorderFactory.createEmptyBorder(4, 8, 4, 8));
         sendIconButton.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-        sendIconButton.setToolTipText("Send");
-        sendIconButton.setOpaque(false);
-        sendIconButton.setContentAreaFilled(false);
-        sendIconButton.setBorderPainted(false);
-        sendIconButton.addActionListener(e -> sendButton.doClick());
-        sendButtonPanel.add(sendIconButton, BorderLayout.CENTER);
-        inputBoxPanel.add(sendButtonPanel, BorderLayout.EAST);
-
-        // Hide the old sendButton
+        sendIconButton.setToolTipText("Send message");
+        sendIconButton.addActionListener(e -> sendMessage());
+        
+        // Add components to input container
+        inputContainer.add(inputArea, BorderLayout.CENTER);
+        inputContainer.add(sendIconButton, BorderLayout.EAST);
+        
+        // Add to input panel
+        inputPanel.add(inputContainer, BorderLayout.CENTER);
+        
+        // Hide the old send button
         sendButton.setVisible(false);
-
-        inputPanel.add(inputBoxPanel, gbc);
     }
 
     /**
@@ -295,10 +275,12 @@ public class TriagePanelView {
         inputArea.setText("");
         
         // TODO: Handle AI response when backend is available
-        // For now, just show a placeholder response
+        // For now, show a professional backend configuration message
+        String backendMessage = "AI backend service is not currently configured. To enable AI-powered test failure analysis, please configure your backend connection in the settings.";
+        
         addMessage(new ChatMessage(ChatMessage.Role.AI, 
-            "This is a placeholder response. AI integration will be added in Phase 5.", 
-            System.currentTimeMillis()));
+            backendMessage, 
+            System.currentTimeMillis(), null));
     }
 
     /**
@@ -310,241 +292,174 @@ public class TriagePanelView {
     }
 
     /**
-     * Adds a message component to the UI
+     * Adds a message component to the UI with proper layout
      */
     private void addMessageToUI(ChatMessage message) {
         JPanel messagePanel = createMessagePanel(message);
-        chatPanel.add(messagePanel);
+        
+        // Remove the vertical glue, add message, then add glue back
+        chatPanel.removeAll();
+        
+        // Add all existing messages
+        for (ChatMessage existingMessage : chatHistory) {
+            JPanel existingPanel = createMessagePanel(existingMessage);
+            chatPanel.add(existingPanel);
+            chatPanel.add(Box.createVerticalStrut(16)); // Add spacing between messages
+        }
+        
+        // Add vertical glue to push messages to top
+        chatPanel.add(Box.createVerticalGlue());
+        
+        // Revalidate and repaint
         chatPanel.revalidate();
         chatPanel.repaint();
+        
+        // Scroll to bottom
         scrollToBottom();
     }
 
     /**
-     * Creates a message panel for display
+     * Creates a properly styled message panel with Codeium-like layout
      */
     private JPanel createMessagePanel(ChatMessage message) {
-        // Message card panel (the chat bubble)
-        JPanel cardPanel = new JPanel();
-        cardPanel.setLayout(new BoxLayout(cardPanel, BoxLayout.Y_AXIS));
-        cardPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
-        Color darkBg = javax.swing.UIManager.getColor("Panel.background");
-        if (darkBg == null) darkBg = new java.awt.Color(43,43,43);
-        Color debugCardColor = new java.awt.Color(60, 60, 80); // TEMP: distinguish cardPanel
-        cardPanel.setBackground(debugCardColor); // TEMP: visually distinguish card
-        cardPanel.setOpaque(true);
-        cardPanel.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createEmptyBorder(12, 16, 12, 16),
-            BorderFactory.createLineBorder(new Color(60, 60, 60), 1, true)
-        ));
-        cardPanel.setMaximumSize(new Dimension(Integer.MAX_VALUE, cardPanel.getPreferredSize().height)); // Only width
-
-        boolean isInitialPrompt = false;
-        if ((message.getRole() == ChatMessage.Role.SYSTEM || message.getRole() == ChatMessage.Role.AI)
-                && chatHistory.size() > 0 && chatHistory.get(0) == message) {
-            isInitialPrompt = true;
-        }
-
-        // --- Add header panel first ---
-        JPanel headerPanel = createMessageHeaderPanel(message);
-        headerPanel.setBackground(new java.awt.Color(80, 80, 100)); // TEMP: visually distinguish header
-        headerPanel.setOpaque(true);
-        headerPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
-        headerPanel.setMaximumSize(new Dimension(Integer.MAX_VALUE, headerPanel.getPreferredSize().height)); // Only width
-        cardPanel.add(headerPanel);
-
-        if (isInitialPrompt) {
-            // Scenario row
-            JPanel scenarioRow = new JPanel();
-            scenarioRow.setLayout(new BoxLayout(scenarioRow, BoxLayout.X_AXIS));
-            scenarioRow.setAlignmentX(Component.LEFT_ALIGNMENT);
-            scenarioRow.setBorder(BorderFactory.createEmptyBorder(0, 0, 0, 0));
-            scenarioRow.setBackground(new java.awt.Color(100, 80, 80)); // TEMP: visually distinguish scenarioRow
-            scenarioRow.setOpaque(true);
-            JLabel warningIcon = new JLabel("\u26A0"); // ⚠️
-            warningIcon.setFont(new Font("Segoe UI", Font.PLAIN, 15));
-            warningIcon.setForeground(new Color(255, 193, 7)); // Amber
-            scenarioRow.add(warningIcon);
-            scenarioRow.add(Box.createHorizontalStrut(6));
-            JLabel scenarioLabel = new JLabel("Scenario: ");
-            scenarioLabel.setFont(new Font("Segoe UI", Font.BOLD, 13));
-            scenarioLabel.setForeground(new Color(255, 152, 0)); // Cucumber orange
-            scenarioRow.add(scenarioLabel);
-            String scenarioName = (currentFailure != null && currentFailure.getScenarioName() != null) ? currentFailure.getScenarioName() : "Unknown Scenario";
-            JLabel scenarioNameLabel = new JLabel(scenarioName);
-            scenarioNameLabel.setFont(new Font("Segoe UI", Font.BOLD, 13));
-            scenarioNameLabel.setForeground(Color.WHITE);
-            scenarioRow.add(scenarioNameLabel);
-            scenarioRow.setMaximumSize(new Dimension(Integer.MAX_VALUE, scenarioRow.getPreferredSize().height)); // Only width
-            cardPanel.add(scenarioRow);
-
-            // Expandable Show AI Thinking section
-            JPanel aiThinkingContainer = new JPanel();
-            aiThinkingContainer.setLayout(new BoxLayout(aiThinkingContainer, BoxLayout.Y_AXIS));
-            aiThinkingContainer.setAlignmentX(Component.LEFT_ALIGNMENT);
-            aiThinkingContainer.setOpaque(true);
-            aiThinkingContainer.setBackground(new java.awt.Color(80, 100, 80)); // TEMP: visually distinguish aiThinkingContainer
-            aiThinkingContainer.setBorder(BorderFactory.createEmptyBorder(0, 0, 0, 0));
-            // Do NOT set maximum size for aiThinkingContainer (let it grow vertically)
-
-            JPanel toggleRow = new JPanel();
-            toggleRow.setLayout(new BoxLayout(toggleRow, BoxLayout.X_AXIS));
-            toggleRow.setOpaque(false);
-            toggleRow.setAlignmentX(Component.LEFT_ALIGNMENT);
-            toggleRow.setBorder(BorderFactory.createEmptyBorder(0, 0, 0, 0));
-            toggleRow.setMaximumSize(new Dimension(Integer.MAX_VALUE, toggleRow.getPreferredSize().height));
-            JLabel chevronLabel = new JLabel("▶");
-            chevronLabel.setFont(new Font("Segoe UI", Font.BOLD, 13));
-            chevronLabel.setForeground(new Color(180, 180, 180));
-            chevronLabel.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-            JButton toggleButton = new JButton("Show AI Thinking");
-            toggleButton.setFont(new Font("Segoe UI", Font.BOLD, 13));
-            toggleButton.setFocusPainted(false);
-            toggleButton.setContentAreaFilled(false);
-            toggleButton.setBorderPainted(false);
-            toggleButton.setHorizontalAlignment(SwingConstants.LEFT);
-            toggleButton.setForeground(new Color(180, 180, 180));
-            toggleRow.add(chevronLabel);
-            toggleRow.add(Box.createHorizontalStrut(6));
-            toggleRow.add(toggleButton);
-            aiThinkingContainer.add(toggleRow);
-
-            // Use JLabel with HTML for promptArea
-            String htmlText = "<html>" + message.getText().replace("\n", "<br>") + "</html>";
-            JLabel promptLabel = new JLabel(htmlText);
-            promptLabel.setFont(new Font("Segoe UI", Font.PLAIN, 14));
-            promptLabel.setForeground(Color.WHITE);
-            promptLabel.setBackground(darkBg);
-            promptLabel.setOpaque(false);
-            promptLabel.setBorder(BorderFactory.createEmptyBorder(8, 0, 8, 0));
-            promptLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
-            promptLabel.setVisible(false);
-            aiThinkingContainer.add(promptLabel);
-
-            java.awt.event.ActionListener toggleAction = e -> {
-                boolean expanded = promptLabel.isVisible();
-                promptLabel.setVisible(!expanded);
-                chevronLabel.setText(expanded ? "▶" : "▼");
-                toggleButton.setText(expanded ? "Show AI Thinking" : "Hide AI Thinking");
-                aiThinkingContainer.revalidate();
-                aiThinkingContainer.repaint();
-                cardPanel.revalidate();
-                cardPanel.repaint();
-                chatPanel.revalidate();
-                chatPanel.repaint();
-            };
-            toggleButton.addActionListener(toggleAction);
-            chevronLabel.addMouseListener(new java.awt.event.MouseAdapter() {
-                @Override
-                public void mouseClicked(java.awt.event.MouseEvent e) {
-                    toggleAction.actionPerformed(null);
-                }
-            });
-            cardPanel.add(aiThinkingContainer);
-        } else {
-            JTextArea messageArea = new JTextArea(message.getText());
-            messageArea.setLineWrap(true);
-            messageArea.setWrapStyleWord(true);
-            messageArea.setEditable(false);
-            messageArea.setFont(new Font("Segoe UI", Font.PLAIN, 14));
-            messageArea.setBackground(darkBg);
-            messageArea.setForeground(Color.WHITE);
-            messageArea.setBorder(BorderFactory.createEmptyBorder(16, 0, 16, 0));
-            messageArea.setOpaque(true);
-            messageArea.setAlignmentX(Component.LEFT_ALIGNMENT);
-            messageArea.setMaximumSize(new Dimension(Integer.MAX_VALUE, messageArea.getPreferredSize().height));
-            cardPanel.add(messageArea);
-
-            if (message.getRole() != ChatMessage.Role.USER) {
-                JButton copyButton = new JButton("Copy");
-                copyButton.setFont(new Font("Segoe UI", Font.PLAIN, 12));
-                copyButton.setFocusPainted(false);
-                copyButton.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-                copyButton.addActionListener(e -> copyToClipboard(message.getText()));
-                copyButton.setAlignmentX(Component.RIGHT_ALIGNMENT);
-                JPanel copyPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 0, 0));
-                copyPanel.setOpaque(false);
-                copyPanel.add(copyButton);
-                copyPanel.setMaximumSize(new Dimension(Integer.MAX_VALUE, copyPanel.getPreferredSize().height));
-                cardPanel.add(copyPanel);
-            }
-        }
-
-        // Print the component hierarchy for this cardPanel
-        System.out.println("[DEBUG] cardPanel hierarchy for message: " + message.getText());
-        printComponentHierarchy(cardPanel, "  ");
-
-        return cardPanel;
-    }
-
-    // Helper to print component hierarchy
-    private void printComponentHierarchy(Component comp, String indent) {
-        System.out.println(indent + comp.getClass().getSimpleName() + (comp instanceof JPanel ? " (JPanel)" : ""));
-        if (comp instanceof Container) {
-            for (Component child : ((Container) comp).getComponents()) {
-                printComponentHierarchy(child, indent + "  ");
-            }
-        }
-    }
-
-    /**
-     * Creates the header panel for a chat message (logo, sender, timestamp)
-     */
-    private JPanel createMessageHeaderPanel(ChatMessage message) {
-        // Use horizontal BoxLayout for tight header row
-        JPanel headerPanel = new JPanel();
-        headerPanel.setLayout(new BoxLayout(headerPanel, BoxLayout.X_AXIS));
-        headerPanel.setOpaque(true);
-        headerPanel.setBackground(new java.awt.Color(80, 80, 100)); // TEMP: visually distinguish header
-        headerPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
-        // Left: logo + sender
-        JPanel leftPanel = new JPanel();
-        leftPanel.setLayout(new BoxLayout(leftPanel, BoxLayout.X_AXIS));
+        JPanel messagePanel = new JPanel(new BorderLayout());
+        messagePanel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        messagePanel.setMaximumSize(new Dimension(Integer.MAX_VALUE, Integer.MAX_VALUE));
+        messagePanel.setOpaque(false);
+        messagePanel.setBorder(BorderFactory.createEmptyBorder(8, 0, 8, 0));
+        
+        // Create header with logo, sender and timestamp
+        JPanel headerPanel = new JPanel(new BorderLayout());
+        headerPanel.setOpaque(false);
+        headerPanel.setBorder(BorderFactory.createEmptyBorder(0, 0, 8, 0));
+        
+        // Left side: logo + sender name
+        JPanel leftPanel = new JPanel(new BorderLayout());
         leftPanel.setOpaque(false);
-        leftPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
-        if (message.getRole() == ChatMessage.Role.AI || message.getRole() == ChatMessage.Role.SYSTEM) {
-            try {
-                Icon logoIcon = IconLoader.getIcon("/icons/logo_24.png", getClass());
-                JLabel logoLabel = new JLabel(logoIcon);
-                logoLabel.setBorder(BorderFactory.createEmptyBorder(0, 0, 0, 6));
-                leftPanel.add(logoLabel);
-            } catch (Exception e) {
-                // fallback: no icon
-            }
-            JLabel senderLabel = new JLabel("TriageMate");
-            senderLabel.setFont(new Font("Segoe UI", Font.BOLD, 13));
-            senderLabel.setForeground(Color.WHITE);
-            leftPanel.add(senderLabel);
-        } else if (message.getRole() == ChatMessage.Role.USER) {
-            JLabel senderLabel = new JLabel(getCurrentUsername());
-            senderLabel.setFont(new Font("Segoe UI", Font.BOLD, 13));
-            senderLabel.setForeground(new Color(180, 180, 180));
-            leftPanel.add(senderLabel);
+        
+        // Add logo for all messages (both user and AI)
+        try {
+            String iconPath = message.getRole() == ChatMessage.Role.USER ? "/icons/user_profile_24.png" : "/icons/logo_24.png";
+            Icon logoIcon = IconLoader.getIcon(iconPath, getClass());
+            JLabel logoLabel = new JLabel(logoIcon);
+            logoLabel.setBorder(BorderFactory.createEmptyBorder(0, 0, 0, 8)); // Add right padding
+            leftPanel.add(logoLabel, BorderLayout.WEST);
+        } catch (Exception e) {
+            // Fallback: no icon
         }
-        headerPanel.add(leftPanel);
-        // Add horizontal glue to push timestamp to the right
-        headerPanel.add(Box.createHorizontalGlue());
-        JLabel timeLabel = new JLabel(formatTimestamp(message.getTimestamp()) + " " + new java.text.SimpleDateFormat("MMM d, yyyy").format(new java.util.Date(message.getTimestamp())));
-        timeLabel.setFont(new Font("Segoe UI", Font.PLAIN, 11));
-        timeLabel.setForeground(new Color(180, 180, 180));
-        headerPanel.add(timeLabel);
-        headerPanel.setBorder(BorderFactory.createEmptyBorder(0, 0, 4, 0));
-        return headerPanel;
-    }
-
-    /**
-     * Copies text to clipboard
-     */
-    private void copyToClipboard(String text) {
-        CopyPasteManager.getInstance().setContents(new StringSelection(text));
-        // TODO: Add visual feedback
-    }
-
-    /**
-     * Formats timestamp for display
-     */
-    private String formatTimestamp(long timestamp) {
-        return new java.text.SimpleDateFormat("HH:mm").format(new java.util.Date(timestamp));
+        
+        JLabel senderLabel = new JLabel(message.getRole() == ChatMessage.Role.USER ? "You" : "TriageMate");
+        senderLabel.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        senderLabel.setForeground(Color.WHITE);
+        leftPanel.add(senderLabel, BorderLayout.CENTER);
+        
+        headerPanel.add(leftPanel, BorderLayout.WEST);
+        
+        // Right side: full timestamp
+        JLabel timeLabel = new JLabel(formatFullTimestamp(message.getTimestamp()));
+        timeLabel.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        timeLabel.setForeground(new Color(150, 150, 150));
+        headerPanel.add(timeLabel, BorderLayout.EAST);
+        
+        // Create content panel
+        JPanel contentPanel = new JPanel(new BorderLayout());
+        contentPanel.setOpaque(false);
+        
+        // Add scenario information for AI messages if available
+        if ((message.getRole() == ChatMessage.Role.AI || message.getRole() == ChatMessage.Role.SYSTEM) && currentFailure != null) {
+            // Add scenario information
+            JPanel scenarioPanel = new JPanel(new BorderLayout());
+            scenarioPanel.setOpaque(false);
+            scenarioPanel.setBorder(BorderFactory.createEmptyBorder(0, 0, 8, 0));
+            
+            // Create scenario label with orange "Scenario:" and bold white test name
+            JPanel scenarioLabelPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
+            scenarioLabelPanel.setOpaque(false);
+            
+            JLabel scenarioPrefix = new JLabel("Scenario: ");
+            scenarioPrefix.setFont(new Font("Segoe UI", Font.BOLD, 13));
+            scenarioPrefix.setForeground(new Color(255, 152, 0)); // Orange color for "Scenario:"
+            
+            JLabel scenarioName = new JLabel(currentFailure.getScenarioName() != null ? currentFailure.getScenarioName() : "Unknown Scenario");
+            scenarioName.setFont(new Font("Segoe UI", Font.BOLD, 13)); // Bold for test name
+            scenarioName.setForeground(Color.WHITE); // White color for test name
+            
+            scenarioLabelPanel.add(scenarioPrefix);
+            scenarioLabelPanel.add(scenarioName);
+            scenarioPanel.add(scenarioLabelPanel, BorderLayout.WEST);
+            
+            contentPanel.add(scenarioPanel, BorderLayout.NORTH);
+            
+            // Add failed step information
+            if (currentFailure.getFailedStepText() != null && !currentFailure.getFailedStepText().trim().isEmpty()) {
+                JPanel failedStepPanel = new JPanel(new BorderLayout());
+                failedStepPanel.setOpaque(false);
+                failedStepPanel.setBorder(BorderFactory.createEmptyBorder(0, 0, 8, 0));
+                
+                // Create failed step label with failure symbol, orange "Failed Step:" and red bold step text
+                JPanel failedStepLabelPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
+                failedStepLabelPanel.setOpaque(false);
+                
+                // Add red X failure symbol
+                JLabel failureSymbol = new JLabel("✗ ");
+                failureSymbol.setFont(new Font("Segoe UI", Font.BOLD, 13));
+                failureSymbol.setForeground(new Color(255, 100, 100)); // Red color for failure symbol
+                
+                JLabel failedStepPrefix = new JLabel("Failed Step: ");
+                failedStepPrefix.setFont(new Font("Segoe UI", Font.BOLD, 13));
+                failedStepPrefix.setForeground(new Color(255, 100, 100)); // Red color for "Failed Step:"
+                
+                JLabel failedStepText = new JLabel(currentFailure.getFailedStepText());
+                failedStepText.setFont(new Font("Segoe UI", Font.BOLD, 13)); // Bold font for step text
+                failedStepText.setForeground(Color.WHITE); // White color for step text
+                
+                failedStepLabelPanel.add(failureSymbol);
+                failedStepLabelPanel.add(failedStepPrefix);
+                failedStepLabelPanel.add(failedStepText);
+                failedStepPanel.add(failedStepLabelPanel, BorderLayout.WEST);
+                
+                contentPanel.add(failedStepPanel, BorderLayout.CENTER);
+            } else {
+                // Debug: Show when failed step text is not available
+                JPanel debugPanel = new JPanel(new BorderLayout());
+                debugPanel.setOpaque(false);
+                debugPanel.setBorder(BorderFactory.createEmptyBorder(0, 0, 8, 0));
+                
+                JLabel debugLabel = new JLabel("Debug: Failed step text is null or empty");
+                debugLabel.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+                debugLabel.setForeground(new Color(255, 100, 100)); // Red for debug
+                
+                debugPanel.add(debugLabel, BorderLayout.WEST);
+                contentPanel.add(debugPanel, BorderLayout.CENTER);
+            }
+        }
+        
+        // Add AI thinking section for AI messages
+        if ((message.getRole() == ChatMessage.Role.AI || message.getRole() == ChatMessage.Role.SYSTEM) && 
+            message.getAiThinking() != null && !message.getAiThinking().trim().isEmpty()) {
+            
+            CollapsiblePanel aiThinkingPanel = new CollapsiblePanel("AI Thinking", message.getAiThinking());
+            contentPanel.add(aiThinkingPanel, BorderLayout.CENTER);
+        }
+        
+        // Create message text area (no background, just text)
+        JTextArea messageText = new JTextArea(message.getText());
+        messageText.setLineWrap(true);
+        messageText.setWrapStyleWord(true);
+        messageText.setEditable(false);
+        messageText.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        messageText.setBackground(chatPanel.getBackground()); // Use chat panel background
+        messageText.setForeground(Color.WHITE);
+        messageText.setBorder(BorderFactory.createEmptyBorder(0, 0, 0, 0));
+        messageText.setOpaque(false);
+        
+        contentPanel.add(messageText, BorderLayout.SOUTH);
+        
+        // Add components to message panel
+        messagePanel.add(headerPanel, BorderLayout.NORTH);
+        messagePanel.add(contentPanel, BorderLayout.CENTER);
+        
+        return messagePanel;
     }
 
     /**
@@ -563,33 +478,19 @@ public class TriagePanelView {
      * Updates the panel with new failure information
      */
     public void updateFailure(FailureInfo failureInfo) {
-        System.out.println("TriageMate: TriagePanelView.updateFailure called for scenario: " + 
-            (failureInfo.getScenarioName() != null ? failureInfo.getScenarioName() : "null"));
-        
         this.currentFailure = failureInfo;
         
-        // Update header
-        updateHeader(failureInfo);
+        // Debug logging
+        System.out.println("TriagePanelView.updateFailure called");
+        System.out.println("Scenario name: " + (failureInfo.getScenarioName() != null ? failureInfo.getScenarioName() : "null"));
+        System.out.println("Failed step text: " + (failureInfo.getFailedStepText() != null ? failureInfo.getFailedStepText() : "null"));
+        System.out.println("Error message: " + (failureInfo.getErrorMessage() != null ? failureInfo.getErrorMessage() : "null"));
         
         // Clear chat history for new failure
         clearChat();
         
         // Generate and display initial prompt
         generateAndDisplayPrompt(failureInfo);
-        
-        System.out.println("TriageMate: TriagePanelView.updateFailure completed successfully");
-    }
-
-    /**
-     * Updates the header with failure metadata
-     */
-    private void updateHeader(FailureInfo failureInfo) {
-        String scenarioName = failureInfo.getScenarioName() != null ? 
-            failureInfo.getScenarioName() : "Unknown Scenario";
-        headerLabel.setText("\uD83D\uDD27 " + scenarioName); // Wrench emoji + scenario name
-        headerLabel.setFont(headerLabel.getFont().deriveFont(Font.BOLD, 16f));
-        headerLabel.setBorder(BorderFactory.createEmptyBorder(12, 12, 12, 12));
-        statusLabel.setText("");
     }
 
     /**
@@ -598,6 +499,7 @@ public class TriagePanelView {
     private void clearChat() {
         chatHistory.clear();
         chatPanel.removeAll();
+        chatPanel.add(Box.createVerticalGlue());
         chatPanel.revalidate();
         chatPanel.repaint();
     }
@@ -614,12 +516,45 @@ public class TriagePanelView {
                 prompt = "Backend not configured. Here's your test failure analysis to copy to your preferred AI service:\n\n" + prompt;
             }
             
-            addMessage(new ChatMessage(ChatMessage.Role.AI, prompt, System.currentTimeMillis()));
+            // Create AI thinking content based on the failure analysis
+            String aiThinking = generateAiThinkingContent(failureInfo);
+            
+            // Create a special AI message with the prompt in the collapsible section
+            addMessage(new ChatMessage(ChatMessage.Role.AI, "", System.currentTimeMillis(), prompt));
             
         } catch (Exception e) {
             String errorMessage = "Error generating prompt: " + e.getMessage();
             addMessage(new ChatMessage(ChatMessage.Role.AI, errorMessage, System.currentTimeMillis()));
         }
+    }
+    
+    /**
+     * Generates AI thinking content based on the failure information
+     */
+    private String generateAiThinkingContent(FailureInfo failureInfo) {
+        StringBuilder thinking = new StringBuilder();
+        thinking.append("Analyzing test failure...\n\n");
+        
+        if (failureInfo.getScenarioName() != null) {
+            thinking.append("• Scenario: ").append(failureInfo.getScenarioName()).append("\n");
+        }
+        
+        if (failureInfo.getFailedStepText() != null) {
+            thinking.append("• Failed Step: ").append(failureInfo.getFailedStepText()).append("\n");
+        }
+        
+        if (failureInfo.getErrorMessage() != null) {
+            thinking.append("• Error: ").append(failureInfo.getErrorMessage()).append("\n");
+        }
+        
+        if (failureInfo.getExpectedValue() != null && failureInfo.getActualValue() != null) {
+            thinking.append("• Expected: ").append(failureInfo.getExpectedValue()).append("\n");
+            thinking.append("• Actual: ").append(failureInfo.getActualValue()).append("\n");
+        }
+        
+        thinking.append("\nGenerating analysis and recommendations...");
+        
+        return thinking.toString();
     }
 
     /**
@@ -640,39 +575,132 @@ public class TriagePanelView {
         private final Role role;
         private final String text;
         private final long timestamp;
+        private final String aiThinking; // New field for AI thinking content
         
         public ChatMessage(Role role, String text, long timestamp) {
+            this(role, text, timestamp, null);
+        }
+        
+        public ChatMessage(Role role, String text, long timestamp, String aiThinking) {
             this.role = role;
             this.text = text;
             this.timestamp = timestamp;
+            this.aiThinking = aiThinking;
         }
         
         public Role getRole() { return role; }
         public String getText() { return text; }
         public long getTimestamp() { return timestamp; }
+        public String getAiThinking() { return aiThinking; }
     }
 
-    // Get the current system username for user messages
-    private String getCurrentUsername() {
-        return System.getProperty("user.name", "User");
+    /**
+     * Custom collapsible panel for AI thinking content
+     */
+    private static class CollapsiblePanel extends JPanel {
+        private final JPanel contentPanel;
+        private final JLabel toggleLabel;
+        private boolean isExpanded = false;
+        
+        public CollapsiblePanel(String title, String content) {
+            setLayout(new BorderLayout());
+            setOpaque(false);
+            setBorder(BorderFactory.createEmptyBorder(4, 0, 4, 0));
+            
+            // Create toggle button with expand/collapse indicator
+            toggleLabel = new JLabel("▶ Show AI Thinking");
+            toggleLabel.setFont(new Font("Segoe UI", Font.BOLD, 12));
+            toggleLabel.setForeground(Color.WHITE); // White color
+            toggleLabel.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+            toggleLabel.setToolTipText("Click to " + (isExpanded ? "hide" : "show") + " AI thinking");
+            
+            // Create content panel
+            contentPanel = new JPanel(new BorderLayout());
+            contentPanel.setOpaque(false);
+            contentPanel.setBorder(BorderFactory.createEmptyBorder(8, 16, 0, 0)); // Indent content
+            
+            if (content != null && !content.trim().isEmpty()) {
+                JTextArea contentArea = new JTextArea(content);
+                contentArea.setLineWrap(true);
+                contentArea.setWrapStyleWord(true);
+                contentArea.setEditable(false);
+                contentArea.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+                contentArea.setForeground(new Color(200, 200, 200)); // Light gray for thinking content
+                contentArea.setBackground(new Color(50, 50, 50)); // Dark background for thinking section
+                contentArea.setBorder(BorderFactory.createCompoundBorder(
+                    BorderFactory.createLineBorder(new Color(80, 80, 80), 1),
+                    BorderFactory.createEmptyBorder(8, 8, 8, 8)
+                ));
+                contentArea.setOpaque(true);
+                contentPanel.add(contentArea, BorderLayout.CENTER);
+            }
+            
+            // Add click listener
+            toggleLabel.addMouseListener(new java.awt.event.MouseAdapter() {
+                @Override
+                public void mouseClicked(java.awt.event.MouseEvent e) {
+                    toggleExpanded();
+                }
+            });
+            
+            // Initially collapsed
+            contentPanel.setVisible(false);
+            add(toggleLabel, BorderLayout.NORTH);
+            add(contentPanel, BorderLayout.CENTER);
+        }
+        
+        private void toggleExpanded() {
+            isExpanded = !isExpanded;
+            contentPanel.setVisible(isExpanded);
+            toggleLabel.setText((isExpanded ? "▼ " : "▶ ") + "Show AI Thinking");
+            toggleLabel.setToolTipText("Click to " + (isExpanded ? "hide" : "show") + " AI thinking");
+            
+            // Trigger revalidation to adjust scroll pane
+            revalidate();
+            repaint();
+            
+            // Don't auto-scroll - let the user control the view
+            // The collapsible section should stay in view when toggled
+        }
     }
 
-    // --- Custom header with TriageMate Chat and settings icon ---
+    /**
+     * Formats full timestamp for display (like Codeium)
+     */
+    private String formatFullTimestamp(long timestamp) {
+        return new java.text.SimpleDateFormat("h:mm a, MMM d, yyyy").format(new java.util.Date(timestamp));
+    }
+
+    /**
+     * Creates the custom header panel with logo and scenario information
+     */
     private JPanel createCustomHeaderPanel() {
-        Color darkBg = javax.swing.UIManager.getColor("Panel.background");
-        if (darkBg == null) darkBg = new java.awt.Color(43,43,43);
+        Color darkBg = UIManager.getColor("Panel.background");
+        if (darkBg == null) {
+            darkBg = new Color(43, 43, 43);
+        }
+        
         JPanel header = new JPanel(new BorderLayout());
         header.setBackground(darkBg);
         header.setBorder(BorderFactory.createCompoundBorder(
             BorderFactory.createMatteBorder(0, 0, 1, 0, new Color(68, 68, 68)),
-            BorderFactory.createEmptyBorder(8, 16, 8, 16)));
+            BorderFactory.createEmptyBorder(8, 16, 8, 16) // Reduced vertical padding for more minimalist look
+        ));
+        
+        // Create left side with smaller, more minimalist title
+        JPanel leftPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
+        leftPanel.setOpaque(false);
+        
         JLabel title = new JLabel("TriageMate Chat");
-        title.setFont(new Font("Segoe UI", Font.BOLD, 18));
-        title.setForeground(Color.WHITE);
-        header.add(title, BorderLayout.WEST);
-        // Settings icon (Unicode gear or use an icon if available)
-        JButton settingsButton = new JButton("\u2699"); // ⚙️
-        settingsButton.setFont(new Font("Segoe UI Symbol", Font.PLAIN, 18));
+        title.setFont(new Font("Segoe UI", Font.PLAIN, 14)); // Smaller, non-bold font for minimalist look
+        title.setForeground(new Color(180, 180, 180)); // Lighter color for subtle appearance
+        leftPanel.add(title);
+        
+        header.add(leftPanel, BorderLayout.WEST);
+        
+        // Settings button with better right alignment
+        JButton settingsButton = new JButton("⚙");
+        settingsButton.setFont(new Font("Segoe UI", Font.PLAIN, 14)); // Smaller font
         settingsButton.setForeground(new Color(180, 180, 180));
         settingsButton.setBackground(darkBg);
         settingsButton.setBorderPainted(false);
@@ -680,27 +708,40 @@ public class TriagePanelView {
         settingsButton.setContentAreaFilled(false);
         settingsButton.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         settingsButton.setToolTipText("Settings");
+        settingsButton.setBorder(BorderFactory.createEmptyBorder(0, 8, 0, 0)); // Add left padding for better spacing
         settingsButton.addActionListener(e -> {
             showSettingsTab = !showSettingsTab;
             refreshMainPanel();
         });
-        header.add(settingsButton, BorderLayout.EAST);
+        
+        // Create a panel to hold the settings button for better right alignment
+        JPanel rightPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 0, 0));
+        rightPanel.setOpaque(false);
+        rightPanel.add(settingsButton);
+        header.add(rightPanel, BorderLayout.EAST);
+        
         return header;
     }
 
-    // --- Settings panel placeholder ---
+    /**
+     * Creates the settings panel
+     */
     private JPanel createSettingsPanel() {
-        Color darkBg = javax.swing.UIManager.getColor("Panel.background");
-        if (darkBg == null) darkBg = new java.awt.Color(43,43,43);
-        JPanel settingsPanel = new JPanel();
+        Color darkBg = UIManager.getColor("Panel.background");
+        if (darkBg == null) {
+            darkBg = new Color(43, 43, 43);
+        }
+        
+        JPanel settingsPanel = new JPanel(new BorderLayout());
         settingsPanel.setBackground(darkBg);
-        settingsPanel.setLayout(new BorderLayout());
+        
         JLabel placeholder = new JLabel("Settings page (placeholder)");
         placeholder.setFont(new Font("Segoe UI", Font.PLAIN, 16));
         placeholder.setForeground(Color.WHITE);
         placeholder.setHorizontalAlignment(SwingConstants.CENTER);
         settingsPanel.add(placeholder, BorderLayout.CENTER);
-        // Add a button to return to chat
+        
+        // Back to chat button
         JButton backToChat = new JButton("Back to Chat");
         backToChat.setFont(new Font("Segoe UI", Font.PLAIN, 13));
         backToChat.setFocusPainted(false);
@@ -709,21 +750,29 @@ public class TriagePanelView {
             showSettingsTab = false;
             refreshMainPanel();
         });
+        
         JPanel buttonPanel = new JPanel();
         buttonPanel.setBackground(darkBg);
         buttonPanel.add(backToChat);
         settingsPanel.add(buttonPanel, BorderLayout.SOUTH);
+        
         return settingsPanel;
     }
 
-    // --- Helper to refresh the main panel when switching tabs ---
+    /**
+     * Refreshes the main panel when switching tabs
+     */
     private void refreshMainPanel() {
         mainPanel.removeAll();
         mainPanel.setLayout(new BorderLayout());
-        Color panelBg = javax.swing.UIManager.getColor("Panel.background");
-        if (panelBg == null) panelBg = new java.awt.Color(43,43,43);
+        
+        Color panelBg = UIManager.getColor("Panel.background");
+        if (panelBg == null) {
+            panelBg = new Color(43, 43, 43);
+        }
         mainPanel.setBackground(panelBg);
         mainPanel.setOpaque(true);
+        
         mainPanel.add(createCustomHeaderPanel(), BorderLayout.NORTH);
         if (showSettingsTab) {
             mainPanel.add(createSettingsPanel(), BorderLayout.CENTER);
@@ -731,6 +780,7 @@ public class TriagePanelView {
             mainPanel.add(chatScrollPane, BorderLayout.CENTER);
             mainPanel.add(inputPanel, BorderLayout.SOUTH);
         }
+        
         mainPanel.revalidate();
         mainPanel.repaint();
     }
