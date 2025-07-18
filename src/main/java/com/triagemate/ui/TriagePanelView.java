@@ -137,9 +137,11 @@ public class TriagePanelView {
         inputContainer.setBackground(new Color(50, 50, 50));
         inputContainer.setOpaque(true);
         
-        // Configure text area
+        // Configure text area for multi-line input
         inputArea.setFont(new Font("Segoe UI", Font.PLAIN, 14));
-        inputArea.setRows(1);
+        inputArea.setRows(3); // Allow multiple rows
+        inputArea.setLineWrap(true);
+        inputArea.setWrapStyleWord(true);
         inputArea.setBorder(BorderFactory.createEmptyBorder(0, 0, 0, 0));
         inputArea.setBackground(new Color(50, 50, 50));
         inputArea.setForeground(Color.WHITE);
@@ -147,20 +149,26 @@ public class TriagePanelView {
         inputArea.setOpaque(false);
         inputArea.putClientProperty("JTextField.placeholderText", "Ask anything about the test failure...");
         
-        // Create send button
-        JButton sendIconButton = new JButton("→");
-        sendIconButton.setFont(new Font("Segoe UI", Font.BOLD, 16));
-        sendIconButton.setBackground(new Color(70, 70, 70));
-        sendIconButton.setForeground(Color.WHITE);
-        sendIconButton.setFocusPainted(false);
-        sendIconButton.setBorder(BorderFactory.createEmptyBorder(4, 8, 4, 8));
-        sendIconButton.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-        sendIconButton.setToolTipText("Send message");
-        sendIconButton.addActionListener(e -> sendMessage());
+        // Create modern send button with custom icon
+        JButton sendIconButton = createModernSendButton();
+        
+        // Create a fixed-size container for the send button with vertical centering
+        JPanel buttonContainer = new JPanel();
+        buttonContainer.setLayout(new BoxLayout(buttonContainer, BoxLayout.Y_AXIS));
+        buttonContainer.setOpaque(false);
+        buttonContainer.setPreferredSize(new Dimension(50, 40));
+        buttonContainer.setMaximumSize(new Dimension(50, 40));
+        buttonContainer.setMinimumSize(new Dimension(50, 40));
+        
+        // Add vertical glue to center the button
+        buttonContainer.add(Box.createVerticalGlue());
+        buttonContainer.add(sendIconButton);
+        buttonContainer.add(Box.createVerticalGlue());
         
         // Add components to input container
         inputContainer.add(inputArea, BorderLayout.CENTER);
-        inputContainer.add(sendIconButton, BorderLayout.EAST);
+        inputContainer.add(buttonContainer, BorderLayout.EAST);
+        buttonContainer.add(sendIconButton);
         
         // Add to input panel
         inputPanel.add(inputContainer, BorderLayout.CENTER);
@@ -249,9 +257,19 @@ public class TriagePanelView {
         for (int i = 0; i < chatHistory.size(); i++) {
             ChatMessage existingMessage = chatHistory.get(i);
             MessageComponent existingComponent = new MessageComponent(existingMessage);
+            existingComponent.setAlignmentY(Component.TOP_ALIGNMENT);
             messageContainer.add(existingComponent);
             
             System.out.println("Added message " + i + " to container - component size: " + existingComponent.getPreferredSize());
+            
+            // In addMessageToUI - after adding each component
+            System.out.println("=== Container Layout Debug ===");
+            System.out.println("MessageContainer layout: " + messageContainer.getLayout().getClass().getSimpleName());
+            System.out.println("MessageContainer preferred size: " + messageContainer.getPreferredSize());
+            System.out.println("MessageContainer minimum size: " + messageContainer.getMinimumSize());
+            System.out.println("MessageContainer maximum size: " + messageContainer.getMaximumSize());
+            System.out.println("Component " + i + " preferred size: " + existingComponent.getPreferredSize());
+            System.out.println("Component " + i + " actual size: " + existingComponent.getSize());
             
             // Add spacing between messages, but not after the last one
             if (i < chatHistory.size() - 1) {
@@ -269,6 +287,12 @@ public class TriagePanelView {
         
         System.out.println("Final message container size: " + messageContainer.getPreferredSize());
         System.out.println("Message container component count: " + messageContainer.getComponentCount());
+        
+        // After revalidate/repaint
+        System.out.println("=== Post-Layout Debug ===");
+        System.out.println("ScrollPane viewport size: " + chatScrollPane.getViewport().getSize());
+        System.out.println("ScrollPane viewport preferred size: " + chatScrollPane.getViewport().getPreferredSize());
+        System.out.println("Final message container size: " + messageContainer.getSize());
         System.out.println("================================");
         
         // Scroll to bottom
@@ -391,14 +415,16 @@ public class TriagePanelView {
      */
     private static class MessageComponent extends JPanel {
         private final ChatMessage message;
+        private CollapsiblePanel collapsiblePanel; // Reference to track collapsible panel
         
         public MessageComponent(ChatMessage message) {
             this.message = message;
             setLayout(new BorderLayout());
             setOpaque(false);
             setBorder(BorderFactory.createEmptyBorder(8, 0, 8, 0));
-            setMaximumSize(new Dimension(Integer.MAX_VALUE, Integer.MAX_VALUE));
+            setMaximumSize(new Dimension(Integer.MAX_VALUE, getPreferredSize().height + 16));
             setAlignmentX(Component.LEFT_ALIGNMENT);
+            setAlignmentY(Component.TOP_ALIGNMENT);
             
             System.out.println("=== MessageComponent Debug ===");
             System.out.println("Creating MessageComponent for role: " + message.getRole());
@@ -413,6 +439,15 @@ public class TriagePanelView {
             
             System.out.println("After initialization - preferred size: " + getPreferredSize());
             System.out.println("After initialization - maximum size: " + getMaximumSize());
+            
+            // In MessageComponent constructor - after initialization
+            System.out.println("=== MessageComponent Sizing Debug ===");
+            System.out.println("Role: " + message.getRole());
+            System.out.println("Preferred size: " + getPreferredSize());
+            System.out.println("Minimum size: " + getMinimumSize());
+            System.out.println("Maximum size: " + getMaximumSize());
+            System.out.println("Alignment X: " + getAlignmentX());
+            System.out.println("Alignment Y: " + getAlignmentY());
             System.out.println("===============================");
         }
         
@@ -458,21 +493,30 @@ public class TriagePanelView {
         }
         
         private JPanel createContent() {
-            JPanel contentPanel = new JPanel(new BorderLayout());
+            // NEW FIX: Use BoxLayout instead of BorderLayout to stack components vertically
+            JPanel contentPanel = new JPanel();
+            contentPanel.setLayout(new BoxLayout(contentPanel, BoxLayout.Y_AXIS));
             contentPanel.setOpaque(false);
             
-            System.out.println("=== createContent Debug ===");
+            System.out.println("=== NEW FIX: BoxLayout createContent Debug ===");
             System.out.println("Creating content panel for role: " + message.getRole());
+            System.out.println("Content panel layout: " + contentPanel.getLayout().getClass().getSimpleName());
             System.out.println("Content panel initial size: " + contentPanel.getPreferredSize());
+            
+            // Track component order for debugging
+            int componentIndex = 0;
             
             // Add scenario information for AI messages if available
             if ((message.getRole() == ChatMessage.Role.AI || message.getRole() == ChatMessage.Role.SYSTEM) && 
                 message.getFailureInfo() != null) {
                 
+                System.out.println("Adding scenario component at index: " + componentIndex++);
+                
                 // Add scenario information
                 JPanel scenarioPanel = new JPanel(new BorderLayout());
                 scenarioPanel.setOpaque(false);
                 scenarioPanel.setBorder(BorderFactory.createEmptyBorder(0, 0, 8, 0));
+                scenarioPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
                 
                 // Create scenario label with orange "Scenario:" and bold white test name
                 JPanel scenarioLabelPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
@@ -491,15 +535,19 @@ public class TriagePanelView {
                 scenarioLabelPanel.add(scenarioName);
                 scenarioPanel.add(scenarioLabelPanel, BorderLayout.WEST);
                 
-                contentPanel.add(scenarioPanel, BorderLayout.NORTH);
+                contentPanel.add(scenarioPanel);
+                System.out.println("Scenario panel added - preferred size: " + scenarioPanel.getPreferredSize());
                 
                 // Add failed step information
                 if (message.getFailureInfo().getFailedStepText() != null && 
                     !message.getFailureInfo().getFailedStepText().trim().isEmpty()) {
                     
+                    System.out.println("Adding failed step component at index: " + componentIndex++);
+                    
                     JPanel failedStepPanel = new JPanel(new BorderLayout());
                     failedStepPanel.setOpaque(false);
                     failedStepPanel.setBorder(BorderFactory.createEmptyBorder(0, 0, 8, 0));
+                    failedStepPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
                     
                     // Create failed step label with failure symbol, orange "Failed Step:" and red bold step text
                     JPanel failedStepLabelPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
@@ -523,70 +571,127 @@ public class TriagePanelView {
                     failedStepLabelPanel.add(failedStepText);
                     failedStepPanel.add(failedStepLabelPanel, BorderLayout.WEST);
                     
-                    contentPanel.add(failedStepPanel, BorderLayout.CENTER);
+                    contentPanel.add(failedStepPanel);
+                    System.out.println("Failed step panel added - preferred size: " + failedStepPanel.getPreferredSize());
                 }
+            }
+            
+            // Create message text component - always use JTextArea for consistent spacing
+            if (message.getText() != null && !message.getText().trim().isEmpty()) {
+                System.out.println("Adding message text component at index: " + componentIndex++);
+                
+                JTextArea messageText = new JTextArea(message.getText());
+                messageText.setLineWrap(true);
+                messageText.setWrapStyleWord(true);
+                messageText.setEditable(false);
+                messageText.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+                messageText.setBackground(getBackground());
+                messageText.setForeground(Color.WHITE);
+                messageText.setBorder(BorderFactory.createEmptyBorder(0, 0, 0, 0));
+                messageText.setOpaque(false);
+                messageText.setAlignmentX(Component.LEFT_ALIGNMENT);
+                
+                // FIX: Calculate proper size for wrapped text
+                // First, set a reasonable width to calculate wrapped height
+                int maxWidth = 600; // Reasonable max width for chat messages
+                messageText.setSize(maxWidth, Short.MAX_VALUE);
+                
+                // Get the preferred size after setting the width
+                Dimension preferredSize = messageText.getPreferredSize();
+                
+                System.out.println("=== FIXED BoxLayout JTextArea Debug ===");
+                System.out.println("Message text: '" + message.getText() + "'");
+                System.out.println("Text length: " + message.getText().length());
+                System.out.println("Contains newlines: " + message.getText().contains("\n"));
+                System.out.println("Line count: " + messageText.getLineCount());
+                System.out.println("Set width: " + maxWidth);
+                System.out.println("Calculated preferred size: " + preferredSize);
+                System.out.println("Font: " + messageText.getFont());
+                System.out.println("Font metrics height: " + messageText.getFontMetrics(messageText.getFont()).getHeight());
+                
+                // Set the calculated size
+                messageText.setPreferredSize(preferredSize);
+                messageText.setMaximumSize(new Dimension(Integer.MAX_VALUE, preferredSize.height + 4));
+                messageText.setAlignmentY(Component.TOP_ALIGNMENT);
+                
+                System.out.println("Final preferred size: " + messageText.getPreferredSize());
+                System.out.println("Final maximum size: " + messageText.getMaximumSize());
+                System.out.println("Alignment X: " + messageText.getAlignmentX());
+                System.out.println("=====================================");
+                
+                contentPanel.add(messageText);
+                System.out.println("Message text added - preferred size: " + messageText.getPreferredSize());
             }
             
             // Add AI thinking section for AI messages
             if ((message.getRole() == ChatMessage.Role.AI || message.getRole() == ChatMessage.Role.SYSTEM) && 
                 message.getAiThinking() != null && !message.getAiThinking().trim().isEmpty()) {
                 
-                CollapsiblePanel aiThinkingPanel = new CollapsiblePanel("AI Thinking", message.getAiThinking());
-                contentPanel.add(aiThinkingPanel, BorderLayout.SOUTH);
+                System.out.println("Adding collapsible panel component at index: " + componentIndex++);
+                
+                collapsiblePanel = new CollapsiblePanel("AI Thinking", message.getAiThinking(), this);
+                collapsiblePanel.setAlignmentX(Component.LEFT_ALIGNMENT);
+                contentPanel.add(collapsiblePanel);
+                System.out.println("Collapsible panel added - preferred size: " + collapsiblePanel.getPreferredSize());
             }
             
-            // Create message text component - use JLabel for simple text, JTextArea for multi-line content
-            if (message.getText() != null && !message.getText().trim().isEmpty()) {
-                if (message.getText().contains("\n") || message.getText().length() > 100) {
-                    // Use JTextArea for multi-line or long content
-                    JTextArea messageText = new JTextArea(message.getText());
-                    messageText.setLineWrap(true);
-                    messageText.setWrapStyleWord(true);
-                    messageText.setEditable(false);
-                    messageText.setFont(new Font("Segoe UI", Font.PLAIN, 14));
-                    messageText.setBackground(getBackground());
-                    messageText.setForeground(Color.WHITE);
-                    messageText.setBorder(BorderFactory.createEmptyBorder(0, 0, 0, 0));
-                    messageText.setOpaque(false);
-                    
-                    // Let JTextArea calculate its natural size with minimal padding
-                    Dimension preferredSize = messageText.getPreferredSize();
-                    System.out.println("=== JTextArea Debug ===");
-                    System.out.println("Message text: '" + message.getText() + "'");
-                    System.out.println("Text length: " + message.getText().length());
-                    System.out.println("Contains newlines: " + message.getText().contains("\n"));
-                    System.out.println("Line count: " + messageText.getLineCount());
-                    System.out.println("Preferred size: " + preferredSize);
-                    System.out.println("Font: " + messageText.getFont());
-                    System.out.println("Font metrics height: " + messageText.getFontMetrics(messageText.getFont()).getHeight());
-                    System.out.println("Font metrics ascent: " + messageText.getFontMetrics(messageText.getFont()).getAscent());
-                    System.out.println("Font metrics descent: " + messageText.getFontMetrics(messageText.getFont()).getDescent());
-                    System.out.println("Font metrics leading: " + messageText.getFontMetrics(messageText.getFont()).getLeading());
-                    
-                    messageText.setPreferredSize(preferredSize);
-                    messageText.setMaximumSize(new Dimension(Integer.MAX_VALUE, preferredSize.height + 4));
-                    
-                    System.out.println("Final preferred size: " + messageText.getPreferredSize());
-                    System.out.println("Final maximum size: " + messageText.getMaximumSize());
-                    System.out.println("=====================");
-                    
-                    contentPanel.add(messageText, BorderLayout.CENTER);
-                } else {
-                    // Use JLabel for simple text
-                    JLabel messageLabel = new JLabel(message.getText());
-                    messageLabel.setFont(new Font("Segoe UI", Font.PLAIN, 14));
-                    messageLabel.setForeground(Color.WHITE);
-                    messageLabel.setBorder(BorderFactory.createEmptyBorder(0, 0, 0, 0));
-                    
-                    contentPanel.add(messageLabel, BorderLayout.CENTER);
-                }
-            }
+            System.out.println("=== BoxLayout Final Debug ===");
+            System.out.println("Content panel layout: " + contentPanel.getLayout().getClass().getSimpleName());
+            System.out.println("Content panel component count: " + contentPanel.getComponentCount());
+            System.out.println("Content panel final preferred size: " + contentPanel.getPreferredSize());
+            System.out.println("Content panel final maximum size: " + contentPanel.getMaximumSize());
             
-            System.out.println("Content panel final size: " + contentPanel.getPreferredSize());
-            System.out.println("Content panel maximum size: " + contentPanel.getMaximumSize());
-            System.out.println("===========================");
+            // Debug each component in the BoxLayout
+            for (int i = 0; i < contentPanel.getComponentCount(); i++) {
+                Component comp = contentPanel.getComponent(i);
+                System.out.println("Component " + i + ": " + comp.getClass().getSimpleName() + 
+                                 " - preferred size: " + comp.getPreferredSize() + 
+                                 " - alignment X: " + comp.getAlignmentX());
+            }
+            System.out.println("=====================================");
             
             return contentPanel;
+        }
+        
+        // Removed the moderate fix - reverting to original preferred size logic
+        
+        private int getContentHeight() {
+            // Calculate actual content height based on components
+            int height = 0;
+            
+            // Add header height (timestamp + sender info)
+            height += 24; // Approximate header height
+            
+            // Add message text height if present
+            if (message.getText() != null && !message.getText().trim().isEmpty()) {
+                // Estimate text height based on content
+                int textHeight = estimateTextHeight(message.getText());
+                height += textHeight;
+            }
+            
+            // Add scenario/failed step height if present
+            if (message.getFailureInfo() != null) {
+                height += 40; // Approximate height for scenario + failed step
+            }
+            
+            // Add AI thinking toggle height if present
+            if (message.getAiThinking() != null && !message.getAiThinking().trim().isEmpty()) {
+                height += 24; // Approximate height for toggle
+            }
+            
+            return height;
+        }
+        
+        private int estimateTextHeight(String text) {
+            // Simple estimation based on text length and line breaks
+            int lines = 1;
+            if (text.contains("\n")) {
+                lines = text.split("\n").length;
+            } else if (text.length() > 80) {
+                // Estimate line wrapping
+                lines = (text.length() / 80) + 1;
+            }
+            return lines * 18; // Approximate line height
         }
         
         private String formatFullTimestamp(long timestamp) {
@@ -601,12 +706,19 @@ public class TriagePanelView {
         private final JPanel contentPanel;
         private final JLabel toggleLabel;
         private boolean isExpanded = false;
+        private final MessageComponent parentMessageComponent;
         
-        public CollapsiblePanel(String title, String content) {
+        public CollapsiblePanel(String title, String content, MessageComponent parent) {
+            this.parentMessageComponent = parent;
+            System.out.println("=== NEW FIX: BoxLayout CollapsiblePanel Constructor Debug ===");
+            System.out.println("Creating CollapsiblePanel with title: '" + title + "'");
+            System.out.println("Content length: " + (content != null ? content.length() : 0));
+            
             setLayout(new BorderLayout());
             setOpaque(false);
             setBorder(BorderFactory.createEmptyBorder(4, 0, 4, 0));
             setMaximumSize(new Dimension(Integer.MAX_VALUE, Short.MAX_VALUE));
+            setAlignmentX(Component.LEFT_ALIGNMENT);
             
             // Create toggle button with expand/collapse indicator
             toggleLabel = new JLabel("▶ Show AI Thinking");
@@ -635,14 +747,20 @@ public class TriagePanelView {
                 ));
                 contentArea.setOpaque(true);
                 
-                // Let JTextArea calculate its natural size with minimal padding
+                // FIX: Calculate proper size for wrapped text in collapsible panel
+                int maxWidth = 550; // Slightly smaller for collapsible content
+                contentArea.setSize(maxWidth, Short.MAX_VALUE);
+                
+                // Get the preferred size after setting the width
                 Dimension preferredSize = contentArea.getPreferredSize();
-                System.out.println("=== CollapsiblePanel JTextArea Debug ===");
+                
+                System.out.println("=== FIXED CollapsiblePanel JTextArea Debug ===");
                 System.out.println("Content text: '" + content + "'");
                 System.out.println("Content length: " + content.length());
                 System.out.println("Contains newlines: " + content.contains("\n"));
                 System.out.println("Line count: " + contentArea.getLineCount());
-                System.out.println("Preferred size: " + preferredSize);
+                System.out.println("Set width: " + maxWidth);
+                System.out.println("Calculated preferred size: " + preferredSize);
                 System.out.println("Font: " + contentArea.getFont());
                 System.out.println("Font metrics height: " + contentArea.getFontMetrics(contentArea.getFont()).getHeight());
                 
@@ -651,7 +769,7 @@ public class TriagePanelView {
                 
                 System.out.println("Final preferred size: " + contentArea.getPreferredSize());
                 System.out.println("Final maximum size: " + contentArea.getMaximumSize());
-                System.out.println("================================");
+                System.out.println("=========================================");
                 
                 contentPanel.add(contentArea, BorderLayout.CENTER);
             }
@@ -668,17 +786,98 @@ public class TriagePanelView {
             contentPanel.setVisible(false);
             add(toggleLabel, BorderLayout.NORTH);
             add(contentPanel, BorderLayout.CENTER);
+            
+            System.out.println("=== NEW FIX: BoxLayout CollapsiblePanel Constructor Complete ===");
+            System.out.println("Initial preferred size: " + getPreferredSize());
+            System.out.println("Initial maximum size: " + getMaximumSize());
+            System.out.println("Alignment X: " + getAlignmentX());
+            System.out.println("Toggle label text: " + toggleLabel.getText());
+            System.out.println("Content panel visible: " + contentPanel.isVisible());
+            System.out.println("Content panel preferred size: " + contentPanel.getPreferredSize());
+            System.out.println("===============================================================");
         }
         
         private void toggleExpanded() {
+            System.out.println("=== NEW FIX: BoxLayout CollapsiblePanel Toggle Debug ===");
+            System.out.println("Before toggle - isExpanded: " + isExpanded);
+            System.out.println("Before toggle - contentPanel visible: " + contentPanel.isVisible());
+            System.out.println("Before toggle - contentPanel size: " + contentPanel.getSize());
+            System.out.println("Before toggle - contentPanel preferred size: " + contentPanel.getPreferredSize());
+            System.out.println("Before toggle - this component size: " + getSize());
+            System.out.println("Before toggle - this component preferred size: " + getPreferredSize());
+            System.out.println("Before toggle - parent layout: " + getParent().getLayout().getClass().getSimpleName());
+            System.out.println("Before toggle - parent size: " + getParent().getSize());
+            System.out.println("Before toggle - parent component count: " + getParent().getComponentCount());
+            
+            // Debug parent's BoxLayout components before toggle
+            if (getParent().getLayout() instanceof BoxLayout) {
+                System.out.println("=== Parent BoxLayout Components Before Toggle ===");
+                for (int i = 0; i < getParent().getComponentCount(); i++) {
+                    Component comp = getParent().getComponent(i);
+                    System.out.println("Parent component " + i + ": " + comp.getClass().getSimpleName() + 
+                                     " - size: " + comp.getSize() + 
+                                     " - preferred size: " + comp.getPreferredSize() +
+                                     " - visible: " + comp.isVisible());
+                }
+                System.out.println("===============================================");
+            }
+            
             isExpanded = !isExpanded;
             contentPanel.setVisible(isExpanded);
             toggleLabel.setText((isExpanded ? "▼ " : "▶ ") + "Show AI Thinking");
             toggleLabel.setToolTipText("Click to " + (isExpanded ? "hide" : "show") + " AI thinking");
             
-            // Trigger revalidation to adjust scroll pane
+            System.out.println("After toggle - isExpanded: " + isExpanded);
+            System.out.println("After toggle - contentPanel visible: " + contentPanel.isVisible());
+            System.out.println("After toggle - contentPanel size: " + contentPanel.getSize());
+            System.out.println("After toggle - contentPanel preferred size: " + contentPanel.getPreferredSize());
+            System.out.println("After toggle - this component size: " + getSize());
+            System.out.println("After toggle - this component preferred size: " + getPreferredSize());
+            
+            // Trigger revalidation for BoxLayout
             revalidate();
             repaint();
+            
+            // Revalidate parent to ensure BoxLayout recalculates
+            if (parentMessageComponent != null) {
+                System.out.println("Revalidating parent message component");
+                parentMessageComponent.revalidate();
+                parentMessageComponent.repaint();
+            }
+            
+            // Add a timer to check sizes after layout
+            Timer timer = new Timer(100, e -> {
+                System.out.println("=== Post-Layout BoxLayout CollapsiblePanel Debug ===");
+                System.out.println("Post-layout - contentPanel size: " + contentPanel.getSize());
+                System.out.println("Post-layout - this component size: " + getSize());
+                System.out.println("Post-layout - parent size: " + getParent().getSize());
+                System.out.println("Post-layout - parent preferred size: " + getParent().getPreferredSize());
+                System.out.println("Post-layout - parent component count: " + getParent().getComponentCount());
+                
+                // Debug parent's BoxLayout components after toggle
+                if (getParent().getLayout() instanceof BoxLayout) {
+                    System.out.println("=== Parent BoxLayout Components After Toggle ===");
+                    for (int i = 0; i < getParent().getComponentCount(); i++) {
+                        Component comp = getParent().getComponent(i);
+                        System.out.println("Parent component " + i + ": " + comp.getClass().getSimpleName() + 
+                                         " - size: " + comp.getSize() + 
+                                         " - preferred size: " + comp.getPreferredSize() +
+                                         " - visible: " + comp.isVisible());
+                    }
+                    System.out.println("==============================================");
+                }
+                System.out.println("==================================================");
+                ((Timer)e.getSource()).stop();
+            });
+            timer.setRepeats(false);
+            timer.start();
+        }
+
+        public boolean isExpanded() {
+            return isExpanded;
+        }
+        public JPanel getContentPanel() {
+            return contentPanel;
         }
     }
 
@@ -768,6 +967,79 @@ public class TriagePanelView {
         settingsPanel.add(buttonPanel, BorderLayout.SOUTH);
         
         return settingsPanel;
+    }
+
+    /**
+     * Creates a modern send button with custom icon and styling
+     */
+    private JButton createModernSendButton() {
+        JButton sendButton = new JButton();
+        
+        // Load the send icon
+        try {
+            Icon sendIcon = IconLoader.getIcon("/icons/send_32.png", getClass());
+            sendButton.setIcon(sendIcon);
+        } catch (Exception e) {
+            // Fallback to text if icon not found
+            sendButton.setText("→");
+            sendButton.setFont(new Font("Segoe UI", Font.BOLD, 16));
+        }
+        
+        // Modern styling - transparent background with just icon
+        sendButton.setPreferredSize(new Dimension(32, 32));
+        sendButton.setMaximumSize(new Dimension(32, 32));
+        sendButton.setMinimumSize(new Dimension(32, 32));
+        
+        // Transparent background - no background color
+        sendButton.setBackground(new Color(0, 0, 0, 0)); // Fully transparent
+        sendButton.setForeground(Color.WHITE);
+        sendButton.setFocusPainted(false);
+        sendButton.setBorderPainted(false);
+        sendButton.setContentAreaFilled(false); // No background fill
+        sendButton.setOpaque(false); // Transparent
+        
+        // Minimal border for icon spacing
+        sendButton.setBorder(BorderFactory.createEmptyBorder(4, 4, 4, 4));
+        
+        // Cursor and tooltip
+        sendButton.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        sendButton.setToolTipText("Send message");
+        
+        // Hover effects - subtle opacity change for transparent button
+        sendButton.addMouseListener(new java.awt.event.MouseAdapter() {
+            @Override
+            public void mouseEntered(java.awt.event.MouseEvent e) {
+                // Slightly increase opacity on hover for subtle effect
+                sendButton.setBackground(new Color(255, 255, 255, 30)); // Very light white overlay
+                sendButton.repaint();
+            }
+            
+            @Override
+            public void mouseExited(java.awt.event.MouseEvent e) {
+                // Return to fully transparent
+                sendButton.setBackground(new Color(0, 0, 0, 0));
+                sendButton.repaint();
+            }
+            
+            @Override
+            public void mousePressed(java.awt.event.MouseEvent e) {
+                // Slightly darker overlay when pressed
+                sendButton.setBackground(new Color(0, 0, 0, 20)); // Very light black overlay
+                sendButton.repaint();
+            }
+            
+            @Override
+            public void mouseReleased(java.awt.event.MouseEvent e) {
+                // Return to hover state
+                sendButton.setBackground(new Color(255, 255, 255, 30));
+                sendButton.repaint();
+            }
+        });
+        
+        // Action listener
+        sendButton.addActionListener(e -> sendMessage());
+        
+        return sendButton;
     }
 
     /**
