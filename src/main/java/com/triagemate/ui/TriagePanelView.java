@@ -126,13 +126,13 @@ public class TriagePanelView {
      * Sets up the input panel with modern styling
      */
     private void setupInputPanel() {
-        inputPanel.setBorder(BorderFactory.createEmptyBorder(8, 16, 16, 16));
+        inputPanel.setBorder(BorderFactory.createEmptyBorder(8, 16, 16, 16)); // Equal left and right padding for the panel
         
-        // Create input container with rounded border
+        // Create input container with rounded border - minimal right padding for button
         JPanel inputContainer = new JPanel(new BorderLayout());
         inputContainer.setBorder(BorderFactory.createCompoundBorder(
             BorderFactory.createLineBorder(new Color(60, 60, 60), 1, true),
-            BorderFactory.createEmptyBorder(8, 12, 8, 8)
+            BorderFactory.createEmptyBorder(8, 12, 8, 0) // No right padding - button will be flush against edge
         ));
         inputContainer.setBackground(new Color(50, 50, 50));
         inputContainer.setOpaque(true);
@@ -156,9 +156,10 @@ public class TriagePanelView {
         JPanel buttonContainer = new JPanel();
         buttonContainer.setLayout(new BoxLayout(buttonContainer, BoxLayout.Y_AXIS));
         buttonContainer.setOpaque(false);
-        buttonContainer.setPreferredSize(new Dimension(50, 40));
-        buttonContainer.setMaximumSize(new Dimension(50, 40));
-        buttonContainer.setMinimumSize(new Dimension(50, 40));
+        buttonContainer.setPreferredSize(new Dimension(40, 40)); // Increased width to accommodate icon
+        buttonContainer.setMaximumSize(new Dimension(40, 40));
+        buttonContainer.setMinimumSize(new Dimension(40, 40));
+        buttonContainer.setBorder(BorderFactory.createEmptyBorder(0, 0, 0, 0)); // No right padding
         
         // Add vertical glue to center the button
         buttonContainer.add(Box.createVerticalGlue());
@@ -998,8 +999,8 @@ public class TriagePanelView {
         sendButton.setContentAreaFilled(false); // No background fill
         sendButton.setOpaque(false); // Transparent
         
-        // Minimal border for icon spacing
-        sendButton.setBorder(BorderFactory.createEmptyBorder(4, 4, 4, 4));
+        // Minimal border for icon spacing - ensure icon fits
+        sendButton.setBorder(BorderFactory.createEmptyBorder(2, 2, 2, 2));
         
         // Cursor and tooltip
         sendButton.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
@@ -1007,14 +1008,14 @@ public class TriagePanelView {
         
         // Hover effects - subtle opacity change for transparent button
         sendButton.addMouseListener(new java.awt.event.MouseAdapter() {
-            @Override
+        @Override
             public void mouseEntered(java.awt.event.MouseEvent e) {
                 // Slightly increase opacity on hover for subtle effect
                 sendButton.setBackground(new Color(255, 255, 255, 30)); // Very light white overlay
                 sendButton.repaint();
-            }
-            
-            @Override
+        }
+        
+        @Override
             public void mouseExited(java.awt.event.MouseEvent e) {
                 // Return to fully transparent
                 sendButton.setBackground(new Color(0, 0, 0, 0));
@@ -1026,9 +1027,9 @@ public class TriagePanelView {
                 // Slightly darker overlay when pressed
                 sendButton.setBackground(new Color(0, 0, 0, 20)); // Very light black overlay
                 sendButton.repaint();
-            }
-            
-            @Override
+        }
+        
+        @Override
             public void mouseReleased(java.awt.event.MouseEvent e) {
                 // Return to hover state
                 sendButton.setBackground(new Color(255, 255, 255, 30));
