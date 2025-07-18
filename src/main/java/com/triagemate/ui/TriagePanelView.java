@@ -352,11 +352,7 @@ public class TriagePanelView {
     private void generateAndDisplayPrompt(FailureInfo failureInfo) {
         try {
             String prompt = promptService.generateDetailedPrompt(failureInfo);
-            
-            // Check backend availability
-            if (!backendService.isBackendAvailable()) {
-                prompt = "Backend not configured. Here's your test failure analysis to copy to your preferred AI service:\n\n" + prompt;
-            }
+        
             
             // Create a special AI message with the prompt in the collapsible section AND failure info
             addMessage(new ChatMessage(ChatMessage.Role.AI, "", System.currentTimeMillis(), prompt, failureInfo));
