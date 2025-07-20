@@ -94,7 +94,7 @@ public final class ChatPanelFactory {
         
         JScrollPane scrollPane = new JScrollPane(viewportView);
         scrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
-        scrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
+        scrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
         scrollPane.setBorder(TriagePanelConstants.EMPTY_BORDER);
         scrollPane.setOpaque(false);
         scrollPane.getViewport().setOpaque(false);
@@ -104,6 +104,9 @@ public final class ChatPanelFactory {
         JScrollBar verticalBar = scrollPane.getVerticalScrollBar();
         verticalBar.setUnitIncrement(TriagePanelConstants.SCROLL_BAR_UNIT_INCREMENT);
         verticalBar.setBlockIncrement(TriagePanelConstants.SCROLL_BAR_UNIT_INCREMENT * 3);
+        
+        // Set minimum width to enable soft wrapping before horizontal scrollbar appears
+        scrollPane.setMinimumSize(new Dimension(TriagePanelConstants.MIN_CHAT_WIDTH_BEFORE_SCROLL, 200));
         
         return scrollPane;
     }

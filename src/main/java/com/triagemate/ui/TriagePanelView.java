@@ -15,7 +15,7 @@ import com.intellij.openapi.util.IconLoader;
 import com.intellij.icons.AllIcons;
 import com.triagemate.models.FailureInfo;
 import com.triagemate.services.LocalPromptGenerationService;
-import com.triagemate.services.BackendCommunicationService;
+import com.triagemate.services.AINetworkService;
 import com.triagemate.ui.ChatMessage;
 import com.triagemate.ui.MessageComponent;
 import com.triagemate.ui.CollapsiblePanel;
@@ -23,10 +23,12 @@ import com.triagemate.ui.TriagePanelConstants;
 import com.triagemate.ui.ChatPanelFactory;
 import com.triagemate.ui.InputPanelFactory;
 import com.triagemate.ui.HeaderPanelFactory;
+import com.triagemate.settings.AISettings;
 import com.intellij.openapi.diagnostic.Logger;
 
 import javax.swing.*;
 import java.awt.*;
+import java.awt.event.ActionListener;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
 import java.awt.datatransfer.StringSelection;
@@ -41,8 +43,9 @@ import java.util.List;
  * with AI-powered assistance. It displays failure information, allows user interaction,
  * and provides collapsible AI thinking sections for detailed analysis.</p>
  * 
- * @author TriageMate Team
+ * @author Alex Ibasitas
  * @version 1.0
+ * @since 1.0
  */
 public class TriagePanelView {
     
@@ -65,7 +68,7 @@ public class TriagePanelView {
     // Chat state management
     private final List<ChatMessage> chatHistory;
     private final LocalPromptGenerationService promptService;
-    private final BackendCommunicationService backendService;
+    private final AINetworkService aiNetworkService;
     private JScrollPane chatScrollPane;
     private JPanel messageContainer;
     private boolean showSettingsTab = false;
@@ -86,7 +89,7 @@ public class TriagePanelView {
         this.project = project;
         this.chatHistory = new ArrayList<>();
         this.promptService = project.getService(LocalPromptGenerationService.class);
-        this.backendService = project.getService(BackendCommunicationService.class);
+        this.aiNetworkService = project.getService(AINetworkService.class);
         
         // Initialize UI components
         this.mainPanel = new JPanel(new BorderLayout());
@@ -468,41 +471,21 @@ public class TriagePanelView {
     }
 
     /**
-     * Creates the settings panel.
+     * Creates the settings panel using the dedicated SettingsPanel class.
      *
      * @return The configured settings panel
      */
     private JPanel createSettingsPanel() {
-        Color darkBg = UIManager.getColor("Panel.background");
-        if (darkBg == null) {
-            darkBg = new Color(43, 43, 43);
-        }
+        AISettings aiSettings = AISettings.getInstance();
         
-        JPanel settingsPanel = new JPanel(new BorderLayout());
-        settingsPanel.setBackground(darkBg);
-        
-        JLabel placeholder = new JLabel("Settings page (placeholder)");
-        placeholder.setFont(new Font("Segoe UI", Font.PLAIN, 16));
-        placeholder.setForeground(Color.WHITE);
-        placeholder.setHorizontalAlignment(SwingConstants.CENTER);
-        settingsPanel.add(placeholder, BorderLayout.CENTER);
-        
-        // Back to chat button
-        JButton backToChat = new JButton("Back to Chat");
-        backToChat.setFont(new Font("Segoe UI", Font.PLAIN, 13));
-        backToChat.setFocusPainted(false);
-        backToChat.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-        backToChat.addActionListener(e -> {
+        // Create action listener for back to chat navigation
+        ActionListener backToChatListener = e -> {
             showSettingsTab = false;
             refreshMainPanel();
-        });
+        };
         
-        JPanel buttonPanel = new JPanel();
-        buttonPanel.setBackground(darkBg);
-        buttonPanel.add(backToChat);
-        settingsPanel.add(buttonPanel, BorderLayout.SOUTH);
-        
-        return settingsPanel;
+        // Create and return the dedicated settings panel
+        return new SettingsPanel(aiSettings, backToChatListener);
     }
 
     /**

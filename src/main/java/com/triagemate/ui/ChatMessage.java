@@ -13,7 +13,7 @@ import com.triagemate.models.FailureInfo;
  * <p>The class is designed to be thread-safe and follows the builder pattern
  * for creating messages with different combinations of optional fields.</p>
  * 
- * @author TriageMate Team
+ * @author Alex Ibasitas
  * @version 1.0
  * @since 1.0
  */

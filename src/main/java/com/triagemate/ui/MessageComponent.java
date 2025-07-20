@@ -237,12 +237,17 @@ public class MessageComponent extends JPanel {
         // Ensure text area is visible and properly sized
         messageText.setVisible(true);
         
-        // Calculate proper size for wrapped text
-        messageText.setSize(TriagePanelConstants.MAX_MESSAGE_TEXT_WIDTH, Short.MAX_VALUE);
+        // Implement soft wrapping: allow text to wrap until minimum width is reached
+        // Set preferred width to allow wrapping, but respect minimum width constraint
+        int preferredWidth = Math.max(TriagePanelConstants.MIN_CHAT_WIDTH_BEFORE_SCROLL, 
+                                    TriagePanelConstants.MAX_MESSAGE_TEXT_WIDTH);
+        messageText.setSize(preferredWidth, Short.MAX_VALUE);
         Dimension preferredSize = messageText.getPreferredSize();
         
-        messageText.setPreferredSize(preferredSize);
+        // Set flexible sizing that allows wrapping but respects minimum width
+        messageText.setPreferredSize(new Dimension(preferredWidth, preferredSize.height));
         messageText.setMaximumSize(new Dimension(Integer.MAX_VALUE, preferredSize.height + TriagePanelConstants.CONTENT_PADDING));
+        messageText.setMinimumSize(new Dimension(TriagePanelConstants.MIN_CHAT_WIDTH_BEFORE_SCROLL, preferredSize.height));
         messageText.setAlignmentY(Component.TOP_ALIGNMENT);
         
         // Add component name for testing identification

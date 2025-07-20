@@ -10,7 +10,6 @@ import com.triagemate.extractors.StepDefinitionExtractor;
 import com.triagemate.models.FailureInfo;
 import com.triagemate.models.GherkinScenarioInfo;
 import com.triagemate.models.StepDefinitionInfo;
-import com.triagemate.services.BackendCommunicationService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;

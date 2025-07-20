@@ -15,7 +15,7 @@ import java.awt.*;
  * <p>All constants are organized into logical groups for better readability
  * and maintenance. Colors follow a dark theme suitable for IDE integration.</p>
  * 
- * @author TriageMate Team
+ * @author Alex Ibasitas
  * @version 1.0
  * @since 1.0
  */
@@ -130,6 +130,12 @@ public final class TriagePanelConstants {
     
     /** Maximum width for message text */
     public static final int MAX_MESSAGE_TEXT_WIDTH = 600;
+    
+    /** Minimum width before horizontal scrollbar appears (soft wrapping threshold) */
+    public static final int MIN_CHAT_WIDTH_BEFORE_SCROLL = 300;
+    
+    /** Minimum width before settings horizontal scrollbar appears (following JetBrains guidelines) */
+    public static final int MIN_SETTINGS_WIDTH_BEFORE_SCROLL = 300;
     
     /** Maximum width for collapsible content */
     public static final int MAX_COLLAPSIBLE_CONTENT_WIDTH = 550;

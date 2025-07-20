@@ -16,7 +16,7 @@ import java.awt.event.ActionListener;
  * between component creation logic and component usage, making the code
  * more maintainable and testable.</p>
  * 
- * @author TriageMate Team
+ * @author Alex Ibasitas
  * @version 1.0
  * @since 1.0
  */

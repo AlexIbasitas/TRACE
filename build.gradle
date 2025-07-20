@@ -174,8 +174,8 @@ test {
     systemProperty 'idea.plugins.path', "${buildDir}/idea-sandbox/plugins-test"
     
     // Exclude integration tests to avoid temp directory nesting issues
-    exclude '**/*IntegrationTest*.class'
-    exclude '**/*Integration.class'
+    exclude '**/*IntegrationTest.java'
+    exclude '**/*Integration.java'
 }
 
 // ============================================================================
@@ -217,6 +217,7 @@ task intellijIntegrationTest(type: Test) {
     // Include only IntelliJ Platform integration tests
     include '**/*StepDefinitionExtractorIntegrationTest*.class'
     include '**/*GherkinScenarioExtractorIntegrationTest*.class'
+    include '**/*SecureAPIKeyManagerIntegrationTest*.class'
     
     // Use unique sandbox directories to prevent conflicts
     systemProperty 'idea.system.path', "${buildDir}/idea-sandbox/system-intellij-test"

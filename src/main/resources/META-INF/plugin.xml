@@ -27,8 +27,9 @@
                    factoryClass="com.triagemate.ui.TriagePanelToolWindowFactory"/>
 
         <!-- Services -->
-        <applicationService serviceImplementation="com.triagemate.services.BackendCommunicationService"/>
+        <projectService serviceImplementation="com.triagemate.services.AINetworkService"/>
         <applicationService serviceImplementation="com.triagemate.services.LocalPromptGenerationService"/>
+        <applicationService serviceImplementation="com.triagemate.settings.AISettings"/>
     </extensions>
 
     <applicationListeners>

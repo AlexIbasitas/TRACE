@@ -221,7 +221,7 @@ class ChatPanelFactoryUnitTest {
 
             // Assert
             assertEquals(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED, scrollPane.getVerticalScrollBarPolicy());
-            assertEquals(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER, scrollPane.getHorizontalScrollBarPolicy());
+            assertEquals(JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED, scrollPane.getHorizontalScrollBarPolicy());
             assertTrue(scrollPane.getVerticalScrollBar().getUnitIncrement() > 0);
         }
     }
