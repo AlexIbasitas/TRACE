@@ -11,7 +11,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Custom collapsible panel for AI thinking content in the TriageMate chat interface.
+ * Custom collapsible panel for AI thinking content in the TRACE interface.
  * 
  * <p>This Swing component provides expandable/collapsible functionality for displaying
  * detailed AI analysis and thinking content. It includes a toggle button with visual

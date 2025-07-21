@@ -3,7 +3,7 @@ package com.triagemate.ui;
 import com.triagemate.models.FailureInfo;
 
 /**
- * Represents a chat message in the TriageMate chat interface.
+ * Represents a chat message in the TRACE interface.
  * 
  * <p>This immutable data class stores all information related to a chat message,
  * including the sender role, message content, timestamp, AI thinking content,

@@ -63,7 +63,7 @@ public final class HeaderPanelFactory {
     /**
      * Creates the left panel of the header containing the title.
      * 
-     * <p>This method creates a panel with the TriageMate Chat title using
+     * <p>This method creates a panel with the TRACE title using
      * proper font and color styling.</p>
      *
      * @return The configured left panel

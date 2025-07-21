@@ -253,7 +253,7 @@ public final class TriagePanelConstants {
     public static final String USER_DISPLAY_NAME = "You";
     
     /** AI display name */
-    public static final String AI_DISPLAY_NAME = "TriageMate";
+    public static final String AI_DISPLAY_NAME = "TRACE";
     
     /** Scenario prefix text */
     public static final String SCENARIO_PREFIX = "Scenario: ";
@@ -286,7 +286,7 @@ public final class TriagePanelConstants {
     public static final String SETTINGS_BUTTON_TOOLTIP = "Settings";
     
     /** Header title text */
-    public static final String HEADER_TITLE_TEXT = "TriageMate Chat";
+    public static final String HEADER_TITLE_TEXT = "TRACE";
     
     /** Settings placeholder text */
     public static final String SETTINGS_PLACEHOLDER_TEXT = "Settings page (placeholder)";

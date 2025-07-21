@@ -435,10 +435,23 @@ public class TriagePanelView {
         ));
         
         // Create left side with smaller, more minimalist title
-        JPanel leftPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
+        JPanel leftPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 0));
         leftPanel.setOpaque(false);
         
-        JLabel title = new JLabel("TriageMate Chat");
+        // Load and add the logo
+        try {
+            Icon logoIcon = IconLoader.getIcon("/icons/logo_24.png", getClass());
+            if (logoIcon != null) {
+                JLabel logoLabel = new JLabel(logoIcon);
+                logoLabel.setBorder(BorderFactory.createEmptyBorder(0, 0, 0, 5));
+                leftPanel.add(logoLabel);
+            }
+        } catch (Exception e) {
+            // Fallback if logo loading fails
+            LOG.warn("Could not load logo icon: " + e.getMessage());
+        }
+        
+        JLabel title = new JLabel("TRACE");
         title.setFont(new Font("Segoe UI", Font.PLAIN, 14));
         title.setForeground(new Color(180, 180, 180));
         leftPanel.add(title);

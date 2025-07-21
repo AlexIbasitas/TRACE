@@ -137,7 +137,7 @@ public class AIServiceConfigPanel extends JBPanel<AIServiceConfigPanel> {
         setMaximumSize(new Dimension(Integer.MAX_VALUE, Integer.MAX_VALUE));
         
         // Create header
-        JBLabel headerLabel = new JBLabel("🤖 AI Model Configuration");
+        JBLabel headerLabel = new JBLabel("AI Model Configuration");
         headerLabel.setFont(headerLabel.getFont().deriveFont(Font.BOLD, 16f));
         headerLabel.setBorder(JBUI.Borders.emptyBottom(20));
         
@@ -172,7 +172,7 @@ public class AIServiceConfigPanel extends JBPanel<AIServiceConfigPanel> {
         ));
         
         // Header
-        JBLabel headerLabel = new JBLabel("🔑 API Key Configuration");
+        JBLabel headerLabel = new JBLabel("API Key Configuration");
         headerLabel.setFont(headerLabel.getFont().deriveFont(Font.BOLD, 14f));
         headerLabel.setBorder(JBUI.Borders.emptyBottom(10));
         
@@ -308,7 +308,7 @@ public class AIServiceConfigPanel extends JBPanel<AIServiceConfigPanel> {
         ));
         
         // Header
-        JBLabel headerLabel = new JBLabel("🤖 Available Models");
+        JBLabel headerLabel = new JBLabel("Available Models");
         headerLabel.setFont(headerLabel.getFont().deriveFont(Font.BOLD, 14f));
         headerLabel.setBorder(JBUI.Borders.emptyBottom(10));
         

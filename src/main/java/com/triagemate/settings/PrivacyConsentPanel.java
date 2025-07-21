@@ -107,7 +107,7 @@ public class PrivacyConsentPanel extends JBPanel<PrivacyConsentPanel> {
         setMaximumSize(new Dimension(Integer.MAX_VALUE, Integer.MAX_VALUE));
         
         // Create header
-        JBLabel headerLabel = new JBLabel("🔒 Privacy & Consent");
+        JBLabel headerLabel = new JBLabel("Privacy & Consent");
         headerLabel.setFont(headerLabel.getFont().deriveFont(Font.BOLD, 14f));
         headerLabel.setBorder(JBUI.Borders.emptyBottom(5));
         
