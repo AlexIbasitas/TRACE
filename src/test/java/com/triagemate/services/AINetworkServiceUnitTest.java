@@ -1,9 +1,10 @@
 package com.triagemate.services;
 
 import com.intellij.openapi.project.Project;
-import com.triagemate.settings.AIServiceType;
 import com.triagemate.models.FailureInfo;
 import com.triagemate.models.StepDefinitionInfo;
+import com.triagemate.settings.AIServiceType;
+
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

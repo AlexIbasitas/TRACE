@@ -1,9 +1,10 @@
 package com.triagemate.security;
 
-import com.triagemate.settings.AIServiceType;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.junit.jupiter.MockitoExtension;
+
+import com.triagemate.settings.AIServiceType;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;

@@ -5,6 +5,7 @@ import com.intellij.credentialStore.Credentials;
 import com.intellij.ide.passwordSafe.PasswordSafe;
 import com.intellij.openapi.diagnostic.Logger;
 import com.triagemate.settings.AIServiceType;
+
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -239,7 +240,17 @@ public final class SecureAPIKeyManager {
         try {
             // TODO: Implement actual Gemini API validation
             // For now, perform basic format validation
-            return apiKey.length() > 20 && !apiKey.contains(" ");
+            boolean hasValidLength = apiKey.length() > 20;
+            boolean hasNoSpaces = !apiKey.contains(" ");
+            
+            boolean isValid = hasValidLength && hasNoSpaces;
+            
+            LOG.info("Gemini key validation - Length: " + apiKey.length() + 
+                    " (>20: " + hasValidLength + "), Contains spaces: " + hasNoSpaces + 
+                    ", Valid: " + isValid + 
+                    ", Key prefix: " + apiKey.substring(0, Math.min(10, apiKey.length())));
+            
+            return isValid;
             
         } catch (Exception e) {
             LOG.error("Error validating Gemini API key", e);

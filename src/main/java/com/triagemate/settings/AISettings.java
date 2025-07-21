@@ -48,7 +48,7 @@ public final class AISettings implements PersistentStateComponent<AISettings.Sta
         // User consent and preferences
         public boolean aiEnabled = false;
         public boolean userConsentGiven = false;
-        public LocalDateTime consentDate;
+        public String consentDate; // Store as string to avoid LocalDateTime serialization issues
         
         // AI service configuration
         public String preferredAIService = AIServiceType.OPENAI.getId(); // Store as string for persistence
@@ -144,7 +144,7 @@ public final class AISettings implements PersistentStateComponent<AISettings.Sta
         
         // Record consent timestamp for audit trail, clear when consent revoked
         if (consentGiven) {
-            myState.consentDate = LocalDateTime.now();
+            myState.consentDate = LocalDateTime.now().toString();
         } else {
             myState.consentDate = null; // Clear date when consent revoked
         }
@@ -156,7 +156,15 @@ public final class AISettings implements PersistentStateComponent<AISettings.Sta
      * @return the consent date, or null if no consent given
      */
     public @Nullable LocalDateTime getConsentDate() {
-        return myState.consentDate;
+        if (myState.consentDate == null || myState.consentDate.trim().isEmpty()) {
+            return null;
+        }
+        try {
+            return LocalDateTime.parse(myState.consentDate);
+        } catch (Exception e) {
+            LOG.warn("Failed to parse consent date: " + myState.consentDate, e);
+            return null;
+        }
     }
     
     // ============================================================================

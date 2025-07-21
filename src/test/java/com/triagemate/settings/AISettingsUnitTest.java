@@ -1,7 +1,6 @@
 package com.triagemate.settings;
 
 import com.intellij.openapi.application.ApplicationManager;
-import com.triagemate.settings.AIServiceType;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

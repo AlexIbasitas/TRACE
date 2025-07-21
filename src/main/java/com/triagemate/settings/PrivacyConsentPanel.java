@@ -2,6 +2,7 @@ package com.triagemate.settings;
 
 import com.intellij.openapi.ui.DialogWrapper;
 import com.intellij.openapi.ui.Messages;
+import com.intellij.ide.BrowserUtil;
 import com.intellij.ui.components.JBLabel;
 import com.intellij.ui.components.JBPanel;
 import com.intellij.ui.components.JBCheckBox;
@@ -12,6 +13,8 @@ import com.triagemate.ui.TriagePanelConstants;
 import org.jetbrains.annotations.Nullable;
 
 import javax.swing.*;
+import javax.swing.event.HyperlinkEvent;
+import javax.swing.event.HyperlinkListener;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -42,12 +45,13 @@ public class PrivacyConsentPanel extends JBPanel<PrivacyConsentPanel> {
     
     // UI Components
     private final JBCheckBox aiEnabledCheckBox;
-    private final JTextArea explanationTextArea;
-    private final JButton learnMoreButton;
-    private final JButton revokeAccessButton;
+    private final JEditorPane explanationPane;
     
     // Settings service
     private final AISettings aiSettings;
+    
+    // Callback for AI service config panel
+    private Runnable onAIStateChanged;
     
     // State tracking for modification detection
     private boolean originalAIEnabled;
@@ -59,7 +63,18 @@ public class PrivacyConsentPanel extends JBPanel<PrivacyConsentPanel> {
      * @param aiSettings the AISettings service for data persistence
      */
     public PrivacyConsentPanel(AISettings aiSettings) {
+        this(aiSettings, null);
+    }
+    
+    /**
+     * Constructor for PrivacyConsentPanel with callback.
+     * 
+     * @param aiSettings the AISettings service for data persistence
+     * @param onAIStateChanged callback to execute when AI state changes
+     */
+    public PrivacyConsentPanel(AISettings aiSettings, Runnable onAIStateChanged) {
         this.aiSettings = aiSettings;
+        this.onAIStateChanged = onAIStateChanged;
         
         // Initialize state tracking
         this.originalAIEnabled = aiSettings.isAIEnabled();
@@ -67,9 +82,8 @@ public class PrivacyConsentPanel extends JBPanel<PrivacyConsentPanel> {
         
         // Create UI components
         this.aiEnabledCheckBox = new JBCheckBox("Enable AI analysis features");
-        this.explanationTextArea = new JTextArea();
-        this.learnMoreButton = new JButton("Learn More");
-        this.revokeAccessButton = new JButton("Revoke Access");
+        this.aiEnabledCheckBox.setFont(UIUtil.getLabelFont());
+        this.explanationPane = new JEditorPane();
         
         // Initialize the panel
         initializePanel();
@@ -89,74 +103,52 @@ public class PrivacyConsentPanel extends JBPanel<PrivacyConsentPanel> {
         
         // Make the panel itself responsive using proper Swing sizing
         setMinimumSize(new Dimension(300, 0));
-        setPreferredSize(new Dimension(400, 120));
+        setPreferredSize(new Dimension(400, 160));
         setMaximumSize(new Dimension(Integer.MAX_VALUE, Integer.MAX_VALUE));
         
         // Create header
         JBLabel headerLabel = new JBLabel("🔒 Privacy & Consent");
         headerLabel.setFont(headerLabel.getFont().deriveFont(Font.BOLD, 14f));
-        headerLabel.setBorder(JBUI.Borders.emptyBottom(10));
+        headerLabel.setBorder(JBUI.Borders.emptyBottom(5));
         
         // Create main content panel with responsive layout
         JPanel contentPanel = new JBPanel<>(new BorderLayout());
-        contentPanel.setBorder(JBUI.Borders.empty(5));
-        // Let the layout manager handle sizing naturally
+        contentPanel.setBorder(JBUI.Borders.empty(2));
         
         // Add checkbox and explanation with proper wrapping
         JPanel checkboxPanel = new JBPanel<>(new BorderLayout());
+        checkboxPanel.setBorder(JBUI.Borders.empty(2));
         checkboxPanel.add(aiEnabledCheckBox, BorderLayout.NORTH);
         
-        // Configure explanation text area for proper text wrapping using JetBrains approach
-        explanationTextArea.setBorder(JBUI.Borders.emptyTop(8));
-        explanationTextArea.setLineWrap(true);
-        explanationTextArea.setWrapStyleWord(true);
-        explanationTextArea.setEditable(false);
-        explanationTextArea.setOpaque(false);
-        explanationTextArea.setFont(TriagePanelConstants.MESSAGE_FONT);
-        explanationTextArea.setForeground(TriagePanelConstants.WHITE);
-        
-        // Set minimum width following JetBrains guidelines for paragraph text
-        explanationTextArea.setMinimumSize(new Dimension(TriagePanelConstants.MIN_SETTINGS_WIDTH_BEFORE_SCROLL, 40));
-        
-        // Force the text area to wrap by setting a maximum width
-        explanationTextArea.setMaximumSize(new Dimension(Integer.MAX_VALUE, 60));
-        
-        // Configure text area for proper responsive behavior
-        explanationTextArea.setLineWrap(true);
-        explanationTextArea.setWrapStyleWord(true);
-        explanationTextArea.setEditable(false);
-        explanationTextArea.setOpaque(false);
-        explanationTextArea.setBackground(UIUtil.getPanelBackground());
-        explanationTextArea.setFont(UIUtil.getLabelFont());
+        // Configure explanation pane for proper text wrapping and clickable links
+        explanationPane.setBorder(JBUI.Borders.emptyTop(5));
+        explanationPane.setEditable(false);
+        explanationPane.setOpaque(false);
+        explanationPane.setBackground(UIUtil.getPanelBackground());
+        explanationPane.setFont(UIUtil.getLabelFont());
+        explanationPane.setForeground(UIUtil.getLabelForeground());
+        explanationPane.setContentType("text/html");
         
         // Set proper sizing according to JetBrains guidelines
-        // Text area: min 270px width, min 55px height (3 lines)
-        explanationTextArea.setMinimumSize(new Dimension(270, 55));
-        explanationTextArea.setPreferredSize(new Dimension(300, 60));
-        explanationTextArea.setMaximumSize(new Dimension(600, Integer.MAX_VALUE));
+        // Pane: min 270px width, min 45px height (2-3 lines)
+        explanationPane.setMinimumSize(new Dimension(270, 45));
+        explanationPane.setPreferredSize(new Dimension(300, 60));
+        explanationPane.setMaximumSize(new Dimension(600, 80));
         
-        checkboxPanel.add(explanationTextArea, BorderLayout.CENTER);
+        checkboxPanel.add(explanationPane, BorderLayout.CENTER);
         checkboxPanel.setBorder(JBUI.Borders.emptyTop(5));
-        
-        // Create responsive button panel
-        JPanel buttonPanel = new JBPanel<>(new BorderLayout());
-        buttonPanel.setBorder(JBUI.Borders.emptyTop(10));
-        
-        // Use FlowLayout for buttons with proper wrapping
-        JPanel buttonContainer = new JBPanel<>(new FlowLayout(FlowLayout.LEFT, 10, 5));
-        buttonContainer.add(learnMoreButton);
-        buttonContainer.add(revokeAccessButton);
-        
-        buttonPanel.add(buttonContainer, BorderLayout.WEST);
         
         // Assemble the panel
         add(headerLabel, BorderLayout.NORTH);
         contentPanel.add(checkboxPanel, BorderLayout.CENTER);
-        contentPanel.add(buttonPanel, BorderLayout.SOUTH);
         add(contentPanel, BorderLayout.CENTER);
         
         // Set explanation text
         updateExplanationText();
+        
+        // Ensure components are visible
+        aiEnabledCheckBox.setVisible(true);
+        explanationPane.setVisible(true);
     }
     
     /**
@@ -171,19 +163,13 @@ public class PrivacyConsentPanel extends JBPanel<PrivacyConsentPanel> {
             }
         });
         
-        // Learn More button handler
-        learnMoreButton.addActionListener(new ActionListener() {
+        // Privacy Policy link handler
+        explanationPane.addHyperlinkListener(new HyperlinkListener() {
             @Override
-            public void actionPerformed(ActionEvent e) {
-                showPrivacyDetails();
-            }
-        });
-        
-        // Revoke Access button handler
-        revokeAccessButton.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                handleRevokeAccess();
+            public void hyperlinkUpdate(HyperlinkEvent e) {
+                if (e.getEventType() == HyperlinkEvent.EventType.ACTIVATED) {
+                    BrowserUtil.browse("https://alexibasitas.github.io/TRACE/PRIVACY.html");
+                }
             }
         });
     }
@@ -197,8 +183,15 @@ public class PrivacyConsentPanel extends JBPanel<PrivacyConsentPanel> {
             // User is enabling AI features - show consent dialog
             showConsentDialog();
         } else {
-            // User is disabling AI features - show confirmation dialog
-            showDisableConfirmationDialog();
+            // User is disabling AI features - this acts as revoke access
+            aiSettings.setAIEnabled(false);
+            aiSettings.setUserConsentGiven(false);
+            updateExplanationText();
+            
+            // Notify callback if provided
+            if (onAIStateChanged != null) {
+                onAIStateChanged.run();
+            }
         }
     }
     
@@ -212,41 +205,18 @@ public class PrivacyConsentPanel extends JBPanel<PrivacyConsentPanel> {
             aiSettings.setUserConsentGiven(true);
             aiSettings.setAIEnabled(true);
             updateExplanationText();
-            updateButtonStates();
+            
+            // Notify callback if provided
+            if (onAIStateChanged != null) {
+                onAIStateChanged.run();
+            }
         } else {
             // User declined consent - revert checkbox
             aiEnabledCheckBox.setSelected(false);
         }
     }
     
-    /**
-     * Shows the confirmation dialog when user disables AI features.
-     */
-    private void showDisableConfirmationDialog() {
-        int result = Messages.showYesNoDialog(
-            "Disable AI Analysis",
-            "Are you sure you want to disable AI analysis features?\n\n" +
-            "This will:\n" +
-            "• Stop AI-powered debugging suggestions\n" +
-            "• Clear your API key configuration\n" +
-            "• Remove consent for data processing\n\n" +
-            "You can re-enable these features at any time in settings.",
-            "Disable Features",
-            "Cancel",
-            Messages.getQuestionIcon()
-        );
-        
-        if (result == Messages.YES) {
-            // User confirmed - disable features
-            aiSettings.setAIEnabled(false);
-            aiSettings.setUserConsentGiven(false);
-            updateExplanationText();
-            updateButtonStates();
-        } else {
-            // User cancelled - revert checkbox
-            aiEnabledCheckBox.setSelected(true);
-        }
-    }
+
     
     /**
      * Shows detailed privacy information.
@@ -274,47 +244,26 @@ public class PrivacyConsentPanel extends JBPanel<PrivacyConsentPanel> {
         );
     }
     
-    /**
-     * Handles the revoke access button click.
-     */
-    private void handleRevokeAccess() {
-        RevokeAccessDialog dialog = new RevokeAccessDialog();
-        if (dialog.showAndGet()) {
-            // Revoke all access
-            aiSettings.setAIEnabled(false);
-            aiSettings.setUserConsentGiven(false);
-            aiEnabledCheckBox.setSelected(false);
-            updateExplanationText();
-            updateButtonStates();
-        }
-    }
+
     
     /**
      * Updates the explanation text based on current settings.
      */
     private void updateExplanationText() {
         if (aiSettings.isAIEnabled() && aiSettings.hasUserConsent()) {
-            explanationTextArea.setText(
+            explanationPane.setText(
                 "AI analysis is enabled. Test failure data and project structure information " +
                 "are sent to AI services for debugging suggestions. Source code files are " +
                 "parsed to locate step definitions. Data is not stored permanently."
             );
         } else {
-            explanationTextArea.setText(
+            explanationPane.setText(
                 "Enable AI analysis to get debugging suggestions when tests fail. " +
                 "The plugin will parse your source code files to locate step definitions " +
-                "and use project structure information. Requires consent and an API key."
+                "and use project structure information. Requires consent and an API key. " +
+                "See our <a href=\"#\">Privacy Policy</a> for details."
             );
         }
-    }
-    
-    /**
-     * Updates button states based on current settings.
-     */
-    private void updateButtonStates() {
-        boolean hasConsent = aiSettings.hasUserConsent();
-        learnMoreButton.setEnabled(true); // Always enabled
-        revokeAccessButton.setEnabled(hasConsent);
     }
     
     /**
@@ -323,7 +272,6 @@ public class PrivacyConsentPanel extends JBPanel<PrivacyConsentPanel> {
     public void loadCurrentSettings() {
         aiEnabledCheckBox.setSelected(aiSettings.isAIEnabled());
         updateExplanationText();
-        updateButtonStates();
         
         // Update original state
         originalAIEnabled = aiSettings.isAIEnabled();
@@ -410,23 +358,24 @@ public class PrivacyConsentPanel extends JBPanel<PrivacyConsentPanel> {
             contentArea.setFont(panel.getFont());
             contentArea.setText(
                 "🔒 Privacy Notice\n\n" +
-                "TriageMate AI Analysis sends test failure information to AI services " +
+                "TRACE AI Analysis sends test failure information to AI services " +
                 "to provide debugging suggestions.\n\n" +
                 "What we collect:\n" +
                 "• Test failure details (stack traces, error messages)\n" +
-                "• Test context (class names, method names)\n" +
+                "• Project structure information (to locate step definitions)\n" +
                 "• Your questions and follow-up messages\n\n" +
                 "What we DON'T collect:\n" +
-                "• Source code files\n" +
+                "• Source code files (only parsed for step definitions)\n" +
                 "• Personal information\n" +
-                "• Project structure\n\n" +
+                "• Permanent storage of your data\n\n" +
                 "Data handling:\n" +
                 "• Data is sent securely to AI services\n" +
-                "• Data is not stored permanently by TriageMate\n" +
+                "• Data is not stored permanently by TRACE\n" +
                 "• AI services may store data according to their policies\n" +
                 "• You can revoke access at any time\n\n" +
-                "By accepting, you agree to allow TriageMate to send test failure " +
-                "data to AI services for analysis and debugging assistance."
+                "By accepting, you agree to allow TRACE to send test failure " +
+                "data to AI services for analysis and debugging assistance.\n\n" +
+                "For complete details, see our Privacy Policy: https://alexibasitas.github.io/TRACE/PRIVACY.html"
             );
             
             // Add scroll pane
@@ -457,82 +406,5 @@ public class PrivacyConsentPanel extends JBPanel<PrivacyConsentPanel> {
         }
     }
     
-    /**
-     * Custom dialog for revoking AI access with proper bulleted list formatting.
-     */
-    private static class RevokeAccessDialog extends DialogWrapper {
-        
-        public RevokeAccessDialog() {
-            super(true);
-            setTitle("Revoke AI Access");
-            setResizable(false);
-            init();
-        }
-        
-        @Override
-        protected @Nullable JComponent createCenterPanel() {
-            JPanel panel = new JBPanel<>(new BorderLayout());
-            panel.setPreferredSize(new Dimension(450, 200));
-            
-            // Create warning icon and text panel
-            JPanel contentPanel = new JBPanel<>(new BorderLayout(15, 0));
-            contentPanel.setBorder(JBUI.Borders.empty(20));
-            
-            // Add warning icon
-            JLabel warningIcon = new JBLabel(Messages.getWarningIcon());
-            contentPanel.add(warningIcon, BorderLayout.WEST);
-            
-            // Create text content with proper HTML formatting
-            JTextPane textPane = new JTextPane();
-            textPane.setContentType("text/html");
-            textPane.setEditable(false);
-            textPane.setOpaque(false);
-            textPane.setBackground(UIUtil.getPanelBackground());
-            textPane.setFont(UIUtil.getLabelFont());
-            
-            // HTML content with proper bulleted list
-            String htmlContent = 
-                "<html><body style='margin: 0; padding: 0;'>" +
-                "<p style='margin: 0 0 10px 0;'>This will immediately:</p>" +
-                "<ul style='margin: 0 0 15px 0; padding-left: 20px;'>" +
-                "<li>Disable all AI analysis features</li>" +
-                "<li>Clear your API key configuration</li>" +
-                "<li>Remove consent for data processing</li>" +
-                "<li>Clear any stored chat history</li>" +
-                "</ul>" +
-                "<p style='margin: 0;'>Are you sure you want to revoke access?</p>" +
-                "</body></html>";
-            
-            textPane.setText(htmlContent);
-            
-            // Wrap in scroll pane for safety
-            JBScrollPane scrollPane = new JBScrollPane(textPane);
-            scrollPane.setBorder(null);
-            scrollPane.setOpaque(false);
-            scrollPane.getViewport().setOpaque(false);
-            
-            contentPanel.add(scrollPane, BorderLayout.CENTER);
-            panel.add(contentPanel, BorderLayout.CENTER);
-            
-            return panel;
-        }
-        
-        @Override
-        protected Action[] createActions() {
-            return new Action[]{
-                getCancelAction(),
-                getOKAction()
-            };
-        }
-        
-        @Override
-        protected void doOKAction() {
-            super.doOKAction();
-        }
-        
-        @Override
-        public void doCancelAction() {
-            super.doCancelAction();
-        }
-    }
+
 } 

@@ -5,6 +5,7 @@ import com.intellij.openapi.options.ConfigurationException;
 import com.intellij.openapi.ui.Messages;
 import com.intellij.ui.components.JBLabel;
 import com.intellij.ui.components.JBPanel;
+import com.intellij.ui.components.JBScrollPane;
 import com.intellij.util.ui.JBUI;
 import org.jetbrains.annotations.Nls;
 import org.jetbrains.annotations.Nullable;
@@ -78,16 +79,36 @@ public class AISettingsConfigurable implements Configurable {
             mainPanel = new JBPanel<>(new BorderLayout());
             mainPanel.setBorder(JBUI.Borders.empty(10));
             
-            // Create and add privacy consent panel
-            privacyConsentPanel = new PrivacyConsentPanel(aiSettings);
-            mainPanel.add(privacyConsentPanel, BorderLayout.NORTH);
-            
-            // Create and add AI service configuration panel
+            // Create AI service configuration panel first
             aiServiceConfigPanel = new AIServiceConfigPanel(aiSettings);
-            mainPanel.add(aiServiceConfigPanel, BorderLayout.CENTER);
             
-            // Add spacing between panels
-            mainPanel.add(Box.createVerticalStrut(20), BorderLayout.CENTER);
+            // Create privacy consent panel
+            privacyConsentPanel = new PrivacyConsentPanel(aiSettings, () -> {
+                // No longer need to update AI service config panel enabled state
+                // The new panel handles this internally
+            });
+            
+            // Create a content panel to hold all components
+            JPanel contentPanel = new JBPanel<>(new BorderLayout());
+            contentPanel.setBorder(JBUI.Borders.empty(5));
+            
+            // Add panels to content with proper spacing
+            contentPanel.add(privacyConsentPanel, BorderLayout.NORTH);
+            contentPanel.add(Box.createVerticalStrut(15), BorderLayout.CENTER);
+            contentPanel.add(aiServiceConfigPanel, BorderLayout.SOUTH);
+            
+            // Create scrollable pane
+            JBScrollPane scrollPane = new JBScrollPane(contentPanel);
+            scrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
+            scrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
+            scrollPane.setBorder(null);
+            
+            // Set preferred size to ensure scrollability
+            contentPanel.setPreferredSize(new Dimension(600, 800));
+            
+            mainPanel.add(scrollPane, BorderLayout.CENTER);
+            
+            // The new AI service config panel handles its own enabled state
         }
         
         return mainPanel;
@@ -102,10 +123,9 @@ public class AISettingsConfigurable implements Configurable {
         // Check if any settings have changed
         boolean aiEnabledChanged = privacyConsentPanel.isAIEnabled() != originalAIEnabled;
         boolean userConsentChanged = privacyConsentPanel.hasUserConsent() != originalUserConsent;
-        boolean serviceChanged = !aiServiceConfigPanel.getSelectedService().equals(originalPreferredService);
         
-        return aiEnabledChanged || userConsentChanged || serviceChanged || 
-               privacyConsentPanel.isModified() || aiServiceConfigPanel.isModified();
+        // The new AI service config panel handles its own modification detection
+        return aiEnabledChanged || userConsentChanged || privacyConsentPanel.isModified();
     }
     
     @Override
