@@ -1,4 +1,4 @@
-# TriageMate - Cucumber Test Failure Triage Assistant
+# TRACE - Cucumber Test Failure Triage Assistant
 
 An IntelliJ IDEA plugin to assist SDETs with triaging Cucumber Java test failures.
 

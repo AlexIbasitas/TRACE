@@ -1,8 +1,8 @@
-<!-- TriageMate: Cucumber Test Failure Triage Assistant -->
+<!-- TRACE: Cucumber Test Failure Triage Assistant -->
 <idea-plugin>
-    <id>com.triagemate</id>
-    <name>TriageMate</name>
-    <vendor>TriageMate</vendor>
+    <id>com.trace</id>
+    <name>TRACE</name>
+    <vendor>TRACE</vendor>
     <description><![CDATA[
         IntelliJ plugin to assist SDETs with triaging Cucumber Java test failures.
         Automatically extracts failure information and formats it for analysis.
@@ -16,7 +16,7 @@
 
     <extensions defaultExtensionNs="com.intellij">
         <!-- Custom Icon -->
-        <icon path="/icons/triagemate_logo.png" id="TriageMate.Icon"/>
+        <icon path="/icons/trace_logo.png" id="TRACE.Icon"/>
         
         <!-- Tool Window -->
         <toolWindow id="AI Assistant"
@@ -24,17 +24,17 @@
                    secondary="false" 
                    icon="icons/logo_16.png" 
                    anchor="right" 
-                   factoryClass="com.triagemate.ui.TriagePanelToolWindowFactory"/>
+                   factoryClass="com.trace.chat.ui.TriagePanelToolWindowFactory"/>
 
         <!-- Services -->
-        <projectService serviceImplementation="com.triagemate.services.AINetworkService"/>
-        <applicationService serviceImplementation="com.triagemate.services.LocalPromptGenerationService"/>
-        <applicationService serviceImplementation="com.triagemate.settings.AISettings"/>
+        <projectService serviceImplementation="com.trace.ai.services.AINetworkService"/>
+        <applicationService serviceImplementation="com.trace.ai.prompts.LocalPromptGenerationService"/>
+        <applicationService serviceImplementation="com.trace.ai.configuration.AISettings"/>
     </extensions>
 
     <applicationListeners>
         <!-- Test Execution Listeners -->
-        <listener class="com.triagemate.listeners.CucumberTestExecutionListener"
+        <listener class="com.trace.test.listeners.CucumberTestExecutionListener"
                   topic="com.intellij.execution.testframework.sm.runner.SMTRunnerEventsListener"/>
     </applicationListeners>
 </idea-plugin> 

@@ -3,7 +3,7 @@ plugins {
     id 'org.jetbrains.intellij' version '1.17.2'
 }
 
-group = 'com.triagemate'
+group = 'com.trace'
 version = '1.0-SNAPSHOT'
 
 // ============================================================================
@@ -141,7 +141,7 @@ def configureTestTask(Test task) {
     task.useJUnitPlatform()
     
     // JetBrains recommended system properties
-    task.systemProperty 'idea.log.debug.categories', 'com.triagemate'
+    task.systemProperty 'idea.log.debug.categories', 'com.trace'
     task.systemProperty 'idea.split.test.logs', 'true'
     
     // Additional properties to help with temporary directory issues
@@ -225,7 +225,7 @@ task intellijIntegrationTest(type: Test) {
     systemProperty 'idea.plugins.path', "${buildDir}/idea-sandbox/plugins-intellij-test"
     
     // JetBrains recommended system properties
-    systemProperty 'idea.log.debug.categories', 'com.triagemate'
+    systemProperty 'idea.log.debug.categories', 'com.trace'
     systemProperty 'idea.split.test.logs', 'true'
     
     // Force complete isolation
