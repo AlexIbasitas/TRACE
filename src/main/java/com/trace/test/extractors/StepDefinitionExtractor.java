@@ -1,6 +1,7 @@
 package com.trace.test.extractors;
 
 import com.intellij.openapi.project.Project;
+import com.intellij.openapi.project.ProjectUtil;
 import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.psi.*;
 import com.intellij.psi.util.PsiTreeUtil;
@@ -236,7 +237,7 @@ public class StepDefinitionExtractor {
                 String fullPath = sourcePath + packagePath + ".java";
                 
                 // Use the project's base directory to search for files
-                VirtualFile baseDir = project.getBaseDir();
+                VirtualFile baseDir = ProjectUtil.guessProjectDir(project);
                 if (baseDir != null) {
                     VirtualFile virtualFile = baseDir.findFileByRelativePath(fullPath);
                     if (virtualFile != null && virtualFile.exists()) {
@@ -245,7 +246,7 @@ public class StepDefinitionExtractor {
                 }
                 
                 // Fallback: try using LocalFileSystem for absolute paths
-                VirtualFile virtualFile = LocalFileSystem.getInstance().findFileByPath(project.getBasePath() + "/" + fullPath);
+                VirtualFile virtualFile = LocalFileSystem.getInstance().findFileByPath(baseDir != null ? baseDir.getPath() + "/" + fullPath : fullPath);
                 if (virtualFile != null && virtualFile.exists()) {
                     return virtualFile.getPath();
                 }

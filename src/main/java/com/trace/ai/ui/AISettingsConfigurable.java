@@ -1,5 +1,6 @@
 package com.trace.ai.ui;
 
+import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.openapi.options.Configurable;
 import com.intellij.openapi.options.ConfigurationException;
 import com.intellij.ui.components.JBPanel;
@@ -34,6 +35,8 @@ import java.awt.*;
  */
 public class AISettingsConfigurable implements Configurable {
     
+    private static final Logger LOG = Logger.getInstance(AISettingsConfigurable.class);
+    
     // UI Components
     private JPanel mainPanel;
     private PrivacyConsentPanel privacyConsentPanel;
@@ -65,6 +68,36 @@ public class AISettingsConfigurable implements Configurable {
         originalPreferredService = aiSettings.getPreferredAIService().getId();
     }
     
+    /**
+     * Checks if any settings have been modified.
+     * 
+     * @return true if any settings have changed, false otherwise
+     */
+    private boolean hasSettingsChanged() {
+        if (privacyConsentPanel == null || aiServiceConfigPanel == null) {
+            return false;
+        }
+        
+        // Check privacy and consent changes
+        boolean aiEnabledChanged = privacyConsentPanel.isAIEnabled() != originalAIEnabled;
+        boolean userConsentChanged = privacyConsentPanel.hasUserConsent() != originalUserConsent;
+        boolean privacyPanelModified = privacyConsentPanel.isModified();
+        
+        // Check AI service configuration changes
+        boolean aiServiceConfigModified = aiServiceConfigPanel.isModified();
+        
+        boolean hasChanges = aiEnabledChanged || userConsentChanged || privacyPanelModified || aiServiceConfigModified;
+        
+        if (hasChanges) {
+            LOG.debug("Settings modified - AI Enabled: " + aiEnabledChanged + 
+                     ", User Consent: " + userConsentChanged + 
+                     ", Privacy Panel: " + privacyPanelModified + 
+                     ", AI Service Config: " + aiServiceConfigModified);
+        }
+        
+        return hasChanges;
+    }
+    
     @Nls(capitalization = Nls.Capitalization.Title)
     @Override
     public String getDisplayName() {
@@ -80,6 +113,9 @@ public class AISettingsConfigurable implements Configurable {
             
             // Create AI service configuration panel first
             aiServiceConfigPanel = new AIServiceConfigPanel(aiSettings);
+            
+            // Load current settings immediately when panel is created
+            aiServiceConfigPanel.loadCurrentSettings();
             
             // Create privacy consent panel
             privacyConsentPanel = new PrivacyConsentPanel(aiSettings, () -> {
@@ -107,7 +143,10 @@ public class AISettingsConfigurable implements Configurable {
             
             mainPanel.add(scrollPane, BorderLayout.CENTER);
             
-            // The new AI service config panel handles its own enabled state
+            // Initialize state for modification detection
+            initializeState();
+            
+            LOG.info("AI settings configurable component created and initialized");
         }
         
         return mainPanel;
@@ -115,35 +154,33 @@ public class AISettingsConfigurable implements Configurable {
     
     @Override
     public boolean isModified() {
-        if (privacyConsentPanel == null || aiServiceConfigPanel == null) {
-            return false;
-        }
-        
-        // Check if any settings have changed
-        boolean aiEnabledChanged = privacyConsentPanel.isAIEnabled() != originalAIEnabled;
-        boolean userConsentChanged = privacyConsentPanel.hasUserConsent() != originalUserConsent;
-        
-        // The new AI service config panel handles its own modification detection
-        return aiEnabledChanged || userConsentChanged || privacyConsentPanel.isModified();
+        return hasSettingsChanged();
     }
     
     @Override
     public void apply() throws ConfigurationException {
         if (privacyConsentPanel == null || aiServiceConfigPanel == null) {
+            LOG.warn("Cannot apply settings - panels not initialized");
             return;
         }
+        
+        LOG.info("Applying AI settings configuration");
         
         try {
             // Apply privacy and consent settings
             privacyConsentPanel.apply();
+            LOG.debug("Privacy and consent settings applied successfully");
             
             // Apply AI service configuration
             aiServiceConfigPanel.apply();
+            LOG.debug("AI service configuration applied successfully");
             
             // Update original state for modification detection
             initializeState();
+            LOG.info("All AI settings applied successfully");
             
         } catch (Exception e) {
+            LOG.error("Failed to apply AI settings", e);
             throw new ConfigurationException("Failed to save settings: " + e.getMessage(), "Settings Error");
         }
     }
@@ -151,17 +188,28 @@ public class AISettingsConfigurable implements Configurable {
     @Override
     public void reset() {
         if (privacyConsentPanel == null || aiServiceConfigPanel == null) {
+            LOG.warn("Cannot reset settings - panels not initialized");
             return;
         }
         
-        // Reset privacy and consent panel
-        privacyConsentPanel.reset();
+        LOG.info("Resetting AI settings configuration");
         
-        // Reset AI service configuration panel
-        aiServiceConfigPanel.reset();
-        
-        // Update original state
-        initializeState();
+        try {
+            // Reset privacy and consent panel
+            privacyConsentPanel.reset();
+            LOG.debug("Privacy and consent panel reset successfully");
+            
+            // Reset AI service configuration panel
+            aiServiceConfigPanel.reset();
+            LOG.debug("AI service configuration panel reset successfully");
+            
+            // Update original state
+            initializeState();
+            LOG.info("All AI settings reset successfully");
+            
+        } catch (Exception e) {
+            LOG.error("Failed to reset AI settings", e);
+        }
     }
     
     @Override
