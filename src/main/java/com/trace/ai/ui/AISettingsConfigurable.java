@@ -115,7 +115,8 @@ public class AISettingsConfigurable implements Configurable {
             aiServiceConfigPanel = new AIServiceConfigPanel(aiSettings);
             
             // Load current settings immediately when panel is created
-            aiServiceConfigPanel.loadCurrentSettings();
+            // Settings are now loaded asynchronously in the constructor
+            // No need to call loadCurrentSettings() explicitly
             
             // Create privacy consent panel
             privacyConsentPanel = new PrivacyConsentPanel(aiSettings, () -> {

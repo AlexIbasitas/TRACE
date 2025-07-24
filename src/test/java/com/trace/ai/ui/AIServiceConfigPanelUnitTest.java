@@ -74,7 +74,7 @@ class AIServiceConfigPanelUnitTest extends BasePlatformTestCase {
     }
     
     @Test
-    public void testLoadCurrentSettingsLoadsStoredKeys() {
+    public void testConstructorLoadsStoredKeys() throws InterruptedException {
         // Given: API keys stored in SecureAPIKeyManager
         String testOpenAIKey = "sk-test-openai-key-67890";
         String testGeminiKey = "test-gemini-key-67890";
@@ -82,137 +82,130 @@ class AIServiceConfigPanelUnitTest extends BasePlatformTestCase {
         SecureAPIKeyManager.storeAPIKey(AIServiceType.OPENAI, testOpenAIKey);
         SecureAPIKeyManager.storeAPIKey(AIServiceType.GEMINI, testGeminiKey);
         
-        // Clear the UI fields first
-        setPasswordFieldText(configPanel, "openaiApiKeyField", "");
-        setPasswordFieldText(configPanel, "geminiApiKeyField", "");
+        // When: new panel is created (loads settings asynchronously)
+        AIServiceConfigPanel newPanel = new AIServiceConfigPanel(aiSettings);
         
-        // When: loadCurrentSettings() is called
-        configPanel.loadCurrentSettings();
+        // Wait for async operations to complete
+        Thread.sleep(200);
         
         // Then: UI fields should be populated with stored keys
-        String uiOpenAIKey = getPasswordFieldText(configPanel, "openaiApiKeyField");
-        String uiGeminiKey = getPasswordFieldText(configPanel, "geminiApiKeyField");
+        String uiOpenAIKey = getPasswordFieldText(newPanel, "openaiApiKeyField");
+        String uiGeminiKey = getPasswordFieldText(newPanel, "geminiApiKeyField");
         
         assertEquals(testOpenAIKey, uiOpenAIKey, "OpenAI key should be loaded into UI");
         assertEquals(testGeminiKey, uiGeminiKey, "Gemini key should be loaded into UI");
     }
     
     @Test
-    public void testLoadCurrentSettingsPreservesUserInput() {
-        // Given: user has entered keys in UI but storage is empty
-        String userOpenAIKey = "sk-user-openai-key";
-        String userGeminiKey = "user-gemini-key";
-        
-        setPasswordFieldText(configPanel, "openaiApiKeyField", userOpenAIKey);
-        setPasswordFieldText(configPanel, "geminiApiKeyField", userGeminiKey);
-        
-        // Clear storage
-        SecureAPIKeyManager.clearAPIKey(AIServiceType.OPENAI);
-        SecureAPIKeyManager.clearAPIKey(AIServiceType.GEMINI);
-        
-        // When: loadCurrentSettings() is called
-        configPanel.loadCurrentSettings();
-        
-        // Then: user input should be preserved
-        String uiOpenAIKey = getPasswordFieldText(configPanel, "openaiApiKeyField");
-        String uiGeminiKey = getPasswordFieldText(configPanel, "geminiApiKeyField");
-        
-        assertEquals(userOpenAIKey, uiOpenAIKey, "User OpenAI input should be preserved");
-        assertEquals(userGeminiKey, uiGeminiKey, "User Gemini input should be preserved");
-    }
-    
-    @Test
-    public void testIsModifiedDetectsChanges() {
+    public void testIsModifiedDetectsChanges() throws InterruptedException {
         // Given: original state with no keys
         SecureAPIKeyManager.clearAPIKey(AIServiceType.OPENAI);
         SecureAPIKeyManager.clearAPIKey(AIServiceType.GEMINI);
-        configPanel.loadCurrentSettings(); // This updates original state
+        
+        // Create new panel to load settings
+        AIServiceConfigPanel newPanel = new AIServiceConfigPanel(aiSettings);
+        Thread.sleep(200); // Wait for async loading
         
         // When: user enters a key
-        setPasswordFieldText(configPanel, "openaiApiKeyField", "sk-new-key");
+        setPasswordFieldText(newPanel, "openaiApiKeyField", "sk-new-key");
         
         // Then: modification should be detected
-        assertTrue("Should detect modification when key is entered", configPanel.isModified());
+        assertTrue("Should detect modification when key is entered", newPanel.isModified());
     }
     
+
+    
     @Test
-    public void testIsModifiedNoChanges() {
+    public void testIsModifiedNoChanges() throws InterruptedException {
         // Given: original state with a key
         String testKey = "sk-test-key";
         SecureAPIKeyManager.storeAPIKey(AIServiceType.OPENAI, testKey);
-        configPanel.loadCurrentSettings(); // This updates original state
+        
+        // Create new panel to load settings
+        AIServiceConfigPanel newPanel = new AIServiceConfigPanel(aiSettings);
+        Thread.sleep(200); // Wait for async loading
         
         // When: UI matches original state
-        setPasswordFieldText(configPanel, "openaiApiKeyField", testKey);
+        setPasswordFieldText(newPanel, "openaiApiKeyField", testKey);
         
         // Then: no modification should be detected
-        assertFalse("Should not detect modification when state matches", configPanel.isModified());
+        assertFalse("Should not detect modification when state matches", newPanel.isModified());
     }
     
     @Test
-    public void testResetRestoresOriginalState() {
+    public void testResetRestoresOriginalState() throws InterruptedException {
         // Given: original state with stored keys
         String originalOpenAIKey = "sk-original-openai";
         String originalGeminiKey = "original-gemini";
         
         SecureAPIKeyManager.storeAPIKey(AIServiceType.OPENAI, originalOpenAIKey);
         SecureAPIKeyManager.storeAPIKey(AIServiceType.GEMINI, originalGeminiKey);
-        configPanel.loadCurrentSettings(); // This updates original state
+        
+        // Create new panel to load settings
+        AIServiceConfigPanel newPanel = new AIServiceConfigPanel(aiSettings);
+        Thread.sleep(200); // Wait for async loading
         
         // User changes the keys
-        setPasswordFieldText(configPanel, "openaiApiKeyField", "sk-changed-openai");
-        setPasswordFieldText(configPanel, "geminiApiKeyField", "changed-gemini");
+        setPasswordFieldText(newPanel, "openaiApiKeyField", "sk-changed-openai");
+        setPasswordFieldText(newPanel, "geminiApiKeyField", "changed-gemini");
         
         // When: reset() is called
-        configPanel.reset();
+        newPanel.reset();
+        Thread.sleep(200); // Wait for async reset
         
         // Then: original keys should be restored
-        String uiOpenAIKey = getPasswordFieldText(configPanel, "openaiApiKeyField");
-        String uiGeminiKey = getPasswordFieldText(configPanel, "geminiApiKeyField");
+        String uiOpenAIKey = getPasswordFieldText(newPanel, "openaiApiKeyField");
+        String uiGeminiKey = getPasswordFieldText(newPanel, "geminiApiKeyField");
         
         assertEquals(originalOpenAIKey, uiOpenAIKey, "OpenAI key should be reset to original");
         assertEquals(originalGeminiKey, uiGeminiKey, "Gemini key should be reset to original");
     }
     
     @Test
-    public void testLoadCurrentSettingsDisplaysStoredKeys() {
+    public void testConstructorDisplaysStoredKeys() throws InterruptedException {
         // Given: API keys are stored in secure storage
         String testOpenAIKey = "sk-test-openai-key";
         String testGeminiKey = "test-gemini-key";
         SecureAPIKeyManager.storeAPIKey(AIServiceType.OPENAI, testOpenAIKey);
         SecureAPIKeyManager.storeAPIKey(AIServiceType.GEMINI, testGeminiKey);
         
-        // When: loadCurrentSettings is called (simulating reopening settings panel)
-        configPanel.loadCurrentSettings();
+        // When: new panel is created (loads settings asynchronously)
+        AIServiceConfigPanel newPanel = new AIServiceConfigPanel(aiSettings);
+        Thread.sleep(200); // Wait for async loading
         
         // Then: UI should display the stored keys and show connected status
-        String displayedOpenAIKey = new String(configPanel.getOpenaiApiKeyField().getPassword());
-        String displayedGeminiKey = new String(configPanel.getGeminiApiKeyField().getPassword());
+        String displayedOpenAIKey = new String(newPanel.getOpenaiApiKeyField().getPassword());
+        String displayedGeminiKey = new String(newPanel.getGeminiApiKeyField().getPassword());
         
         assertEquals(testOpenAIKey, displayedOpenAIKey, "OpenAI key should be displayed in UI");
         assertEquals(testGeminiKey, displayedGeminiKey, "Gemini key should be displayed in UI");
         
         // Verify status labels show connected state
         assertTrue("OpenAI status should show connected", 
-                  configPanel.getOpenaiStatusLabel().getText().contains("Connected"));
+                  newPanel.getOpenaiStatusLabel().getText().contains("Connected"));
         assertTrue("Gemini status should show connected", 
-                  configPanel.getGeminiStatusLabel().getText().contains("Connected"));
+                  newPanel.getGeminiStatusLabel().getText().contains("Connected"));
     }
     
     @Test
-    public void testResetLoadsStoredKeys() {
+    public void testResetLoadsStoredKeys() throws InterruptedException {
         // Given: API keys are stored in secure storage
         String testOpenAIKey = "sk-test-openai-key-reset";
         String testGeminiKey = "test-gemini-key-reset";
         SecureAPIKeyManager.storeAPIKey(AIServiceType.OPENAI, testOpenAIKey);
         SecureAPIKeyManager.storeAPIKey(AIServiceType.GEMINI, testGeminiKey);
         
+        // Create new panel to load settings
+        AIServiceConfigPanel newPanel = new AIServiceConfigPanel(aiSettings);
+        Thread.sleep(200); // Wait for async loading
+        
         // When: reset is called (simulating reopening settings panel)
-        configPanel.reset();
+        newPanel.reset();
+        Thread.sleep(200); // Wait for async reset
         
         // Then: UI should display the stored keys
-        String displayedOpenAIKey = new String(configPanel.getOpenaiApiKeyField().getPassword());
-        String displayedGeminiKey = new String(configPanel.getGeminiApiKeyField().getPassword());
+        String displayedOpenAIKey = new String(newPanel.getOpenaiApiKeyField().getPassword());
+        String displayedGeminiKey = new String(newPanel.getGeminiApiKeyField().getPassword());
         
         assertEquals(testOpenAIKey, displayedOpenAIKey, "OpenAI key should be displayed after reset");
         assertEquals(testGeminiKey, displayedGeminiKey, "Gemini key should be displayed after reset");

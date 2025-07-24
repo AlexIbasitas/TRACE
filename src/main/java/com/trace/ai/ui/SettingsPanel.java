@@ -205,7 +205,8 @@ public class SettingsPanel extends JPanel {
             privacyPanel.loadCurrentSettings();
         }
         if (servicePanel != null) {
-            servicePanel.loadCurrentSettings();
+            // Settings are now loaded asynchronously in the constructor
+            // No need to call loadCurrentSettings() explicitly
         }
         
         revalidate();

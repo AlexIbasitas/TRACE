@@ -42,6 +42,13 @@ public class AIModelService implements PersistentStateComponent<AIModelService.S
     
     private static final Logger LOG = Logger.getInstance(AIModelService.class);
     
+    // Stupid simple - hardcoded list of known deprecated models
+    private static final Set<String> DEPRECATED_MODELS = Set.of(
+        "gemini-1.0-pro-vision-latest",
+        "gemini-pro", 
+        "gemini-pro-vision"
+    );
+    
     // Singleton instance
     private static AIModelService instance;
     
@@ -50,6 +57,9 @@ public class AIModelService implements PersistentStateComponent<AIModelService.S
     
     // In-memory cache for fast access
     private final Map<String, AIModel> modelCache = new ConcurrentHashMap<>();
+    
+    // Flag to ensure cleanup only runs once
+    private boolean cleanupPerformed = false;
     
     /**
      * State class for persistence.
@@ -111,6 +121,10 @@ public class AIModelService implements PersistentStateComponent<AIModelService.S
         if (instance == null) {
             instance = new AIModelService();
         }
+        
+        // Ensure cleanup runs on first access
+        instance.ensureCleanup();
+        
         return instance;
     }
     
@@ -125,7 +139,23 @@ public class AIModelService implements PersistentStateComponent<AIModelService.S
         if (instance == null) {
             instance = new AIModelService();
         }
+        
+        // Ensure cleanup runs on first access
+        instance.ensureCleanup();
+        
         return instance;
+    }
+    
+    /**
+     * Ensures cleanup has been performed (runs once per instance).
+     */
+    private void ensureCleanup() {
+        // Use a simple flag to ensure cleanup only runs once
+        if (!cleanupPerformed) {
+            LOG.info("AIModelService.ensureCleanup() - performing manual cleanup");
+            cleanupDeprecatedModels();
+            cleanupPerformed = true;
+        }
     }
     
     // ============================================================================
@@ -133,11 +163,11 @@ public class AIModelService implements PersistentStateComponent<AIModelService.S
     // ============================================================================
     
     /**
-     * Creates a new AI model with the specified parameters.
+     * Creates a new AI model.
      * 
-     * @param name user-friendly name for the model
-     * @param serviceType the AI service type
-     * @param modelId the specific model identifier
+     * @param name the model name
+     * @param serviceType the service type
+     * @param modelId the model ID (will be validated by API when used)
      * @return the created model, or null if creation failed
      */
     @Nullable
@@ -154,12 +184,6 @@ public class AIModelService implements PersistentStateComponent<AIModelService.S
         
         if (modelId == null || modelId.trim().isEmpty()) {
             LOG.warn("Cannot create model with empty model ID");
-            return null;
-        }
-        
-        // Check if model ID is valid for the service
-        if (!isValidModelId(serviceType, modelId)) {
-            LOG.warn("Invalid model ID '" + modelId + "' for service " + serviceType);
             return null;
         }
         
@@ -209,6 +233,8 @@ public class AIModelService implements PersistentStateComponent<AIModelService.S
      */
     @NotNull
     public List<AIModel> getAllModels() {
+        // Clean up deprecated models before returning
+        cleanupDeprecatedModels();
         return new ArrayList<>(modelCache.values());
     }
     
@@ -219,6 +245,8 @@ public class AIModelService implements PersistentStateComponent<AIModelService.S
      */
     @NotNull
     public List<AIModel> getEnabledModels() {
+        // Clean up deprecated models before returning
+        cleanupDeprecatedModels();
         return modelCache.values().stream()
                 .filter(AIModel::isEnabled)
                 .collect(Collectors.toList());
@@ -473,18 +501,6 @@ public class AIModelService implements PersistentStateComponent<AIModelService.S
     // ============================================================================
     
     /**
-     * Checks if a model ID is valid for a given service.
-     * 
-     * @param serviceType the service type
-     * @param modelId the model ID to validate
-     * @return true if valid, false otherwise
-     */
-    public boolean isValidModelId(@NotNull AIServiceType serviceType, @NotNull String modelId) {
-        String[] availableModels = AIModel.getAvailableModelIds(serviceType);
-        return Arrays.asList(availableModels).contains(modelId);
-    }
-    
-    /**
      * Checks if a model with the given name already exists.
      * 
      * @param name the name to check
@@ -545,6 +561,7 @@ public class AIModelService implements PersistentStateComponent<AIModelService.S
     
     @Override
     public void loadState(@NotNull State state) {
+        LOG.info("AIModelService.loadState() called - loading " + (state.models != null ? state.models.size() : 0) + " models");
         myState = state;
         
         // Rebuild cache from state
@@ -553,17 +570,64 @@ public class AIModelService implements PersistentStateComponent<AIModelService.S
             try {
                 AIModel model = modelData.toAIModel();
                 modelCache.put(model.getId(), model);
+                LOG.debug("Loaded model: " + model.getFullDisplayName());
             } catch (Exception e) {
                 LOG.error("Failed to load model from state: " + modelData.id, e);
             }
         }
+        
+        // Clean up deprecated models
+        cleanupDeprecatedModels();
         
         // Initialize default models if none exist
         if (modelCache.isEmpty()) {
             initializeDefaultModels();
         }
         
-        LOG.info("Loaded " + modelCache.size() + " AI models from state");
+        LOG.info("AIModelService.loadState() completed - " + modelCache.size() + " models loaded");
+    }
+    
+    /**
+     * Cleans up deprecated models from the cache and state.
+     */
+    private void cleanupDeprecatedModels() {
+        LOG.debug("AIModelService.cleanupDeprecatedModels() called");
+        List<String> deprecatedModelIds = new ArrayList<>();
+        
+        for (AIModel model : modelCache.values()) {
+            if (isDeprecatedModel(model.getServiceType(), model.getModelId())) {
+                LOG.info("Found deprecated model: " + model.getFullDisplayName() + " - will be removed");
+                deprecatedModelIds.add(model.getId());
+            }
+        }
+        
+        // Remove deprecated models
+        for (String modelId : deprecatedModelIds) {
+            deleteModel(modelId);
+        }
+        
+        if (!deprecatedModelIds.isEmpty()) {
+            LOG.info("Cleaned up " + deprecatedModelIds.size() + " deprecated models");
+        }
+    }
+    
+    /**
+     * Checks if a model ID is deprecated.
+     * 
+     * @param serviceType the service type
+     * @param modelId the model ID to check
+     * @return true if deprecated, false otherwise
+     */
+    private boolean isDeprecatedModel(@NotNull AIServiceType serviceType, @NotNull String modelId) {
+        switch (serviceType) {
+            case GEMINI:
+                return DEPRECATED_MODELS.contains(modelId);
+            case OPENAI:
+                // Currently no deprecated OpenAI models
+                return false;
+            default:
+                return false;
+        }
     }
     
     /**
@@ -573,10 +637,10 @@ public class AIModelService implements PersistentStateComponent<AIModelService.S
         LOG.info("Initializing default AI models");
         
         // Create default OpenAI model
-        createModel("GPT-4o (Default)", AIServiceType.OPENAI, "gpt-4o");
+        createModel("GPT-3.5 Turbo (Default)", AIServiceType.OPENAI, "gpt-3.5-turbo");
         
         // Create default Gemini model
-        createModel("Gemini Pro (Default)", AIServiceType.GEMINI, "gemini-pro");
+        createModel("Gemini 1.5 Flash (Default)", AIServiceType.GEMINI, "gemini-1.5-flash");
     }
     
     /**

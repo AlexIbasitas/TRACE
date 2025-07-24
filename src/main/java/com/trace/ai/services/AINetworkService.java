@@ -198,26 +198,6 @@ public final class AINetworkService {
     }
     
     /**
-     * Gets the available models for a specific service.
-     * 
-     * @param serviceType the service type
-     * @return array of available model IDs, or empty array if no provider found
-     */
-    public String[] getAvailableModels(@NotNull AIServiceType serviceType) {
-        if (serviceType == null) {
-            return new String[0];
-        }
-        
-        AIServiceProvider provider = AIServiceFactory.getProvider(serviceType);
-        if (provider == null) {
-            LOG.warn("No provider found for service type: " + serviceType);
-            return new String[0];
-        }
-        
-        return provider.getAvailableModels();
-    }
-    
-    /**
      * Checks if a service type has a registered provider.
      * 
      * @param serviceType the service type to check

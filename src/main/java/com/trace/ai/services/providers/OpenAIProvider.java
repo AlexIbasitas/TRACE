@@ -13,7 +13,10 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import com.google.gson.JsonArray;
 
 /**
  * OpenAI-specific AI service provider implementation.
@@ -120,15 +123,46 @@ public class OpenAIProvider implements AIServiceProvider {
     }
     
     @Override
-    public String[] getAvailableModels() {
-        return new String[]{
-            "gpt-4o",
-            "gpt-4o-mini", 
-            "gpt-4",
-            "gpt-4-turbo",
-            "gpt-3.5-turbo",
-            "gpt-3.5-turbo-16k"
-        };
+    public CompletableFuture<String[]> discoverAvailableModels(@NotNull String apiKey) {
+        return CompletableFuture.supplyAsync(() -> {
+            try {
+                // Query OpenAI's models endpoint to get available models
+                HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create("https://api.openai.com/v1/models"))
+                    .header("Authorization", "Bearer " + apiKey)
+                    .GET()
+                    .timeout(REQUEST_TIMEOUT)
+                    .build();
+                
+                HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+                
+                if (response.statusCode() == 200) {
+                    JsonObject jsonResponse = JsonParser.parseString(response.body()).getAsJsonObject();
+                    JsonArray data = jsonResponse.getAsJsonArray("data");
+                    
+                    List<String> availableModels = new ArrayList<>();
+                    for (int i = 0; i < data.size(); i++) {
+                        JsonObject model = data.get(i).getAsJsonObject();
+                        String modelId = model.get("id").getAsString();
+                        // Only include GPT models
+                        if (modelId.startsWith("gpt-")) {
+                            availableModels.add(modelId);
+                        }
+                    }
+                    
+                    LOG.info("Discovered " + availableModels.size() + " OpenAI models");
+                    return availableModels.toArray(new String[0]);
+                } else {
+                    LOG.warn("Failed to discover OpenAI models: " + response.statusCode());
+                    // Return default models as fallback
+                    return new String[]{"gpt-3.5-turbo", "gpt-4o", "gpt-4o-mini"};
+                }
+            } catch (Exception e) {
+                LOG.warn("Error discovering OpenAI models: " + e.getMessage());
+                // Return default models as fallback
+                return new String[]{"gpt-3.5-turbo", "gpt-4o", "gpt-4o-mini"};
+            }
+        });
     }
     
     @Override

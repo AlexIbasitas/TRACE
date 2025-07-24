@@ -28,6 +28,7 @@
 
         <!-- Services -->
         <projectService serviceImplementation="com.trace.ai.services.AINetworkService"/>
+        <projectService serviceImplementation="com.trace.ai.services.AIModelService"/>
         <applicationService serviceImplementation="com.trace.ai.prompts.LocalPromptGenerationService"/>
         <applicationService serviceImplementation="com.trace.ai.configuration.AISettings"/>
     </extensions>

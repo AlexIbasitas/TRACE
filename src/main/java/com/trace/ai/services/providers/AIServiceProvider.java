@@ -67,14 +67,17 @@ public interface AIServiceProvider {
                                                @NotNull String apiKey);
     
     /**
-     * Gets the available models for this service.
+     * Discovers the models available to the user with the given API key.
      * 
-     * <p>Returns an array of model IDs that are supported by this service.
-     * These models can be used in the analyze method.</p>
+     * <p>This method queries the actual API to determine which models
+     * the user has access to based on their subscription tier. This is
+     * the single source of truth for model availability.</p>
      * 
-     * @return array of available model IDs
+     * @param apiKey the API key to use for discovery
+     * @return a CompletableFuture that resolves to an array of available model IDs
+     * @throws IllegalArgumentException if apiKey is null or empty
      */
-    String[] getAvailableModels();
+    CompletableFuture<String[]> discoverAvailableModels(@NotNull String apiKey);
     
     /**
      * Gets the service type this provider handles.

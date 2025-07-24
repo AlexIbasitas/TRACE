@@ -37,7 +37,7 @@ public class AIModel {
     // The AI service this model belongs to
     private final AIServiceType serviceType;
     
-    // The specific model identifier (e.g., "gpt-4", "gemini-pro")
+    // The specific model identifier (e.g., "gpt-4", "gemini-1.5-flash")
     private final String modelId;
     
     // Whether this model is enabled for use
@@ -331,7 +331,7 @@ public class AIModel {
     }
     
     /**
-     * Gets whether confidence scores should be included for a given service and model.
+     * Gets the optimal confidence scores setting for a given service and model.
      * 
      * @param serviceType the service type
      * @param modelId the model ID
@@ -340,36 +340,6 @@ public class AIModel {
     public static boolean getOptimalConfidenceScores(@NotNull AIServiceType serviceType, @NotNull String modelId) {
         // Always include confidence scores for better analysis
         return true;
-    }
-    
-    /**
-     * Gets the available model IDs for a given service.
-     * 
-     * @param serviceType the service type
-     * @return array of available model IDs
-     */
-    @NotNull
-    public static String[] getAvailableModelIds(@NotNull AIServiceType serviceType) {
-        switch (serviceType) {
-            case OPENAI:
-                return new String[]{
-                    "gpt-4o",
-                    "gpt-4o-mini",
-                    "gpt-4",
-                    "gpt-4-turbo",
-                    "gpt-3.5-turbo",
-                    "gpt-3.5-turbo-16k"
-                };
-            case GEMINI:
-                return new String[]{
-                    "gemini-pro",
-                    "gemini-pro-vision",
-                    "gemini-1.5-pro",
-                    "gemini-1.5-flash"
-                };
-            default:
-                return new String[0];
-        }
     }
     
     /**
@@ -396,14 +366,14 @@ public class AIModel {
                 return "GPT-3.5 Turbo (16K)";
             
             // Gemini Models
-            case "gemini-pro":
-                return "Gemini Pro";
-            case "gemini-pro-vision":
-                return "Gemini Pro Vision";
             case "gemini-1.5-pro":
                 return "Gemini 1.5 Pro";
             case "gemini-1.5-flash":
                 return "Gemini 1.5 Flash";
+            case "gemini-1.5-flash-exp":
+                return "Gemini 1.5 Flash (Experimental)";
+            case "gemini-1.5-pro-exp":
+                return "Gemini 1.5 Pro (Experimental)";
             
             default:
                 return modelId; // Fallback to model ID if unknown

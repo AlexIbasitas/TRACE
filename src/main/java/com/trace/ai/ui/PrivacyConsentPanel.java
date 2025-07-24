@@ -182,15 +182,8 @@ public class PrivacyConsentPanel extends JBPanel<PrivacyConsentPanel> {
             // User is enabling AI features - show consent dialog
             showConsentDialog();
         } else {
-            // User is disabling AI features - this acts as revoke access
-            aiSettings.setAIEnabled(false);
-            aiSettings.setUserConsentGiven(false);
-            updateExplanationText();
-            
-            // Notify callback if provided
-            if (onAIStateChanged != null) {
-                onAIStateChanged.run();
-            }
+            // User is disabling AI features - show warning dialog
+            showDisableWarningDialog();
         }
     }
     
@@ -216,6 +209,35 @@ public class PrivacyConsentPanel extends JBPanel<PrivacyConsentPanel> {
     }
     
 
+    
+    /**
+     * Shows warning dialog when user tries to disable AI analysis.
+     */
+    private void showDisableWarningDialog() {
+        int result = Messages.showYesNoDialog(
+            "You will lose access to AI-powered debugging suggestions for test failures. Are you sure you want to disable AI analysis?",
+            "Disable AI Analysis?",
+            "Disable",
+            "Cancel",
+            Messages.getQuestionIcon(),
+            null
+        );
+        
+        if (result == Messages.YES) {
+            // User confirmed - disable AI features
+            aiSettings.setAIEnabled(false);
+            aiSettings.setUserConsentGiven(false);
+            updateExplanationText();
+            
+            // Notify callback if provided
+            if (onAIStateChanged != null) {
+                onAIStateChanged.run();
+            }
+        } else {
+            // User cancelled - revert checkbox
+            aiEnabledCheckBox.setSelected(true);
+        }
+    }
     
     /**
      * Shows detailed privacy information.
@@ -249,18 +271,15 @@ public class PrivacyConsentPanel extends JBPanel<PrivacyConsentPanel> {
      * Updates the explanation text based on current settings.
      */
     private void updateExplanationText() {
+        String baseText = "The plugin examines your project to understand test context and provide better debugging suggestions. See our <a href=\"#\">Privacy Policy</a> for details.";
+        
         if (aiSettings.isAIEnabled() && aiSettings.hasUserConsent()) {
             explanationPane.setText(
-                "AI analysis is enabled. Test failure data and project structure information " +
-                "are sent to AI services for debugging suggestions. Source code files are " +
-                "parsed to locate step definitions. Data is not stored permanently."
+                "AI analysis is enabled and provides debugging suggestions for test failures. " + baseText
             );
         } else {
             explanationPane.setText(
-                "Enable AI analysis to get debugging suggestions when tests fail. " +
-                "The plugin will parse your source code files to locate step definitions " +
-                "and use project structure information. Requires consent and an API key. " +
-                "See our <a href=\"#\">Privacy Policy</a> for details."
+                "Enable AI analysis to get debugging suggestions for test failures. " + baseText
             );
         }
     }
@@ -349,33 +368,53 @@ public class PrivacyConsentPanel extends JBPanel<PrivacyConsentPanel> {
             panel.setBorder(JBUI.Borders.empty(20));
             
             // Create content
-            JTextArea contentArea = new JTextArea();
+            JEditorPane contentArea = new JEditorPane();
             contentArea.setEditable(false);
-            contentArea.setLineWrap(true);
-            contentArea.setWrapStyleWord(true);
+            contentArea.setContentType("text/html");
             contentArea.setBackground(panel.getBackground());
             contentArea.setFont(panel.getFont());
             contentArea.setText(
-                "🔒 Privacy Notice\n\n" +
-                "TRACE AI Analysis sends test failure information to AI services " +
-                "to provide debugging suggestions.\n\n" +
-                "What we collect:\n" +
-                "• Test failure details (stack traces, error messages)\n" +
-                "• Project structure information (to locate step definitions)\n" +
-                "• Your questions and follow-up messages\n\n" +
-                "What we DON'T collect:\n" +
-                "• Source code files (only parsed for step definitions)\n" +
-                "• Personal information\n" +
-                "• Permanent storage of your data\n\n" +
-                "Data handling:\n" +
-                "• Data is sent securely to AI services\n" +
-                "• Data is not stored permanently by TRACE\n" +
-                "• AI services may store data according to their policies\n" +
-                "• You can revoke access at any time\n\n" +
-                "By accepting, you agree to allow TRACE to send test failure " +
-                "data to AI services for analysis and debugging assistance.\n\n" +
-                "For complete details, see our Privacy Policy: https://alexibasitas.github.io/TRACE/PRIVACY.html"
+                "<html><body style='font-family: " + panel.getFont().getFamily() + "; font-size: " + (panel.getFont().getSize() - 2) + "px; line-height: 1.4;'>" +
+                "<h3 style='font-size: " + (panel.getFont().getSize() + 2) + "px; margin-top: 0; margin-bottom: 12px;'>Privacy Notice</h3>" +
+                "<p style='margin: 8px 0;'>TRACE AI Analysis sends test failure information to AI services " +
+                "to provide debugging suggestions.</p>" +
+                "<p style='margin: 12px 0 6px 0; font-weight: bold;'>What we collect:</p>" +
+                "<ul style='margin: 6px 0 12px 0; padding-left: 20px;'>" +
+                "<li style='margin: 3px 0;'>Test failure details (stack traces, error messages)</li>" +
+                "<li style='margin: 3px 0;'>Project structure information (to locate step definitions)</li>" +
+                "<li style='margin: 3px 0;'>Your questions and follow-up messages</li>" +
+                "</ul>" +
+                "<p style='margin: 12px 0 6px 0; font-weight: bold;'>What we DON'T collect:</p>" +
+                "<ul style='margin: 6px 0 12px 0; padding-left: 20px;'>" +
+                "<li style='margin: 3px 0;'>Source code files (only parsed for step definitions)</li>" +
+                "<li style='margin: 3px 0;'>Personal information</li>" +
+                "<li style='margin: 3px 0;'>Permanent storage of your data</li>" +
+                "</ul>" +
+                "<p style='margin: 12px 0 6px 0; font-weight: bold;'>Data handling:</p>" +
+                "<ul style='margin: 6px 0 12px 0; padding-left: 20px;'>" +
+                "<li style='margin: 3px 0;'>Data is sent securely to AI services</li>" +
+                "<li style='margin: 3px 0;'>Data is not stored permanently by TRACE</li>" +
+                "<li style='margin: 3px 0;'>AI services may store data according to their policies</li>" +
+                "<li style='margin: 3px 0;'>You can revoke access at any time</li>" +
+                "</ul>" +
+                "<p style='margin: 12px 0 6px 0; font-weight: bold;'>Billing and Usage:</p>" +
+                "<ul style='margin: 6px 0 12px 0; padding-left: 20px;'>" +
+                "<li style='margin: 3px 0;'>You are responsible for your own AI service usage and billing</li>" +
+                "<li style='margin: 3px 0;'>TRACE does not charge for AI analysis - costs are from your AI service provider</li>" +
+                "<li style='margin: 3px 0;'>Monitor your AI service usage and billing through your provider's dashboard</li>" +
+                "</ul>" +
+                "<p style='margin: 12px 0;'>By accepting, you agree to allow TRACE to send test failure " +
+                "data to AI services for analysis and debugging assistance.</p>" +
+                "<p style='margin: 8px 0;'>For complete details, see our <a href=\"https://alexibasitas.github.io/TRACE/PRIVACY.html\">Privacy Policy</a>.</p>" +
+                "</body></html>"
             );
+            
+            // Add hyperlink listener
+            contentArea.addHyperlinkListener(e -> {
+                if (e.getEventType() == HyperlinkEvent.EventType.ACTIVATED) {
+                    BrowserUtil.browse(e.getURL());
+                }
+            });
             
             // Add scroll pane
             JScrollPane scrollPane = new JScrollPane(contentArea);

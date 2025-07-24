@@ -13,7 +13,10 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import com.google.gson.JsonArray;
 
 /**
  * Google Gemini-specific AI service provider implementation.
@@ -121,13 +124,52 @@ public class GeminiProvider implements AIServiceProvider {
     }
     
     @Override
-    public String[] getAvailableModels() {
-        return new String[]{
-            "gemini-pro",
-            "gemini-pro-vision",
-            "gemini-1.5-pro",
-            "gemini-1.5-flash"
-        };
+    public CompletableFuture<String[]> discoverAvailableModels(@NotNull String apiKey) {
+        return CompletableFuture.supplyAsync(() -> {
+            try {
+                // Query Gemini's models endpoint to get available models
+                HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create("https://generativelanguage.googleapis.com/v1beta/models?key=" + apiKey))
+                    .GET()
+                    .timeout(REQUEST_TIMEOUT)
+                    .build();
+                
+                HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+                
+                if (response.statusCode() == 200) {
+                    JsonObject jsonResponse = JsonParser.parseString(response.body()).getAsJsonObject();
+                    JsonArray models = jsonResponse.getAsJsonArray("models");
+                    
+                    List<String> availableModels = new ArrayList<>();
+                    for (int i = 0; i < models.size(); i++) {
+                        JsonObject model = models.get(i).getAsJsonObject();
+                        String modelId = model.get("name").getAsString().replace("models/", "");
+                        
+                        // Check if model supports generateContent
+                        if (model.has("supportedGenerationMethods")) {
+                            JsonArray methods = model.getAsJsonArray("supportedGenerationMethods");
+                            for (int j = 0; j < methods.size(); j++) {
+                                if ("generateContent".equals(methods.get(j).getAsString())) {
+                                    availableModels.add(modelId);
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                    
+                    LOG.info("Discovered " + availableModels.size() + " Gemini models");
+                    return availableModels.toArray(new String[0]);
+                } else {
+                    LOG.warn("Failed to discover Gemini models: " + response.statusCode());
+                    // Return default models as fallback
+                    return new String[]{"gemini-1.5-flash", "gemini-1.5-pro"};
+                }
+            } catch (Exception e) {
+                LOG.warn("Error discovering Gemini models: " + e.getMessage());
+                // Return default models as fallback
+                return new String[]{"gemini-1.5-flash", "gemini-1.5-pro"};
+            }
+        });
     }
     
     @Override
