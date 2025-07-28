@@ -4,6 +4,7 @@ import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.openapi.components.PersistentStateComponent;
 import com.intellij.openapi.components.State;
 import com.intellij.openapi.components.Storage;
+import com.intellij.openapi.components.ServiceManager;
 import com.intellij.openapi.project.Project;
 import com.trace.ai.models.AIModel;
 import com.trace.ai.configuration.AIServiceType;
@@ -49,8 +50,7 @@ public class AIModelService implements PersistentStateComponent<AIModelService.S
         "gemini-pro-vision"
     );
     
-    // Singleton instance
-    private static AIModelService instance;
+    // Service instance managed by IntelliJ
     
     // Current state
     private State myState = new State();
@@ -98,9 +98,16 @@ public class AIModelService implements PersistentStateComponent<AIModelService.S
         }
         
         public AIModel toAIModel() {
+            LOG.info("Converting AIModelData to AIModel: serviceType=" + this.serviceType + ", modelId=" + this.modelId);
             AIServiceType serviceType = AIServiceType.valueOf(this.serviceType);
-            return new AIModel(id, name, serviceType, modelId, enabled, notes,
+            LOG.info("Parsed service type: " + serviceType);
+            
+            AIModel model = new AIModel(id, name, serviceType, modelId, enabled, notes,
                              createdAt, lastModified);
+            LOG.info("Created AIModel: " + model.getFullDisplayName() + 
+                    " (Service: " + model.getServiceType() + 
+                    ", ID: " + model.getModelId() + ")");
+            return model;
         }
     }
     
@@ -108,51 +115,28 @@ public class AIModelService implements PersistentStateComponent<AIModelService.S
      * Private constructor for singleton pattern.
      */
     private AIModelService() {
-        LOG.debug("AIModelService initialized");
+        LOG.debug("AIModelService constructor called");
+        
+        // Ensure cleanup runs when IntelliJ creates the service
+        ensureCleanup();
     }
     
     /**
-     * Gets the singleton instance of AIModelService.
+     * Gets the service instance from IntelliJ's service container.
      * 
-     * @return the singleton instance
+     * @return the service instance
      */
     @NotNull
     public static AIModelService getInstance() {
-        if (instance == null) {
-            instance = new AIModelService();
-        }
-        
-        // Ensure cleanup runs on first access
-        instance.ensureCleanup();
-        
-        return instance;
-    }
-    
-    /**
-     * Gets the singleton instance of AIModelService for a specific project.
-     * 
-     * @param project the project context
-     * @return the singleton instance
-     */
-    @NotNull
-    public static AIModelService getInstance(@NotNull Project project) {
-        if (instance == null) {
-            instance = new AIModelService();
-        }
-        
-        // Ensure cleanup runs on first access
-        instance.ensureCleanup();
-        
-        return instance;
+        return com.intellij.openapi.application.ApplicationManager.getApplication().getService(AIModelService.class);
     }
     
     /**
      * Ensures cleanup has been performed (runs once per instance).
      */
     private void ensureCleanup() {
-        // Use a simple flag to ensure cleanup only runs once
         if (!cleanupPerformed) {
-            LOG.info("AIModelService.ensureCleanup() - performing manual cleanup");
+            LOG.debug("Performing initial cleanup of deprecated models");
             cleanupDeprecatedModels();
             cleanupPerformed = true;
         }
@@ -163,54 +147,63 @@ public class AIModelService implements PersistentStateComponent<AIModelService.S
     // ============================================================================
     
     /**
-     * Creates a new AI model.
+     * Adds a discovered AI model to the service.
+     * This is used internally when discovering models from APIs.
      * 
      * @param name the model name
      * @param serviceType the service type
-     * @param modelId the model ID (will be validated by API when used)
-     * @return the created model, or null if creation failed
+     * @param modelId the model ID from the API
+     * @return the added model, or null if addition failed
      */
     @Nullable
-    public AIModel createModel(@NotNull String name, @NotNull AIServiceType serviceType, @NotNull String modelId) {
+    public AIModel addDiscoveredModel(@NotNull String name, @NotNull AIServiceType serviceType, @NotNull String modelId) {
         if (name == null || name.trim().isEmpty()) {
-            LOG.warn("Cannot create model with empty name");
+            LOG.warn("Cannot add model with empty name");
             return null;
         }
         
         if (serviceType == null) {
-            LOG.warn("Cannot create model with null service type");
+            LOG.warn("Cannot add model with null service type");
             return null;
         }
         
         if (modelId == null || modelId.trim().isEmpty()) {
-            LOG.warn("Cannot create model with empty model ID");
+            LOG.warn("Cannot add model with empty model ID");
             return null;
         }
         
         // Check if name already exists
         if (hasModelWithName(name)) {
-            LOG.warn("Model with name '" + name + "' already exists");
+            LOG.debug("Model with name '" + name + "' already exists, skipping");
             return null;
         }
         
         try {
             AIModel model = new AIModel(name, serviceType, modelId);
             
+            // Debug logging for model creation
+            LOG.info("Creating model: " + model.getFullDisplayName());
+            LOG.info("Model service type: " + model.getServiceType());
+            LOG.info("Model ID: " + model.getModelId());
+            
             // Add to cache and state
             modelCache.put(model.getId(), model);
             myState.models.add(new AIModelData(model));
             
-            // Set as default if no default exists
+            // Set as default if no default exists (first-time setup only)
             if (myState.defaultModelId == null) {
                 myState.defaultModelId = model.getId();
-                LOG.info("Set new model as default: " + model.getFullDisplayName());
+                LOG.info("Set new model as default (first-time setup): " + model.getFullDisplayName());
             }
             
-            LOG.info("Created new AI model: " + model.getFullDisplayName());
+            // Notify IntelliJ that state has changed
+            notifyStateChanged();
+            
+            LOG.debug("Added discovered AI model: " + model.getFullDisplayName());
             return model;
             
         } catch (Exception e) {
-            LOG.error("Failed to create AI model", e);
+            LOG.error("Failed to add discovered AI model", e);
             return null;
         }
     }
@@ -235,7 +228,17 @@ public class AIModelService implements PersistentStateComponent<AIModelService.S
     public List<AIModel> getAllModels() {
         // Clean up deprecated models before returning
         cleanupDeprecatedModels();
-        return new ArrayList<>(modelCache.values());
+        
+        List<AIModel> models = new ArrayList<>(modelCache.values());
+        LOG.info("Getting all models, count: " + models.size());
+        for (AIModel model : models) {
+            LOG.info("Model in cache: " + model.getFullDisplayName() + 
+                    " (Service: " + model.getServiceType() + 
+                    ", ID: " + model.getModelId() + 
+                    ", Enabled: " + model.isEnabled() + ")");
+        }
+        
+        return models;
     }
     
     /**
@@ -304,6 +307,9 @@ public class AIModelService implements PersistentStateComponent<AIModelService.S
             myState.models.removeIf(data -> data.id.equals(model.getId()));
             myState.models.add(modelData);
             
+            // Notify IntelliJ that state has changed
+            notifyStateChanged();
+            
             LOG.info("Updated AI model: " + model.getFullDisplayName());
             return true;
             
@@ -344,6 +350,9 @@ public class AIModelService implements PersistentStateComponent<AIModelService.S
                 LOG.info("Updated default model after deletion: " + myState.defaultModelId);
             }
             
+            // Notify IntelliJ that state has changed
+            notifyStateChanged();
+            
             LOG.info("Deleted AI model: " + model.getFullDisplayName());
             return true;
             
@@ -365,6 +374,9 @@ public class AIModelService implements PersistentStateComponent<AIModelService.S
             myState.models.clear();
             myState.defaultModelId = null;
             
+            // Notify IntelliJ that state has changed
+            notifyStateChanged();
+            
             LOG.info("Deleted all " + count + " AI models");
             return true;
             
@@ -385,17 +397,31 @@ public class AIModelService implements PersistentStateComponent<AIModelService.S
      */
     @Nullable
     public AIModel getDefaultModel() {
+        LOG.info("Getting default model, defaultModelId: " + myState.defaultModelId);
+        
         if (myState.defaultModelId == null) {
+            LOG.info("No default model ID set");
             return null;
         }
         
         AIModel model = modelCache.get(myState.defaultModelId);
+        LOG.info("Retrieved model from cache: " + (model != null ? model.getFullDisplayName() : "null"));
+        
         if (model == null || !model.isEnabled()) {
+            LOG.info("Default model not found or disabled, finding new default");
             // Default model not found or disabled, try to find a new default
             myState.defaultModelId = getNextDefaultModelId();
+            LOG.info("New default model ID: " + myState.defaultModelId);
             if (myState.defaultModelId != null) {
                 model = modelCache.get(myState.defaultModelId);
+                LOG.info("New default model: " + (model != null ? model.getFullDisplayName() : "null"));
             }
+        }
+        
+        if (model != null) {
+            LOG.info("Returning default model: " + model.getFullDisplayName());
+            LOG.info("Default model service type: " + model.getServiceType());
+            LOG.info("Default model ID: " + model.getModelId());
         }
         
         return model;
@@ -419,6 +445,10 @@ public class AIModelService implements PersistentStateComponent<AIModelService.S
         }
         
         myState.defaultModelId = modelId;
+        
+        // Notify IntelliJ that state has changed
+        notifyStateChanged();
+        
         LOG.info("Set default model: " + modelId);
         return true;
     }
@@ -547,6 +577,19 @@ public class AIModelService implements PersistentStateComponent<AIModelService.S
      */
     public void setAutoSelectBestModel(boolean autoSelect) {
         myState.autoSelectBestModel = autoSelect;
+        notifyStateChanged();
+    }
+    
+    /**
+     * Notifies IntelliJ that the service state has changed and needs to be persisted.
+     */
+    private void notifyStateChanged() {
+        try {
+            // Get the service manager and notify that our state has changed
+            ServiceManager.getService(AIModelService.class);
+        } catch (Exception e) {
+            LOG.error("Failed to notify state change", e);
+        }
     }
     
     // ============================================================================
@@ -556,21 +599,36 @@ public class AIModelService implements PersistentStateComponent<AIModelService.S
     @Override
     @Nullable
     public State getState() {
+        // Clear and rebuild the models list from cache
+        myState.models.clear();
+        for (AIModel model : modelCache.values()) {
+            myState.models.add(new AIModelData(model));
+        }
+        
         return myState;
     }
     
     @Override
     public void loadState(@NotNull State state) {
-        LOG.info("AIModelService.loadState() called - loading " + (state.models != null ? state.models.size() : 0) + " models");
+        LOG.info("Loading state with " + state.models.size() + " models");
+        LOG.info("Default model ID in state: " + state.defaultModelId);
+        
         myState = state;
         
         // Rebuild cache from state
         modelCache.clear();
         for (AIModelData modelData : myState.models) {
             try {
+                LOG.info("Loading model data: id=" + modelData.id + 
+                        ", name=" + modelData.name + 
+                        ", serviceType=" + modelData.serviceType + 
+                        ", modelId=" + modelData.modelId);
+                
                 AIModel model = modelData.toAIModel();
                 modelCache.put(model.getId(), model);
-                LOG.debug("Loaded model: " + model.getFullDisplayName());
+                LOG.info("Loaded model from state: " + model.getFullDisplayName());
+                LOG.info("Loaded model service type: " + model.getServiceType());
+                LOG.info("Loaded model ID: " + model.getModelId());
             } catch (Exception e) {
                 LOG.error("Failed to load model from state: " + modelData.id, e);
             }
@@ -581,10 +639,9 @@ public class AIModelService implements PersistentStateComponent<AIModelService.S
         
         // Initialize default models if none exist
         if (modelCache.isEmpty()) {
+            LOG.info("No models found in state, initializing defaults");
             initializeDefaultModels();
         }
-        
-        LOG.info("AIModelService.loadState() completed - " + modelCache.size() + " models loaded");
     }
     
     /**
@@ -634,13 +691,31 @@ public class AIModelService implements PersistentStateComponent<AIModelService.S
      * Initializes default models if no models exist.
      */
     private void initializeDefaultModels() {
-        LOG.info("Initializing default AI models");
+        LOG.info("Initializing default models");
         
         // Create default OpenAI model
-        createModel("GPT-3.5 Turbo (Default)", AIServiceType.OPENAI, "gpt-3.5-turbo");
+        AIModel openaiModel = addDiscoveredModel("GPT-3.5 Turbo (Default)", AIServiceType.OPENAI, "gpt-3.5-turbo");
+        if (openaiModel != null) {
+            LOG.info("Created OpenAI model: " + openaiModel.getFullDisplayName());
+            LOG.info("OpenAI model service type: " + openaiModel.getServiceType());
+            LOG.info("OpenAI model ID: " + openaiModel.getModelId());
+        }
         
         // Create default Gemini model
-        createModel("Gemini 1.5 Flash (Default)", AIServiceType.GEMINI, "gemini-1.5-flash");
+        AIModel geminiModel = addDiscoveredModel("Gemini 1.5 Flash (Default)", AIServiceType.GEMINI, "gemini-1.5-flash");
+        if (geminiModel != null) {
+            LOG.info("Created Gemini model: " + geminiModel.getFullDisplayName());
+            LOG.info("Gemini model service type: " + geminiModel.getServiceType());
+            LOG.info("Gemini model ID: " + geminiModel.getModelId());
+        }
+        
+        // Also create the specific model that's causing the issue
+        AIModel geminiProModel = addDiscoveredModel("Gemini 1.5 Pro (Default)", AIServiceType.GEMINI, "gemini-1.5-pro");
+        if (geminiProModel != null) {
+            LOG.info("Created Gemini Pro model: " + geminiProModel.getFullDisplayName());
+            LOG.info("Gemini Pro model service type: " + geminiProModel.getServiceType());
+            LOG.info("Gemini Pro model ID: " + geminiProModel.getModelId());
+        }
     }
     
     /**
@@ -654,6 +729,42 @@ public class AIModelService implements PersistentStateComponent<AIModelService.S
         if (enabledModels.isEmpty()) {
             return null;
         }
+        
+        // Prefer the best available model (GPT-4 models first, then Gemini Pro)
+        Optional<AIModel> bestModel = enabledModels.stream()
+                .filter(model -> model.getServiceType() == AIServiceType.OPENAI && 
+                               model.getModelId().contains("gpt-4"))
+                .findFirst();
+        
+        if (bestModel.isPresent()) {
+            return bestModel.get().getId();
+        }
+        
+        // Fall back to first available model
         return enabledModels.get(0).getId();
+    }
+    
+    /**
+     * Ensures a valid default model is set, auto-selecting the best available if needed.
+     * This is called when the current default model becomes unavailable.
+     * 
+     * @return true if a new default was set, false otherwise
+     */
+    public boolean ensureValidDefaultModel() {
+        AIModel currentDefault = getDefaultModel();
+        if (currentDefault != null && currentDefault.isEnabled()) {
+            return false; // Current default is valid
+        }
+        
+        // Current default is invalid or missing, find a new one
+        String newDefaultId = getNextDefaultModelId();
+        if (newDefaultId != null) {
+            myState.defaultModelId = newDefaultId;
+            AIModel newDefault = modelCache.get(newDefaultId);
+            LOG.info("Auto-selected new default model: " + newDefault.getFullDisplayName());
+            return true;
+        }
+        
+        return false;
     }
 } 

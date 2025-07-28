@@ -22,6 +22,9 @@ dependencies {
     // JSON serialization for backend communication
     implementation 'com.google.code.gson:gson:2.10.1'
     
+    // Professional markdown rendering with Flexmark Java
+    implementation 'com.vladsch.flexmark:flexmark-all:0.64.8'
+    
     // Test Framework Dependencies (JetBrains recommended)
     testImplementation 'org.junit.jupiter:junit-jupiter-api:5.10.2'
     testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.10.2'

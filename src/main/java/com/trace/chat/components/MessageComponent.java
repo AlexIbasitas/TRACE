@@ -223,6 +223,63 @@ public class MessageComponent extends JPanel {
      * @param contentPanel The panel to add the message text to
      */
     private void addMessageText(JPanel contentPanel) {
+        if (message.isFromAI()) {
+            // Use JEditorPane with markdown rendering for AI responses
+            addAiMessageText(contentPanel);
+        } else {
+            // Use JTextArea for user messages (no markdown needed)
+            addUserMessageText(contentPanel);
+        }
+    }
+    
+    /**
+     * Adds AI message text with professional markdown rendering using Flexmark Java.
+     *
+     * @param contentPanel The panel to add the AI message text to
+     */
+    private void addAiMessageText(JPanel contentPanel) {
+        // Use Flexmark Java for professional markdown rendering
+        JEditorPane messageText = MarkdownRenderer.createMarkdownPane(message.getText());
+        
+        // Log the font before and after creating the markdown pane
+        System.out.println("MessageComponent: JEditorPane font after creation: " + messageText.getFont());
+        System.out.println("MessageComponent: JEditorPane font size: " + messageText.getFont().getSize());
+        
+        // Apply consistent styling to match other chat elements
+        messageText.setBorder(TriagePanelConstants.EMPTY_BORDER);
+        messageText.setAlignmentX(Component.LEFT_ALIGNMENT);
+        messageText.setAlignmentY(Component.TOP_ALIGNMENT);
+        
+        // Calculate proper sizing to match JTextArea behavior
+        int preferredWidth = Math.max(TriagePanelConstants.MIN_CHAT_WIDTH_BEFORE_SCROLL, 
+                                    TriagePanelConstants.MAX_MESSAGE_TEXT_WIDTH);
+        
+        // Use the same sizing logic as JTextArea
+        messageText.setSize(preferredWidth, Short.MAX_VALUE);
+        Dimension preferredSize = messageText.getPreferredSize();
+        
+        // Set flexible sizing that allows wrapping but respects minimum width
+        messageText.setPreferredSize(new Dimension(preferredWidth, preferredSize.height));
+        messageText.setMaximumSize(new Dimension(Integer.MAX_VALUE, preferredSize.height + TriagePanelConstants.CONTENT_PADDING));
+        messageText.setMinimumSize(new Dimension(TriagePanelConstants.MIN_CHAT_WIDTH_BEFORE_SCROLL, preferredSize.height));
+        
+        // Add component name for testing identification
+        messageText.setName("aiMessageText");
+        
+        contentPanel.add(messageText);
+        
+        // Force layout update to ensure proper display
+        contentPanel.revalidate();
+    }
+    
+
+    
+    /**
+     * Adds user message text with standard JTextArea rendering.
+     *
+     * @param contentPanel The panel to add the user message text to
+     */
+    private void addUserMessageText(JPanel contentPanel) {
         JTextArea messageText = new JTextArea(message.getText());
         messageText.setLineWrap(true);
         messageText.setWrapStyleWord(true);
@@ -251,7 +308,7 @@ public class MessageComponent extends JPanel {
         messageText.setAlignmentY(Component.TOP_ALIGNMENT);
         
         // Add component name for testing identification
-        messageText.setName("messageText");
+        messageText.setName("userMessageText");
         
         contentPanel.add(messageText);
         

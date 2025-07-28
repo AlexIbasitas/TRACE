@@ -13,9 +13,13 @@ import com.trace.test.models.StepDefinitionInfo;
 import com.trace.test.models.GherkinScenarioInfo;
 import com.trace.ai.prompts.LocalPromptGenerationService;
 import com.trace.chat.ui.TriagePanelView;
+import com.trace.ai.configuration.AISettings;
+import com.trace.ai.services.AINetworkService;
+import com.trace.ai.models.AIAnalysisResult;
 
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
@@ -43,6 +47,8 @@ public class CucumberTestExecutionListener implements SMTRunnerEventsListener {
     private final StepDefinitionExtractor stepDefinitionExtractor;
     private final GherkinScenarioExtractor gherkinScenarioExtractor;
     private final LocalPromptGenerationService promptGenerationService;
+    private final AISettings aiSettings;
+    private AINetworkService aiNetworkService;
     
     // Stream capture for test output analysis
     private static final ConcurrentMap<SMTestProxy, ByteArrayOutputStream> testOutputStreams = new ConcurrentHashMap<>();
@@ -60,6 +66,8 @@ public class CucumberTestExecutionListener implements SMTRunnerEventsListener {
         this.stepDefinitionExtractor = null;
         this.gherkinScenarioExtractor = null;
         this.promptGenerationService = new LocalPromptGenerationService();
+        this.aiSettings = AISettings.getInstance();
+        this.aiNetworkService = null; // Will be initialized when project is available
     }
 
     /**
@@ -71,16 +79,19 @@ public class CucumberTestExecutionListener implements SMTRunnerEventsListener {
     public CucumberTestExecutionListener(Project project) {
         this.project = project;
         this.promptGenerationService = new LocalPromptGenerationService();
+        this.aiSettings = AISettings.getInstance();
         
-        // Initialize extractors only if project is available
+        // Initialize extractors and AI services only if project is available
         if (project != null) {
             this.stackTraceExtractor = new StackTraceExtractor(project);
             this.stepDefinitionExtractor = new StepDefinitionExtractor(project);
             this.gherkinScenarioExtractor = new GherkinScenarioExtractor(project);
+            this.aiNetworkService = new AINetworkService(project);
         } else {
             this.stackTraceExtractor = null;
             this.stepDefinitionExtractor = null;
             this.gherkinScenarioExtractor = null;
+            this.aiNetworkService = null;
         }
     }
 
@@ -468,6 +479,9 @@ public class CucumberTestExecutionListener implements SMTRunnerEventsListener {
             LOG.debug("Notifying TriagePanel about failure");
             notifyTriagePanel(enhancedFailureInfo, currentProject);
             
+            // Trigger AI analysis if configured and enabled
+            triggerAIAnalysisIfConfigured(enhancedFailureInfo, currentProject);
+            
         } catch (Exception e) {
             LOG.error("Error processing failed test: " + e.getMessage(), e);
         }
@@ -513,6 +527,118 @@ public class CucumberTestExecutionListener implements SMTRunnerEventsListener {
      */
     private TriagePanelView getTriagePanelForProject(Project project) {
         return TriagePanelToolWindowFactory.getPanelForProject(project);
+    }
+    
+    /**
+     * Triggers AI analysis if the system is properly configured and auto-analysis is enabled.
+     * This method runs asynchronously to avoid blocking the test execution flow.
+     * 
+     * @param failureInfo The failure information to analyze
+     * @param currentProject The current project context
+     */
+    private void triggerAIAnalysisIfConfigured(FailureInfo failureInfo, Project currentProject) {
+        if (failureInfo == null) {
+            LOG.warn("FailureInfo is null, cannot trigger AI analysis");
+            return;
+        }
+        
+        if (currentProject == null) {
+            LOG.warn("Project is null, cannot trigger AI analysis");
+            return;
+        }
+        
+        // Check if AI network service is available
+        if (aiNetworkService == null) {
+            LOG.warn("AI network service is null, cannot trigger AI analysis");
+            return;
+        }
+        
+        // Check if AI is configured and auto-analysis is enabled
+        if (!aiSettings.isConfigured()) {
+            LOG.debug("AI analysis not triggered: AI is not properly configured");
+            return;
+        }
+        
+        if (!aiSettings.isAutoAnalyzeEnabled()) {
+            LOG.debug("AI analysis not triggered: Auto-analysis is disabled");
+            return;
+        }
+        
+        LOG.info("Triggering AI analysis for failure: " + failureInfo.getScenarioName());
+        
+        // Perform AI analysis asynchronously to avoid blocking test execution
+        CompletableFuture<AIAnalysisResult> analysisFuture = aiNetworkService.analyze(failureInfo);
+        
+        // Handle the analysis result
+        analysisFuture.thenAccept(result -> {
+            LOG.info("AI analysis callback triggered for: " + failureInfo.getScenarioName());
+            if (result != null) {
+                LOG.info("AI analysis completed successfully for: " + failureInfo.getScenarioName());
+                LOG.info("Result analysis length: " + (result.getAnalysis() != null ? result.getAnalysis().length() : "null"));
+                displayAIAnalysisResult(result, currentProject);
+            } else {
+                LOG.warn("AI analysis returned null result for: " + failureInfo.getScenarioName());
+                displayAIAnalysisError("AI analysis returned no result", currentProject);
+            }
+        }).exceptionally(throwable -> {
+            LOG.error("AI analysis failed for: " + failureInfo.getScenarioName(), throwable);
+            displayAIAnalysisError("AI analysis failed: " + throwable.getMessage(), currentProject);
+            return null;
+        });
+    }
+    
+    /**
+     * Displays the AI analysis result in the TriagePanel.
+     * This method runs on the EDT to ensure thread safety.
+     * 
+     * @param result The AI analysis result to display
+     * @param currentProject The current project context
+     */
+    private void displayAIAnalysisResult(AIAnalysisResult result, Project currentProject) {
+        if (result == null || currentProject == null) {
+            return;
+        }
+        
+        // Run on EDT to ensure thread safety
+        com.intellij.openapi.application.ApplicationManager.getApplication().invokeLater(() -> {
+            try {
+                TriagePanelView triagePanel = getTriagePanelForProject(currentProject);
+                if (triagePanel != null) {
+                    triagePanel.displayAIAnalysisResult(result);
+                } else {
+                    LOG.debug("TriagePanel not found for project: " + currentProject.getName());
+                }
+            } catch (Exception e) {
+                LOG.error("Error displaying AI analysis result: " + e.getMessage(), e);
+            }
+        });
+    }
+    
+    /**
+     * Displays an AI analysis error in the TriagePanel.
+     * This method runs on the EDT to ensure thread safety.
+     * 
+     * @param errorMessage The error message to display
+     * @param currentProject The current project context
+     */
+    private void displayAIAnalysisError(String errorMessage, Project currentProject) {
+        if (errorMessage == null || currentProject == null) {
+            return;
+        }
+        
+        // Run on EDT to ensure thread safety
+        com.intellij.openapi.application.ApplicationManager.getApplication().invokeLater(() -> {
+            try {
+                TriagePanelView triagePanel = getTriagePanelForProject(currentProject);
+                if (triagePanel != null) {
+                    triagePanel.displayAIAnalysisError(errorMessage);
+                } else {
+                    LOG.debug("TriagePanel not found for project: " + currentProject.getName());
+                }
+            } catch (Exception e) {
+                LOG.error("Error displaying AI analysis error: " + e.getMessage(), e);
+            }
+        });
     }
     
     /**

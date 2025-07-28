@@ -247,4 +247,21 @@ class AINetworkServiceUnitTest {
             assertTrue(e instanceof RuntimeException || e instanceof NullPointerException);
         }
     }
+
+    @Test
+    public void testProviderSelectionForGeminiModel() {
+        // Create a test model with Gemini service type
+        AIModel geminiModel = new AIModel("Test Gemini Model", AIServiceType.GEMINI, "gemini-1.5-pro");
+        
+        // Test that the correct provider is selected
+        // This test will help us verify that the provider selection logic works correctly
+        assertNotNull(geminiModel);
+        assertEquals(AIServiceType.GEMINI, geminiModel.getServiceType());
+        assertEquals("gemini-1.5-pro", geminiModel.getModelId());
+        
+        // Verify that the factory can provide a Gemini provider
+        AIServiceProvider provider = AIServiceFactory.getProvider(AIServiceType.GEMINI);
+        assertNotNull(provider);
+        assertTrue(provider instanceof com.trace.ai.services.providers.GeminiProvider);
+    }
 } 

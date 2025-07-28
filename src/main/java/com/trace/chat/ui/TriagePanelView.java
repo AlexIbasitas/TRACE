@@ -8,6 +8,7 @@ import com.trace.test.models.FailureInfo;
 import com.trace.ai.prompts.LocalPromptGenerationService;
 import com.trace.ai.services.AINetworkService;
 import com.trace.ai.configuration.AISettings;
+import com.trace.ai.models.AIAnalysisResult;
 import com.intellij.openapi.diagnostic.Logger;
 import com.trace.chat.components.ChatMessage;
 import com.trace.chat.components.MessageComponent;
@@ -247,9 +248,34 @@ public class TriagePanelView {
         // Clear input area
         inputArea.setText("");
         
-        // Show backend configuration message
+        // Check AI configuration and provide appropriate response
+        handleUserMessageWithAI(messageText);
+    }
+    
+    /**
+     * Handles user messages with AI analysis if configured, otherwise shows configuration guidance.
+     *
+     * @param messageText The user's message text
+     */
+    private void handleUserMessageWithAI(String messageText) {
+        AISettings aiSettings = AISettings.getInstance();
+        
+        if (!aiSettings.isConfigured()) {
+            // AI is not configured, show configuration guidance
+            String configurationStatus = aiSettings.getConfigurationStatus();
+            String guidanceMessage = "AI features are not configured. " + configurationStatus + 
+                                   " Please configure AI settings to enable analysis.";
+            addMessage(new ChatMessage(ChatMessage.Role.AI, guidanceMessage, System.currentTimeMillis(), null, null));
+            return;
+        }
+        
+        // AI is configured, attempt to process the message
+        LOG.info("Processing user message with AI analysis");
+        
+        // For now, show a placeholder message indicating AI processing
+        // TODO: Implement actual AI message processing in Phase 1.2
         addMessage(new ChatMessage(ChatMessage.Role.AI, 
-            BACKEND_NOT_CONFIGURED_MESSAGE, 
+            "AI analysis is configured and ready. Message processing will be implemented in the next phase.", 
             System.currentTimeMillis(), null, null));
     }
 
@@ -389,6 +415,69 @@ public class TriagePanelView {
             LOG.error("Error generating prompt: " + e.getMessage(), e);
             String errorMessage = ERROR_GENERATING_PROMPT_PREFIX + e.getMessage();
             addMessage(new ChatMessage(ChatMessage.Role.AI, errorMessage, System.currentTimeMillis(), null, failureInfo));
+        }
+    }
+    
+    /**
+     * Displays an AI analysis result in the chat interface.
+     * This method is called when AI analysis completes successfully.
+     *
+     * @param result The AI analysis result to display
+     */
+    public void displayAIAnalysisResult(AIAnalysisResult result) {
+        if (result == null) {
+            LOG.warn("AI analysis result is null, cannot display");
+            return;
+        }
+        
+        LOG.info("Displaying AI analysis result");
+        
+        // Ensure we're on the EDT
+        if (!SwingUtilities.isEventDispatchThread()) {
+            SwingUtilities.invokeLater(() -> displayAIAnalysisResult(result));
+            return;
+        }
+        
+        try {
+            // Create an AI message with the analysis result
+            String analysisText = result.getAnalysis();
+            if (analysisText != null && !analysisText.trim().isEmpty()) {
+                addMessage(new ChatMessage(ChatMessage.Role.AI, analysisText, System.currentTimeMillis(), null, null));
+            } else {
+                LOG.warn("AI analysis result is empty");
+                addMessage(new ChatMessage(ChatMessage.Role.AI, "AI analysis completed but returned no content.", System.currentTimeMillis(), null, null));
+            }
+        } catch (Exception e) {
+            LOG.error("Error displaying AI analysis result: " + e.getMessage(), e);
+            addMessage(new ChatMessage(ChatMessage.Role.AI, "Error displaying AI analysis result: " + e.getMessage(), System.currentTimeMillis(), null, null));
+        }
+    }
+    
+    /**
+     * Displays an AI analysis error in the chat interface.
+     * This method is called when AI analysis fails.
+     *
+     * @param errorMessage The error message to display
+     */
+    public void displayAIAnalysisError(String errorMessage) {
+        if (errorMessage == null || errorMessage.trim().isEmpty()) {
+            LOG.warn("AI analysis error message is null or empty");
+            return;
+        }
+        
+        LOG.info("Displaying AI analysis error: " + errorMessage);
+        
+        // Ensure we're on the EDT
+        if (!SwingUtilities.isEventDispatchThread()) {
+            SwingUtilities.invokeLater(() -> displayAIAnalysisError(errorMessage));
+            return;
+        }
+        
+        try {
+            // Create an AI message with the error
+            addMessage(new ChatMessage(ChatMessage.Role.AI, "AI Analysis Error: " + errorMessage, System.currentTimeMillis(), null, null));
+        } catch (Exception e) {
+            LOG.error("Error displaying AI analysis error: " + e.getMessage(), e);
         }
     }
 

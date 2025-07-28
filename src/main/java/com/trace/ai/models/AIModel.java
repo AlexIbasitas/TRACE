@@ -68,6 +68,10 @@ public class AIModel {
         this.notes = "";
         this.createdAt = System.currentTimeMillis();
         this.lastModified = this.createdAt;
+        
+        LOG.info("Created new AIModel: " + getFullDisplayName() + 
+                " (Service: " + this.serviceType + 
+                ", ID: " + this.modelId + ")");
     }
     
     /**
@@ -93,6 +97,10 @@ public class AIModel {
         this.notes = notes;
         this.createdAt = createdAt;
         this.lastModified = lastModified;
+        
+        LOG.info("Created AIModel from existing data: " + getFullDisplayName() + 
+                " (Service: " + this.serviceType + 
+                ", ID: " + this.modelId + ")");
     }
     
     // ============================================================================
