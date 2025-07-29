@@ -260,16 +260,33 @@ public class TriagePanelView {
     private void handleUserMessageWithAI(String messageText) {
         AISettings aiSettings = AISettings.getInstance();
         
+        // Check if TRACE is enabled (power button) - if not, do nothing at all
+        if (!aiSettings.isAIEnabled()) {
+            LOG.info("TRACE is disabled (power off) - skipping all processing");
+            return; // Complete silence - no messages from TRACE
+        }
+        
         if (!aiSettings.isConfigured()) {
             // AI is not configured, show configuration guidance
             String configurationStatus = aiSettings.getConfigurationStatus();
             String guidanceMessage = "AI features are not configured. " + configurationStatus + 
-                                   " Please configure AI settings to enable analysis.";
-            addMessage(new ChatMessage(ChatMessage.Role.AI, guidanceMessage, System.currentTimeMillis(), null, null));
+                                   " Please configure AI settings to use AI-powered features.";
+            addMessage(new ChatMessage(ChatMessage.Role.AI, guidanceMessage, 
+                                    System.currentTimeMillis(), null, null));
             return;
         }
         
-        // AI is configured, attempt to process the message
+        // TRACE is enabled, check if AI analysis is enabled
+        if (!aiSettings.isAutoAnalyzeEnabled()) {
+            // Only show local prompt generation, no AI model calls
+            LOG.info("AI analysis is disabled - showing only local prompt generation");
+            addMessage(new ChatMessage(ChatMessage.Role.AI, 
+                "AI Analysis is disabled. Local prompt generation is available.", 
+                System.currentTimeMillis(), null, null));
+            return;
+        }
+        
+        // AI is configured and enabled, attempt to process the message
         LOG.info("Processing user message with AI analysis");
         
         // For now, show a placeholder message indicating AI processing
@@ -404,6 +421,13 @@ public class TriagePanelView {
      * @param failureInfo The failure information to generate a prompt for
      */
     private void generateAndDisplayPrompt(FailureInfo failureInfo) {
+        // Check if TRACE is enabled (power button) - if not, do nothing at all
+        AISettings aiSettings = AISettings.getInstance();
+        if (!aiSettings.isAIEnabled()) {
+            LOG.info("TRACE is disabled (power off) - skipping prompt generation");
+            return; // Complete silence - no messages from TRACE
+        }
+        
         try {
             LOG.debug("Generating detailed prompt for failure");
             String prompt = promptService.generateDetailedPrompt(failureInfo);
@@ -425,6 +449,13 @@ public class TriagePanelView {
      * @param result The AI analysis result to display
      */
     public void displayAIAnalysisResult(AIAnalysisResult result) {
+        // Check if TRACE is enabled (power button) - if not, do nothing at all
+        AISettings aiSettings = AISettings.getInstance();
+        if (!aiSettings.isAIEnabled()) {
+            LOG.info("TRACE is disabled (power off) - skipping AI analysis result display");
+            return; // Complete silence - no messages from TRACE
+        }
+        
         if (result == null) {
             LOG.warn("AI analysis result is null, cannot display");
             return;
@@ -460,6 +491,13 @@ public class TriagePanelView {
      * @param errorMessage The error message to display
      */
     public void displayAIAnalysisError(String errorMessage) {
+        // Check if TRACE is enabled (power button) - if not, do nothing at all
+        AISettings aiSettings = AISettings.getInstance();
+        if (!aiSettings.isAIEnabled()) {
+            LOG.info("TRACE is disabled (power off) - skipping AI analysis error display");
+            return; // Complete silence - no messages from TRACE
+        }
+        
         if (errorMessage == null || errorMessage.trim().isEmpty()) {
             LOG.warn("AI analysis error message is null or empty");
             return;
@@ -503,60 +541,209 @@ public class TriagePanelView {
             darkBg = new Color(43, 43, 43);
         }
         
+        LOG.info("Creating custom header panel with ultra-compact layout");
+        
         JPanel header = new JPanel(new BorderLayout());
         header.setBackground(darkBg);
+        
+        // Minimal header padding
         header.setBorder(BorderFactory.createCompoundBorder(
             BorderFactory.createMatteBorder(0, 0, 1, 0, new Color(68, 68, 68)),
-            BorderFactory.createEmptyBorder(8, 16, 8, 16)
+            BorderFactory.createEmptyBorder(6, 8, 6, 8) // Increased from (2, 4, 2, 4) for better visual balance
         ));
         
-        // Create left side with smaller, more minimalist title
-        JPanel leftPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 0));
+        // Create left side with BoxLayout for precise control
+        JPanel leftPanel = new JPanel();
+        leftPanel.setLayout(new BoxLayout(leftPanel, BoxLayout.X_AXIS));
         leftPanel.setOpaque(false);
         
-        // Load and add the logo
-        try {
-            Icon logoIcon = IconLoader.getIcon("/icons/logo_24.png", getClass());
-            if (logoIcon != null) {
-                JLabel logoLabel = new JLabel(logoIcon);
-                logoLabel.setBorder(BorderFactory.createEmptyBorder(0, 0, 0, 5));
-                leftPanel.add(logoLabel);
-            }
-        } catch (Exception e) {
-            // Fallback if logo loading fails
-            LOG.warn("Could not load logo icon: " + e.getMessage());
-        }
+        LOG.info("Creating AI toggle button for header");
+        // Create AI toggle button
+        JButton aiToggleButton = createAIToggleButton();
+        aiToggleButton.setAlignmentX(Component.LEFT_ALIGNMENT);
+        leftPanel.add(aiToggleButton);
         
+        // Add minimal spacing between button and text
+        leftPanel.add(Box.createHorizontalStrut(2));
+        
+        LOG.info("Creating TRACE title label");
         JLabel title = new JLabel("TRACE");
         title.setFont(new Font("Segoe UI", Font.PLAIN, 14));
         title.setForeground(new Color(180, 180, 180));
+        title.setAlignmentX(Component.LEFT_ALIGNMENT);
         leftPanel.add(title);
         
+        LOG.info("Adding left panel to header with " + leftPanel.getComponentCount() + " components");
         header.add(leftPanel, BorderLayout.WEST);
         
-        // Settings button with better right alignment
+        // Log component details for debugging
+        LOG.info("AI toggle button preferred size: " + aiToggleButton.getPreferredSize());
+        LOG.info("TRACE label preferred size: " + title.getPreferredSize());
+        LOG.info("Left panel preferred size: " + leftPanel.getPreferredSize());
+        
+        // Create right panel with BoxLayout for tight packing
+        JPanel rightPanel = new JPanel();
+        rightPanel.setLayout(new BoxLayout(rightPanel, BoxLayout.X_AXIS));
+        rightPanel.setOpaque(false);
+        
+        // Trash button for clear chat
+        JButton clearChatButton = createClearChatButton();
+        clearChatButton.setAlignmentX(Component.RIGHT_ALIGNMENT);
+        rightPanel.add(clearChatButton);
+        
+        // Minimal spacing between buttons
+        rightPanel.add(Box.createHorizontalStrut(2));
+        
+        // Settings button
+        JButton settingsButton = createSettingsButton();
+        settingsButton.setAlignmentX(Component.RIGHT_ALIGNMENT);
+        rightPanel.add(settingsButton);
+        
+        header.add(rightPanel, BorderLayout.EAST);
+        
+        LOG.info("Header panel created with dimensions: " + header.getPreferredSize());
+        return header;
+    }
+
+    /**
+     * Creates the AI toggle button with proper styling and functionality.
+     *
+     * @return The configured AI toggle button
+     */
+    private JButton createAIToggleButton() {
+        JButton aiToggleButton = new JButton("⏻");
+        aiToggleButton.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        aiToggleButton.setBorderPainted(false);
+        aiToggleButton.setFocusPainted(false);
+        aiToggleButton.setContentAreaFilled(false);
+        aiToggleButton.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        
+        // Zero padding on the toggle button
+        aiToggleButton.setBorder(BorderFactory.createEmptyBorder(0, 0, 0, 0));
+        
+        // Set minimum and preferred sizes to be compact
+        Dimension buttonSize = new Dimension(20, 20);
+        aiToggleButton.setMinimumSize(buttonSize);
+        aiToggleButton.setPreferredSize(buttonSize);
+        aiToggleButton.setMaximumSize(buttonSize);
+        
+        // Update initial appearance
+        updateAIToggleButtonAppearance(aiToggleButton);
+        
+        // Add action listener to toggle AI state
+        aiToggleButton.addActionListener(e -> {
+            AISettings aiSettings = AISettings.getInstance();
+            boolean currentState = aiSettings.isAIEnabled();
+            aiSettings.setAIEnabled(!currentState);
+            updateAIToggleButtonAppearance(aiToggleButton);
+            LOG.info("AI toggle clicked - new state: " + (!currentState));
+        });
+        
+        return aiToggleButton;
+    }
+    
+    /**
+     * Creates the clear chat button with proper styling and functionality.
+     *
+     * @return The configured clear chat button
+     */
+    private JButton createClearChatButton() {
+        JButton clearChatButton = new JButton();
+        
+        // Load custom red trash icon
+        try {
+            ImageIcon trashIcon = new ImageIcon(getClass().getResource("/icons/trash_20.png"));
+            // Scale the icon down to 18x18
+            Image img = trashIcon.getImage();
+            Image scaledImg = img.getScaledInstance(18, 18, Image.SCALE_SMOOTH);
+            clearChatButton.setIcon(new ImageIcon(scaledImg));
+            clearChatButton.setText(""); // Remove text, use icon only
+        } catch (Exception e) {
+            LOG.warn("Could not load trash icon, falling back to text: " + e.getMessage());
+            clearChatButton.setText("🗑");
+        }
+        
+        clearChatButton.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        clearChatButton.setBorderPainted(false);
+        clearChatButton.setFocusPainted(false);
+        clearChatButton.setContentAreaFilled(false);
+        clearChatButton.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        clearChatButton.setToolTipText("Clear Chat");
+        
+        // Zero padding on the button
+        clearChatButton.setBorder(BorderFactory.createEmptyBorder(0, 0, 0, 0));
+        
+        // Set minimum and preferred sizes to be compact - smaller size
+        Dimension buttonSize = new Dimension(18, 18);
+        clearChatButton.setMinimumSize(buttonSize);
+        clearChatButton.setPreferredSize(buttonSize);
+        clearChatButton.setMaximumSize(buttonSize);
+        
+        // Add action listener to clear chat
+        clearChatButton.addActionListener(e -> {
+            LOG.info("Clear chat button clicked");
+            clearChat();
+        });
+        
+        return clearChatButton;
+    }
+    
+    /**
+     * Creates the settings button with proper styling and functionality.
+     *
+     * @return The configured settings button
+     */
+    private JButton createSettingsButton() {
         JButton settingsButton = new JButton("⚙");
-        settingsButton.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        settingsButton.setFont(new Font("Segoe UI", Font.PLAIN, 16)); // Increased from 14 to 16
         settingsButton.setForeground(new Color(180, 180, 180));
-        settingsButton.setBackground(darkBg);
         settingsButton.setBorderPainted(false);
         settingsButton.setFocusPainted(false);
         settingsButton.setContentAreaFilled(false);
         settingsButton.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         settingsButton.setToolTipText("Settings");
-        settingsButton.setBorder(BorderFactory.createEmptyBorder(0, 8, 0, 0));
+        
+        // Zero padding on the button
+        settingsButton.setBorder(BorderFactory.createEmptyBorder(0, 0, 0, 0));
+        
+        // Set minimum and preferred sizes to be compact - matching size
+        Dimension buttonSize = new Dimension(20, 20);
+        settingsButton.setMinimumSize(buttonSize);
+        settingsButton.setPreferredSize(buttonSize);
+        settingsButton.setMaximumSize(buttonSize);
+        
+        // Add action listener to toggle settings
         settingsButton.addActionListener(e -> {
+            LOG.info("Settings button clicked");
             showSettingsTab = !showSettingsTab;
             refreshMainPanel();
         });
         
-        // Create a panel to hold the settings button for better right alignment
-        JPanel rightPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 0, 0));
-        rightPanel.setOpaque(false);
-        rightPanel.add(settingsButton);
-        header.add(rightPanel, BorderLayout.EAST);
+        return settingsButton;
+    }
+
+    /**
+     * Updates the AI toggle button appearance based on the current AI state.
+     *
+     * @param button The toggle button to update
+     */
+    private void updateAIToggleButtonAppearance(JButton button) {
+        AISettings aiSettings = AISettings.getInstance();
+        boolean aiEnabled = aiSettings.isAIEnabled();
         
-        return header;
+        LOG.info("Updating TRACE toggle button appearance - TRACE enabled: " + aiEnabled);
+        
+        if (aiEnabled) {
+            // TRACE is enabled - green color
+            button.setForeground(new Color(76, 175, 80)); // Material Design Green
+            button.setToolTipText("Disable TRACE");
+            LOG.info("TRACE toggle button set to enabled state (green)");
+        } else {
+            // TRACE is disabled - gray color
+            button.setForeground(new Color(158, 158, 158)); // Material Design Gray
+            button.setToolTipText("Enable TRACE");
+            LOG.info("TRACE toggle button set to disabled state (gray)");
+        }
     }
 
     /**

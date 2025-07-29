@@ -129,12 +129,11 @@ public class CollapsiblePanel extends JPanel {
         contentArea.setBorder(TriagePanelConstants.COLLAPSIBLE_TEXT_BORDER_COMPOUND);
         contentArea.setOpaque(true);
         
-        // Calculate proper size for wrapped text
-        contentArea.setSize(TriagePanelConstants.MAX_COLLAPSIBLE_CONTENT_WIDTH, Short.MAX_VALUE);
-        Dimension preferredSize = contentArea.getPreferredSize();
-        
-        contentArea.setPreferredSize(preferredSize);
-        contentArea.setMaximumSize(new Dimension(Integer.MAX_VALUE, preferredSize.height + TriagePanelConstants.CONTENT_PADDING));
+        // Let the text area calculate its own size based on content
+        // This allows for dynamic sizing proportional to text amount
+        contentArea.setPreferredSize(null); // Let Swing calculate preferred size
+        contentArea.setMaximumSize(new Dimension(Integer.MAX_VALUE, Integer.MAX_VALUE));
+        contentArea.setMinimumSize(new Dimension(TriagePanelConstants.MIN_CHAT_WIDTH_BEFORE_SCROLL, 50));
         
         contentPanel.add(contentArea, BorderLayout.CENTER);
     }

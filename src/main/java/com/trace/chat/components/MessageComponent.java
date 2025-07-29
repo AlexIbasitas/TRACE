@@ -250,18 +250,11 @@ public class MessageComponent extends JPanel {
         messageText.setAlignmentX(Component.LEFT_ALIGNMENT);
         messageText.setAlignmentY(Component.TOP_ALIGNMENT);
         
-        // Calculate proper sizing to match JTextArea behavior
-        int preferredWidth = Math.max(TriagePanelConstants.MIN_CHAT_WIDTH_BEFORE_SCROLL, 
-                                    TriagePanelConstants.MAX_MESSAGE_TEXT_WIDTH);
-        
-        // Use the same sizing logic as JTextArea
-        messageText.setSize(preferredWidth, Short.MAX_VALUE);
-        Dimension preferredSize = messageText.getPreferredSize();
-        
-        // Set flexible sizing that allows wrapping but respects minimum width
-        messageText.setPreferredSize(new Dimension(preferredWidth, preferredSize.height));
-        messageText.setMaximumSize(new Dimension(Integer.MAX_VALUE, preferredSize.height + TriagePanelConstants.CONTENT_PADDING));
-        messageText.setMinimumSize(new Dimension(TriagePanelConstants.MIN_CHAT_WIDTH_BEFORE_SCROLL, preferredSize.height));
+        // Let the component calculate its own size based on content
+        // This allows for dynamic sizing proportional to text amount
+        messageText.setPreferredSize(null); // Let Swing calculate preferred size
+        messageText.setMaximumSize(new Dimension(Integer.MAX_VALUE, Integer.MAX_VALUE));
+        messageText.setMinimumSize(new Dimension(TriagePanelConstants.MIN_CHAT_WIDTH_BEFORE_SCROLL, 50));
         
         // Add component name for testing identification
         messageText.setName("aiMessageText");
@@ -294,17 +287,11 @@ public class MessageComponent extends JPanel {
         // Ensure text area is visible and properly sized
         messageText.setVisible(true);
         
-        // Implement soft wrapping: allow text to wrap until minimum width is reached
-        // Set preferred width to allow wrapping, but respect minimum width constraint
-        int preferredWidth = Math.max(TriagePanelConstants.MIN_CHAT_WIDTH_BEFORE_SCROLL, 
-                                    TriagePanelConstants.MAX_MESSAGE_TEXT_WIDTH);
-        messageText.setSize(preferredWidth, Short.MAX_VALUE);
-        Dimension preferredSize = messageText.getPreferredSize();
-        
-        // Set flexible sizing that allows wrapping but respects minimum width
-        messageText.setPreferredSize(new Dimension(preferredWidth, preferredSize.height));
-        messageText.setMaximumSize(new Dimension(Integer.MAX_VALUE, preferredSize.height + TriagePanelConstants.CONTENT_PADDING));
-        messageText.setMinimumSize(new Dimension(TriagePanelConstants.MIN_CHAT_WIDTH_BEFORE_SCROLL, preferredSize.height));
+        // Let the component calculate its own size based on content
+        // This allows for dynamic sizing proportional to text amount
+        messageText.setPreferredSize(null); // Let Swing calculate preferred size
+        messageText.setMaximumSize(new Dimension(Integer.MAX_VALUE, Integer.MAX_VALUE));
+        messageText.setMinimumSize(new Dimension(TriagePanelConstants.MIN_CHAT_WIDTH_BEFORE_SCROLL, 50));
         messageText.setAlignmentY(Component.TOP_ALIGNMENT);
         
         // Add component name for testing identification

@@ -5,8 +5,10 @@ import com.intellij.openapi.diagnostic.Logger;
 import com.trace.test.models.FailureInfo;
 import com.trace.test.models.GherkinScenarioInfo;
 import com.trace.test.models.StepDefinitionInfo;
+import com.trace.ai.configuration.AISettings;
 
 import java.util.List;
+import org.jetbrains.annotations.NotNull;
 
 /**
  * Local implementation of prompt generation service.
@@ -32,6 +34,13 @@ public final class LocalPromptGenerationService implements PromptGenerationServi
             throw new IllegalArgumentException("failureInfo cannot be null");
         }
         
+        // Check if AI is enabled
+        AISettings aiSettings = AISettings.getInstance();
+        if (!aiSettings.isAIEnabled()) {
+            LOG.info("Skipping prompt generation - AI is disabled");
+            return "AI Analysis is currently disabled. Enable AI in the header to use AI-powered features.";
+        }
+        
         StringBuilder prompt = new StringBuilder();
         
         // Clear instruction at the beginning with specific role and task
@@ -52,13 +61,31 @@ public final class LocalPromptGenerationService implements PromptGenerationServi
         return prompt.toString();
     }
     
-    @Override
-    public String generateDetailedPrompt(FailureInfo failureInfo) {
+    /**
+     * Generates a detailed prompt for AI analysis of a test failure.
+     * 
+     * <p>This method creates a comprehensive prompt that includes all relevant
+     * information about the test failure, including the scenario, step definitions,
+     * and failure details. The prompt follows OpenAI best practices for
+     * structured analysis requests.</p>
+     * 
+     * @param failureInfo the failure information to generate a prompt for
+     * @return a detailed prompt string suitable for AI analysis
+     * @throws IllegalArgumentException if failureInfo is null
+     */
+    public String generateDetailedPrompt(@NotNull FailureInfo failureInfo) {
         if (failureInfo == null) {
-            throw new IllegalArgumentException("failureInfo cannot be null");
+            throw new IllegalArgumentException("FailureInfo cannot be null");
         }
         
-        LOG.debug("Generating detailed prompt for scenario: " + failureInfo.getScenarioName());
+        // Check if TRACE is enabled (power button) - if not, return early
+        AISettings aiSettings = AISettings.getInstance();
+        if (!aiSettings.isAIEnabled()) {
+            LOG.info("TRACE is disabled (power off) - skipping prompt generation");
+            return "TRACE is currently disabled. Enable TRACE to generate analysis prompts.";
+        }
+        
+        LOG.info("Generating detailed prompt for failure: " + failureInfo.getScenarioName());
         StepDefinitionInfo stepDefInfo = failureInfo.getStepDefinitionInfo();
         if (stepDefInfo == null) {
             LOG.warn("LocalPromptGenerationService: StepDefinitionInfo is null");

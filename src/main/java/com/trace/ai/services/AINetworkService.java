@@ -82,11 +82,39 @@ public final class AINetworkService {
             throw new IllegalArgumentException("FailureInfo cannot be null");
         }
         
+        // Check if TRACE is enabled (power button) - if not, return early
+        AISettings aiSettings = AISettings.getInstance();
+        if (!aiSettings.isAIEnabled()) {
+            LOG.info("TRACE is disabled (power off) - skipping AI analysis");
+            return CompletableFuture.completedFuture(
+                new AIAnalysisResult(
+                    "TRACE is currently disabled. Enable TRACE to use AI analysis features.",
+                    AIServiceType.OPENAI, // Default service type
+                    "disabled",
+                    System.currentTimeMillis(),
+                    0L
+                )
+            );
+        }
+        
+        // Check if AI analysis is enabled
+        if (!aiSettings.isAutoAnalyzeEnabled()) {
+            LOG.info("AI analysis is disabled - skipping AI model calls");
+            return CompletableFuture.completedFuture(
+                new AIAnalysisResult(
+                    "AI Analysis is disabled. Local prompt generation is available.",
+                    AIServiceType.OPENAI, // Default service type
+                    "disabled",
+                    System.currentTimeMillis(),
+                    0L
+                )
+            );
+        }
+        
         LOG.info("Starting AI analysis for failure: " + failureInfo.getScenarioName());
         
         try {
             // Get configured services
-            AISettings aiSettings = AISettings.getInstance();
             AIModelService modelService = AIModelService.getInstance();
             
             // Get the default model first

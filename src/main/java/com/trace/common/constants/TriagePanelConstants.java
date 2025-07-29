@@ -206,7 +206,7 @@ public final class TriagePanelConstants {
     public static final Border FAILED_STEP_PANEL_BORDER = BorderFactory.createEmptyBorder(0, 0, 8, 0);
     
     /** Collapsible panel border */
-    public static final Border COLLAPSIBLE_PANEL_BORDER = BorderFactory.createEmptyBorder(4, 0, 2, 0);
+    public static final Border COLLAPSIBLE_PANEL_BORDER = BorderFactory.createEmptyBorder(4, 0, 4, 0);
     
     /** Collapsible content border */
     public static final Border COLLAPSIBLE_CONTENT_BORDER = BorderFactory.createEmptyBorder(8, 16, 0, 0);
@@ -214,11 +214,8 @@ public final class TriagePanelConstants {
     /** Collapsible text area border compound */
     public static final Border COLLAPSIBLE_TEXT_BORDER_COMPOUND = BorderFactory.createCompoundBorder(
         BorderFactory.createLineBorder(COLLAPSIBLE_BORDER, 1),
-        BorderFactory.createEmptyBorder(8, 8, 4, 8)
+        BorderFactory.createEmptyBorder(8, 8, 8, 8)
     );
-    
-    /** Minimal border for collapsible text content - reduced padding for cleaner look */
-    public static final Border COLLAPSIBLE_TEXT_BORDER_MINIMAL = BorderFactory.createEmptyBorder(4, 8, 4, 8);
     
     // ============================================================================
     // SPACING CONSTANTS
