@@ -1,23 +1,28 @@
 package com.trace.chat.ui;
 
+import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.openapi.project.Project;
-import com.intellij.ui.components.JBTextArea;
-import com.intellij.ui.components.JBLabel;
 import com.intellij.openapi.util.IconLoader;
-import com.trace.test.models.FailureInfo;
-import com.trace.ai.prompts.LocalPromptGenerationService;
-import com.trace.ai.services.AINetworkService;
+import com.intellij.ui.JBColor;
+import com.intellij.ui.components.JBLabel;
+import com.intellij.ui.components.JBTextArea;
+import com.intellij.util.ui.JBUI;
 import com.trace.ai.configuration.AISettings;
 import com.trace.ai.models.AIAnalysisResult;
-import com.intellij.openapi.diagnostic.Logger;
+import com.trace.ai.prompts.LocalPromptGenerationService;
+import com.trace.ai.services.AINetworkService;
+import com.trace.ai.ui.SettingsPanel;
 import com.trace.chat.components.ChatMessage;
 import com.trace.chat.components.MessageComponent;
-import com.trace.ai.ui.SettingsPanel;
 import com.trace.common.constants.TriagePanelConstants;
+import com.trace.test.models.FailureInfo;
 
 import javax.swing.*;
+import javax.swing.border.CompoundBorder;
 import java.awt.*;
 import java.awt.event.ActionListener;
+import java.awt.event.HierarchyEvent;
+import java.awt.event.HierarchyListener;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
 import java.util.ArrayList;
@@ -60,6 +65,11 @@ public class TriagePanelView {
     private JScrollPane chatScrollPane;
     private JPanel messageContainer;
     private boolean showSettingsTab = false;
+    
+    // Analysis mode state management
+    private String currentAnalysisMode = "Quick Overview";
+    private static final String ANALYSIS_MODE_OVERVIEW = "Quick Overview";
+    private static final String ANALYSIS_MODE_FULL = "Full Analysis";
 
     /**
      * Constructor for TriagePanelView.
@@ -90,6 +100,69 @@ public class TriagePanelView {
         initializeUI();
         setupEventHandlers();
         LOG.info("TriagePanelView created successfully");
+    }
+
+    /**
+     * Gets the current analysis mode.
+     *
+     * @return The current analysis mode ("Quick Overview" or "Full Analysis")
+     */
+    public String getCurrentAnalysisMode() {
+        return currentAnalysisMode;
+    }
+    
+    /**
+     * Sets the current analysis mode.
+     *
+     * @param mode The analysis mode to set ("Quick Overview" or "Full Analysis")
+     * @throws IllegalArgumentException if mode is null or invalid
+     */
+    public void setCurrentAnalysisMode(String mode) {
+        if (mode == null) {
+            throw new IllegalArgumentException("Analysis mode cannot be null");
+        }
+        if (!mode.equals(ANALYSIS_MODE_OVERVIEW) && !mode.equals(ANALYSIS_MODE_FULL)) {
+            throw new IllegalArgumentException("Invalid analysis mode: " + mode);
+        }
+        
+        LOG.info("Setting analysis mode from '" + currentAnalysisMode + "' to '" + mode + "'");
+        this.currentAnalysisMode = mode;
+        
+        // Update the analysis mode button text if it exists
+        // We need to find the button in the component hierarchy
+        updateAnalysisModeButtonTextInUI();
+    }
+    
+    /**
+     * Updates the analysis mode button text in the UI.
+     * This method searches for the analysis mode button and updates its text.
+     */
+    private void updateAnalysisModeButtonTextInUI() {
+        // Find the analysis mode button in the component hierarchy
+        if (mainPanel != null) {
+            findAndUpdateAnalysisModeButton(mainPanel);
+        }
+    }
+    
+    /**
+     * Recursively searches for the analysis mode button and updates its text.
+     *
+     * @param component The component to search in
+     */
+    private void findAndUpdateAnalysisModeButton(Container component) {
+        for (Component child : component.getComponents()) {
+            if (child instanceof JButton) {
+                JButton button = (JButton) child;
+                // Check if this is the analysis mode button by looking at its tooltip
+                if ("Click to switch between Quick Overview and Full Analysis modes".equals(button.getToolTipText())) {
+                    updateAnalysisModeButtonText(button);
+                    return;
+                }
+            }
+            if (child instanceof Container) {
+                findAndUpdateAnalysisModeButton((Container) child);
+            }
+        }
     }
 
     /**
@@ -152,16 +225,21 @@ public class TriagePanelView {
      * Configures the text input area and send button with proper layout and styling.
      */
     private void setupInputPanel() {
+        LOG.info("=== SETUP INPUT PANEL - SIMPLE APPROACH ===");
+        
         inputPanel.setBorder(BorderFactory.createEmptyBorder(8, 16, 16, 16));
         
+        // Create analysis mode button - SIMPLE LEFT ALIGNMENT
+        JButton analysisModeButton = createAnalysisModeButton();
+        
         // Create input container with rounded border
-        JPanel inputContainer = new JPanel(new BorderLayout());
-        inputContainer.setBorder(BorderFactory.createCompoundBorder(
+        JPanel inputBoxContainer = new JPanel(new BorderLayout());
+        inputBoxContainer.setBorder(BorderFactory.createCompoundBorder(
             BorderFactory.createLineBorder(new Color(60, 60, 60), 1, true),
             BorderFactory.createEmptyBorder(8, 12, 8, 0)
         ));
-        inputContainer.setBackground(new Color(50, 50, 50));
-        inputContainer.setOpaque(true);
+        inputBoxContainer.setBackground(new Color(50, 50, 50));
+        inputBoxContainer.setOpaque(true);
         
         // Configure text area for multi-line input
         inputArea.setFont(new Font("Segoe UI", Font.PLAIN, 14));
@@ -192,15 +270,44 @@ public class TriagePanelView {
         buttonContainer.add(sendIconButton);
         buttonContainer.add(Box.createVerticalGlue());
         
-        // Add components to input container
-        inputContainer.add(inputArea, BorderLayout.CENTER);
-        inputContainer.add(buttonContainer, BorderLayout.EAST);
+        // Add components to input box container
+        inputBoxContainer.add(inputArea, BorderLayout.CENTER);
+        inputBoxContainer.add(buttonContainer, BorderLayout.EAST);
         
-        // Add to input panel
-        inputPanel.add(inputContainer, BorderLayout.CENTER);
+        // Use BorderLayout with minimal gap for tight spacing
+        inputPanel.setLayout(new BorderLayout(0, 2)); // 2px gap for tight spacing
+        inputPanel.add(inputBoxContainer, BorderLayout.CENTER);
+        
+        // Create a compact container for the toggle below the input box
+        JPanel toggleContainer = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
+        toggleContainer.setOpaque(false);
+        toggleContainer.setPreferredSize(new Dimension(inputBoxContainer.getPreferredSize().width, 20)); // Reduced height for tighter spacing
+        toggleContainer.setBorder(BorderFactory.createEmptyBorder(2, 0, 2, 0)); // Minimal padding for tight appearance
+        toggleContainer.add(analysisModeButton);
+        
+        // FORCE LEFT ALIGNMENT - Set button alignment properties
+        analysisModeButton.setHorizontalAlignment(SwingConstants.LEFT);
+        analysisModeButton.setAlignmentX(Component.LEFT_ALIGNMENT);
+        
+        // Position button at top of container to be right below input box
+        toggleContainer.setLayout(new BorderLayout());
+        toggleContainer.add(analysisModeButton, BorderLayout.NORTH);
+        
+        inputPanel.add(toggleContainer, BorderLayout.SOUTH);
         
         // Hide the old send button
         sendButton.setVisible(false);
+        
+        // Add detailed logging to understand the layout hierarchy
+        LOG.info("=== LAYOUT INVESTIGATION ===");
+        LOG.info("Input panel border: " + inputPanel.getBorder());
+        LOG.info("Input panel insets: " + inputPanel.getInsets());
+        LOG.info("Toggle container preferred size: " + toggleContainer.getPreferredSize());
+        LOG.info("Input box container preferred size: " + inputBoxContainer.getPreferredSize());
+        LOG.info("Analysis mode button border: " + analysisModeButton.getBorder());
+        LOG.info("Input box container border: " + inputBoxContainer.getBorder());
+        
+        LOG.info("=== SIMPLE SETUP COMPLETE ===");
     }
 
     /**
@@ -429,8 +536,14 @@ public class TriagePanelView {
         }
         
         try {
-            LOG.debug("Generating detailed prompt for failure");
-            String prompt = promptService.generateDetailedPrompt(failureInfo);
+            LOG.debug("Generating " + currentAnalysisMode.toLowerCase() + " prompt for failure");
+            String prompt;
+            
+            if (ANALYSIS_MODE_OVERVIEW.equals(currentAnalysisMode)) {
+                prompt = promptService.generateSummaryPrompt(failureInfo);
+            } else {
+                prompt = promptService.generateDetailedPrompt(failureInfo);
+            }
             
             // Create a special AI message with the prompt in the collapsible section AND failure info
             addMessage(new ChatMessage(ChatMessage.Role.AI, "", System.currentTimeMillis(), prompt, failureInfo));
@@ -720,6 +833,71 @@ public class TriagePanelView {
         });
         
         return settingsButton;
+    }
+    
+    /**
+     * Creates the analysis mode button with proper styling and functionality.
+     * Shows "Quick Overview | Full Analysis" with the selected option in bold.
+     *
+     * @return The configured analysis mode button
+     */
+    private JButton createAnalysisModeButton() {
+        LOG.info("=== CREATING ANALYSIS MODE BUTTON ===");
+        
+        JButton analysisModeButton = new JButton();
+        
+        // Minimal styling - reverted to original approach
+        analysisModeButton.setFont(new Font("Segoe UI", Font.PLAIN, 11));
+        analysisModeButton.setForeground(new Color(200, 200, 200)); // Lighter gray for better contrast
+        analysisModeButton.setBorderPainted(false);
+        analysisModeButton.setFocusPainted(false);
+        analysisModeButton.setContentAreaFilled(false);
+        analysisModeButton.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        analysisModeButton.setToolTipText("Click to switch between Quick Overview and Full Analysis modes");
+        
+        // Minimal padding for compact appearance
+        analysisModeButton.setBorder(BorderFactory.createEmptyBorder(0, 0, 0, 0)); // NO PADDING - container handles alignment
+        
+        // Set compact size for position above input - reduced height for tighter appearance
+        Dimension buttonSize = new Dimension(250, 16); // Reduced height for tighter appearance
+        analysisModeButton.setMinimumSize(buttonSize);
+        analysisModeButton.setPreferredSize(buttonSize);
+        analysisModeButton.setMaximumSize(buttonSize);
+        LOG.info("Button size set to: " + buttonSize);
+        
+        // Update button text based on current mode
+        updateAnalysisModeButtonText(analysisModeButton);
+        LOG.info("Button text set to: " + analysisModeButton.getText());
+        
+        // Add action listener to toggle between modes
+        analysisModeButton.addActionListener(e -> {
+            if (ANALYSIS_MODE_OVERVIEW.equals(currentAnalysisMode)) {
+                setCurrentAnalysisMode(ANALYSIS_MODE_FULL);
+            } else {
+                setCurrentAnalysisMode(ANALYSIS_MODE_OVERVIEW);
+            }
+            updateAnalysisModeButtonText(analysisModeButton);
+        });
+        
+        LOG.info("Analysis mode button creation complete");
+        return analysisModeButton;
+    }
+    
+    /**
+     * Updates the analysis mode button text to show the current selection in bold.
+     *
+     * @param button The analysis mode button to update
+     */
+    private void updateAnalysisModeButtonText(JButton button) {
+        // Create HTML text with blue color for selected option - matching send button blue
+        String htmlText;
+        if (ANALYSIS_MODE_OVERVIEW.equals(currentAnalysisMode)) {
+            htmlText = "<html><nobr><b style='font-size: 11px; color: #1976D2;'>Quick Overview</b> <span style='font-size: 10px; color: #888;'>|</span> <span style='font-size: 10px; color: #666;'>Full Analysis</span></nobr></html>";
+        } else {
+            htmlText = "<html><nobr><span style='font-size: 10px; color: #666;'>Quick Overview</span> <span style='font-size: 10px; color: #888;'>|</span> <b style='font-size: 11px; color: #1976D2;'>Full Analysis</b></nobr></html>";
+        }
+        
+        button.setText(htmlText);
     }
 
     /**

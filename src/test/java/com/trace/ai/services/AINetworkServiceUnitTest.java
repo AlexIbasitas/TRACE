@@ -90,7 +90,7 @@ class AINetworkServiceUnitTest {
     void testAnalyzeWithNullFailureInfo() {
         // Test that null failure info throws exception
         assertThrows(IllegalArgumentException.class, () -> {
-            aiNetworkService.analyze(null);
+            aiNetworkService.analyze(null, "Full Analysis");
         });
     }
     
@@ -178,7 +178,7 @@ class AINetworkServiceUnitTest {
             mockedSecureAPIKeyManager.when(() -> SecureAPIKeyManager.getAPIKey(AIServiceType.OPENAI)).thenReturn("test-api-key");
             
             // Now test the analyze method
-            CompletableFuture<AIAnalysisResult> result = aiNetworkService.analyze(testFailureInfo);
+            CompletableFuture<AIAnalysisResult> result = aiNetworkService.analyze(testFailureInfo, "Full Analysis");
             
             // Verify the result
             assertNotNull(result);
@@ -232,7 +232,7 @@ class AINetworkServiceUnitTest {
             mockedSecureAPIKeyManager.when(() -> SecureAPIKeyManager.getAPIKey(AIServiceType.OPENAI)).thenReturn("test-api-key");
             
             // Now test the analyze method
-            CompletableFuture<AIAnalysisResult> result = aiNetworkService.analyze(minimalFailureInfo);
+            CompletableFuture<AIAnalysisResult> result = aiNetworkService.analyze(minimalFailureInfo, "Full Analysis");
             
             // Verify the result
             assertNotNull(result);

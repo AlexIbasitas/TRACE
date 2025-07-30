@@ -73,11 +73,12 @@ public final class AINetworkService {
      * appropriate AI service provider to perform the analysis.</p>
      * 
      * @param failureInfo the failure information to analyze
+     * @param analysisMode the analysis mode ("Quick Overview" or "Full Analysis")
      * @return a CompletableFuture containing the analysis result
      * @throws IllegalArgumentException if failureInfo is null
      * @throws IllegalStateException if no AI service is properly configured
      */
-    public CompletableFuture<AIAnalysisResult> analyze(@NotNull FailureInfo failureInfo) {
+    public CompletableFuture<AIAnalysisResult> analyze(@NotNull FailureInfo failureInfo, @NotNull String analysisMode) {
         if (failureInfo == null) {
             throw new IllegalArgumentException("FailureInfo cannot be null");
         }
@@ -165,9 +166,14 @@ public final class AINetworkService {
             }
             LOG.info("API key retrieved successfully (length: " + apiKey.length() + ")");
             
-            // Generate prompt using the prompt service
-            LOG.info("Generating prompt for failure info");
-            String prompt = promptService.generateDetailedPrompt(failureInfo);
+            // Generate prompt using the prompt service based on analysis mode
+            LOG.info("Generating " + analysisMode.toLowerCase() + " prompt for failure info");
+            String prompt;
+            if ("Quick Overview".equals(analysisMode)) {
+                prompt = promptService.generateSummaryPrompt(failureInfo);
+            } else {
+                prompt = promptService.generateDetailedPrompt(failureInfo);
+            }
             LOG.info("Prompt generated successfully (length: " + prompt.length() + ")");
             
             LOG.info("Delegating analysis to " + provider.getDisplayName() + 

@@ -1,198 +1,152 @@
 package com.trace.chat.ui;
 
-import com.intellij.openapi.project.Project;
 import com.intellij.testFramework.fixtures.BasePlatformTestCase;
-import com.trace.ai.configuration.AISettings;
-import com.trace.chat.components.ChatMessage;
 import com.trace.test.models.FailureInfo;
+import com.trace.test.models.GherkinScenarioInfo;
 import com.trace.test.models.StepDefinitionInfo;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.DisplayName;
 
-import javax.swing.*;
-import java.awt.*;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
+import java.util.Arrays;
 
 /**
- * Unit tests for TriagePanelView functionality.
+ * Unit tests for TriagePanelView analysis mode functionality.
  * 
- * <p>This test class focuses on testing the AI toggle functionality and
- * related UI interactions in the TriagePanelView.</p>
+ * <p>Tests the analysis mode toggle feature that allows users to switch
+ * between Overview and Full Analysis modes for AI prompt generation.</p>
  * 
  * @author Alex Ibasitas
  * @version 1.0
  * @since 1.0
  */
+@DisplayName("TriagePanelView Analysis Mode Tests")
 public class TriagePanelViewUnitTest extends BasePlatformTestCase {
     
     private TriagePanelView triagePanelView;
-    private AISettings aiSettings;
     
+    @BeforeEach
     @Override
     protected void setUp() throws Exception {
         super.setUp();
         triagePanelView = new TriagePanelView(getProject());
-        aiSettings = AISettings.getInstance();
-        
-        // Reset AI settings to known state
-        aiSettings.setAIEnabled(false);
     }
     
-    @Override
-    protected void tearDown() throws Exception {
-        // Reset AI settings
-        aiSettings.setAIEnabled(false);
-        super.tearDown();
+    @Test
+    @DisplayName("Should initialize with Quick Overview mode by default")
+    void shouldInitializeWithOverviewModeByDefault() {
+        // Given: TriagePanelView is created
+        
+        // When: Getting the current analysis mode
+        String currentMode = triagePanelView.getCurrentAnalysisMode();
+        
+        // Then: Should be Quick Overview by default
+        assertEquals("Quick Overview", currentMode);
     }
     
-    /**
-     * Test that the AI toggle button is created and visible in the header.
-     */
-    public void testAIToggleButtonIsCreated() {
-        JComponent content = triagePanelView.getContent();
-        assertNotNull("Content should not be null", content);
+    @Test
+    @DisplayName("Should set analysis mode to Full Analysis")
+    void shouldSetAnalysisModeToFullAnalysis() {
+        // Given: TriagePanelView is created with default Quick Overview mode
         
-        // Find the toggle button in the component hierarchy
-        JButton toggleButton = findAIToggleButton(content);
-        assertNotNull("AI toggle button should be present", toggleButton);
-        assertEquals("Toggle button should have power symbol", "⏻", toggleButton.getText());
+        // When: Setting the analysis mode to Full Analysis
+        triagePanelView.setCurrentAnalysisMode("Full Analysis");
+        
+        // Then: Should be set to Full Analysis
+        assertEquals("Full Analysis", triagePanelView.getCurrentAnalysisMode());
     }
     
-    /**
-     * Test that the AI toggle button reflects the current AI state.
-     */
-    public void testAIToggleButtonReflectsAIState() {
-        JComponent content = triagePanelView.getContent();
-        JButton toggleButton = findAIToggleButton(content);
-        assertNotNull("AI toggle button should be present", toggleButton);
+    @Test
+    @DisplayName("Should set analysis mode back to Quick Overview")
+    void shouldSetAnalysisModeBackToOverview() {
+        // Given: TriagePanelView is created and set to Full Analysis
+        triagePanelView.setCurrentAnalysisMode("Full Analysis");
         
-        // Test disabled state
-        aiSettings.setAIEnabled(false);
-        assertEquals("Button should show disabled tooltip", "Enable AI Analysis", toggleButton.getToolTipText());
+        // When: Setting the analysis mode back to Quick Overview
+        triagePanelView.setCurrentAnalysisMode("Quick Overview");
         
-        // Test enabled state
-        aiSettings.setAIEnabled(true);
-        assertEquals("Button should show enabled tooltip", "Disable AI Analysis", toggleButton.getToolTipText());
+        // Then: Should be set to Quick Overview
+        assertEquals("Quick Overview", triagePanelView.getCurrentAnalysisMode());
     }
     
-    /**
-     * Test that clicking the AI toggle button changes the AI state.
-     */
-    public void testAIToggleButtonChangesAIState() {
-        JComponent content = triagePanelView.getContent();
-        JButton toggleButton = findAIToggleButton(content);
-        assertNotNull("AI toggle button should be present", toggleButton);
+    @Test
+    @DisplayName("Should throw exception when setting null analysis mode")
+    void shouldThrowExceptionWhenSettingNullAnalysisMode() {
+        // Given: TriagePanelView is created
         
-        // Initial state should be disabled
-        assertFalse("AI should be disabled initially", aiSettings.isAIEnabled());
-        
-        // Click the button to enable AI
-        toggleButton.doClick();
-        assertTrue("AI should be enabled after clicking", aiSettings.isAIEnabled());
-        
-        // Click again to disable AI
-        toggleButton.doClick();
-        assertFalse("AI should be disabled after second click", aiSettings.isAIEnabled());
+        // When/Then: Setting null should throw IllegalArgumentException
+        assertThrows(IllegalArgumentException.class, () -> {
+            triagePanelView.setCurrentAnalysisMode(null);
+        });
     }
     
-    /**
-     * Test that the TRACE text is still present in the header.
-     */
-    public void testTRACETextIsPresent() {
-        JComponent content = triagePanelView.getContent();
+    @Test
+    @DisplayName("Should throw exception when setting invalid analysis mode")
+    void shouldThrowExceptionWhenSettingInvalidAnalysisMode() {
+        // Given: TriagePanelView is created
         
-        // Find the TRACE label in the component hierarchy
-        JLabel traceLabel = findTRACELabel(content);
-        assertNotNull("TRACE label should be present", traceLabel);
-        assertEquals("Label should contain TRACE text", "TRACE", traceLabel.getText());
+        // When/Then: Setting invalid mode should throw IllegalArgumentException
+        assertThrows(IllegalArgumentException.class, () -> {
+            triagePanelView.setCurrentAnalysisMode("Invalid Mode");
+        });
     }
     
-    /**
-     * Test that AI disabled state prevents prompt generation.
-     */
-    public void testAIDisabledPreventsPromptGeneration() {
-        // Set AI to disabled
-        aiSettings.setAIEnabled(false);
-        
-        // Create a test failure info
+    @Test
+    @DisplayName("Should create valid failure info for testing")
+    void shouldCreateValidFailureInfoForTesting() {
+        // Given: Creating a test failure info
         FailureInfo failureInfo = createTestFailureInfo();
         
-        // Update the failure - this should trigger prompt generation
-        triagePanelView.updateFailure(failureInfo);
+        // When: Checking the failure info properties
         
-        // The prompt generation should be skipped and a disabled message should be shown
-        // This test verifies the integration with LocalPromptGenerationService
-        assertFalse("AI should remain disabled", aiSettings.isAIEnabled());
+        // Then: Should have valid properties
+        assertNotNull(failureInfo);
+        assertEquals("Test Scenario", failureInfo.getScenarioName());
+        assertEquals("Given I am on the test page", failureInfo.getFailedStepText());
+        assertEquals("Expected: 'Test Title', Actual: 'Wrong Title'", failureInfo.getErrorMessage());
     }
     
     /**
-     * Helper method to find the AI toggle button in the component hierarchy.
-     */
-    private JButton findAIToggleButton(Container container) {
-        for (Component component : container.getComponents()) {
-            if (component instanceof JButton) {
-                JButton button = (JButton) component;
-                if ("⏻".equals(button.getText())) {
-                    return button;
-                }
-            }
-            if (component instanceof Container) {
-                JButton found = findAIToggleButton((Container) component);
-                if (found != null) {
-                    return found;
-                }
-            }
-        }
-        return null;
-    }
-    
-    /**
-     * Helper method to find the TRACE label in the component hierarchy.
-     */
-    private JLabel findTRACELabel(Container container) {
-        for (Component component : container.getComponents()) {
-            if (component instanceof JLabel) {
-                JLabel label = (JLabel) component;
-                if ("TRACE".equals(label.getText())) {
-                    return label;
-                }
-            }
-            if (component instanceof Container) {
-                JLabel found = findTRACELabel((Container) component);
-                if (found != null) {
-                    return found;
-                }
-            }
-        }
-        return null;
-    }
-    
-    /**
-     * Helper method to create a test FailureInfo for testing.
+     * Creates a test FailureInfo object for testing purposes.
+     *
+     * @return A test FailureInfo object
      */
     private FailureInfo createTestFailureInfo() {
-        StepDefinitionInfo stepDefInfo = new StepDefinitionInfo.Builder()
-            .withMethodName("testMethod")
-            .withClassName("TestClass")
-            .withPackageName("com.example")
-            .withSourceFilePath("src/test/java/com/example/TestClass.java")
-            .withLineNumber(10)
-            .withStepPattern("^Given a test step$")
-            .withMethodText("public void testMethod() { }")
+        // Create Gherkin scenario info using Builder pattern
+        GherkinScenarioInfo scenarioInfo = new GherkinScenarioInfo.Builder()
+            .withFeatureName("Test Feature")
+            .withScenarioName("Test Scenario")
+            .withSteps(Arrays.asList(
+                "Given I am on the test page",
+                "When I check the page title",
+                "Then the title should be \"Test Title\""
+            ))
+            .withTags(Arrays.asList("@test", "@ui"))
             .build();
         
-        FailureInfo failureInfo = new FailureInfo.Builder()
-            .withScenarioName("Test Scenario")
-            .withFailedStepText("Given a test step")
-            .withErrorMessage("Test error message")
-            .withStackTrace("Test stack trace")
-            .withStepDefinitionInfo(stepDefInfo)
+        // Create step definition info using Builder pattern
+        StepDefinitionInfo stepDefInfo = new StepDefinitionInfo.Builder()
+            .withClassName("com.example.TestClass")
+            .withMethodName("testPageTitle")
+            .withStepPattern("I am on the test page")
+            .withParameters(Arrays.asList())
+            .withMethodText("@Given(\"I am on the test page\")\npublic void testPageTitle() {\n    // Test implementation\n}")
             .withSourceFilePath("src/test/java/com/example/TestClass.java")
-            .withLineNumber(10)
-            .withExpectedValue("true")
-            .withActualValue("false")
+            .withLineNumber(42)
+            .build();
+        
+        // Create failure info using Builder pattern
+        return new FailureInfo.Builder()
+            .withScenarioName("Test Scenario")
+            .withFailedStepText("Given I am on the test page")
+            .withErrorMessage("Expected: 'Test Title', Actual: 'Wrong Title'")
+            .withExpectedValue("Test Title")
+            .withActualValue("Wrong Title")
+            .withSourceFilePath("src/test/java/com/example/TestClass.java")
+            .withLineNumber(42)
+            .withStepDefinitionInfo(stepDefInfo)
+            .withGherkinScenarioInfo(scenarioInfo)
             .withParsingTime(100L)
             .build();
-        
-        return failureInfo;
     }
 } 

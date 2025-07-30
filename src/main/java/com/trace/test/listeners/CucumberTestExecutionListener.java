@@ -566,8 +566,18 @@ public class CucumberTestExecutionListener implements SMTRunnerEventsListener {
         
         LOG.info("Triggering AI analysis for failure: " + failureInfo.getScenarioName());
         
+        // Get the current analysis mode from the TriagePanel
+        TriagePanelView triagePanel = getTriagePanelForProject(currentProject);
+        String analysisMode = "Full Analysis"; // Default to full analysis
+        if (triagePanel != null) {
+            analysisMode = triagePanel.getCurrentAnalysisMode();
+            LOG.info("Using analysis mode: " + analysisMode);
+        } else {
+            LOG.debug("TriagePanel not found, using default analysis mode: " + analysisMode);
+        }
+        
         // Perform AI analysis asynchronously to avoid blocking test execution
-        CompletableFuture<AIAnalysisResult> analysisFuture = aiNetworkService.analyze(failureInfo);
+        CompletableFuture<AIAnalysisResult> analysisFuture = aiNetworkService.analyze(failureInfo, analysisMode);
         
         // Handle the analysis result
         analysisFuture.thenAccept(result -> {
