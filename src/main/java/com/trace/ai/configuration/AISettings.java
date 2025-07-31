@@ -61,6 +61,7 @@ public final class AISettings implements PersistentStateComponent<AISettings.Sta
         
         // Advanced features (optional)
         public boolean customRulesEnabled = false;
+        public String customRule = ""; // Store custom rule text
         
         /**
          * Default constructor for state initialization.
@@ -304,6 +305,26 @@ public final class AISettings implements PersistentStateComponent<AISettings.Sta
     public void setCustomRulesEnabled(boolean enabled) {
         LOG.info("Setting custom rules enabled: " + enabled);
         myState.customRulesEnabled = enabled;
+    }
+    
+    /**
+     * Gets the custom rule text.
+     * 
+     * @return the custom rule text, or null if not set
+     */
+    public @Nullable String getCustomRule() {
+        return myState.customRule != null && !myState.customRule.trim().isEmpty() ? myState.customRule.trim() : null;
+    }
+    
+    /**
+     * Sets the custom rule text.
+     * 
+     * @param customRule the custom rule text to set
+     */
+    public void setCustomRule(@Nullable String customRule) {
+        String rule = customRule != null ? customRule.trim() : "";
+        LOG.info("Setting custom rule: " + (rule.length() > 50 ? rule.substring(0, 50) + "..." : rule));
+        myState.customRule = rule;
     }
     
     // ============================================================================

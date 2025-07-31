@@ -26,6 +26,7 @@ public class SettingsPanel extends JPanel {
     // Settings sections
     private PrivacyConsentPanel privacyPanel;
     private AIServiceConfigPanel servicePanel;
+    private CustomRulePanel customRulePanel;
     
     // UI components
     private JScrollPane scrollPane;
@@ -125,11 +126,14 @@ public class SettingsPanel extends JPanel {
         // Create settings sections
         privacyPanel = new PrivacyConsentPanel(aiSettings);
         servicePanel = new AIServiceConfigPanel(aiSettings);
+        customRulePanel = new CustomRulePanel(aiSettings);
         
         // Add sections with proper spacing
         sectionsContainer.add(privacyPanel);
         sectionsContainer.add(Box.createVerticalStrut(20));
         sectionsContainer.add(servicePanel);
+        sectionsContainer.add(Box.createVerticalStrut(20));
+        sectionsContainer.add(customRulePanel);
         
         // Add extensibility space for future sections
         sectionsContainer.add(Box.createVerticalStrut(10));

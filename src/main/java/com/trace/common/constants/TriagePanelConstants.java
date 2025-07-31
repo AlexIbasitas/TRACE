@@ -60,6 +60,9 @@ public final class TriagePanelConstants {
     /** Error foreground color for error states */
     public static final Color ERROR_FOREGROUND = new Color(255, 100, 100);
     
+    /** Warning foreground color for warning states */
+    public static final Color WARNING_FOREGROUND = new Color(255, 193, 7);
+    
     /** Collapsible panel content text color */
     public static final Color COLLAPSIBLE_TEXT_COLOR = new Color(200, 200, 200);
     

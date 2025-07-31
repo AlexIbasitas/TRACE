@@ -97,7 +97,7 @@ public class PrivacyConsentPanel extends JBPanel<PrivacyConsentPanel> {
         setLayout(new BorderLayout());
         setBorder(JBUI.Borders.compound(
             JBUI.Borders.customLine(UIUtil.getPanelBackground().darker(), 1),
-            JBUI.Borders.empty(15)
+            JBUI.Borders.empty(10)
         ));
         
         // Make the panel itself responsive using proper Swing sizing

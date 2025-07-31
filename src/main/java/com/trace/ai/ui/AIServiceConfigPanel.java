@@ -141,7 +141,7 @@ public class AIServiceConfigPanel extends JBPanel<AIServiceConfigPanel> {
         setLayout(new BorderLayout());
         setBorder(JBUI.Borders.compound(
             JBUI.Borders.customLine(UIUtil.getPanelBackground().darker(), 1),
-            JBUI.Borders.empty(15)
+            JBUI.Borders.empty(10)
         ));
         
         // Set responsive sizing
@@ -151,8 +151,8 @@ public class AIServiceConfigPanel extends JBPanel<AIServiceConfigPanel> {
         
         // Create header
         JBLabel headerLabel = new JBLabel("AI Model Configuration");
-        headerLabel.setFont(headerLabel.getFont().deriveFont(Font.BOLD, 16f));
-        headerLabel.setBorder(JBUI.Borders.emptyBottom(20));
+        headerLabel.setFont(headerLabel.getFont().deriveFont(Font.BOLD, 14f));
+        headerLabel.setBorder(JBUI.Borders.emptyBottom(5));
         
         // Create main content panel
         JPanel contentPanel = new JBPanel<>(new BorderLayout());

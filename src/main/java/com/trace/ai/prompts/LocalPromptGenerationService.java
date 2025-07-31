@@ -51,12 +51,28 @@ public final class LocalPromptGenerationService implements PromptGenerationServi
         prompt.append("### Context ###\n");
         appendSummaryContext(prompt, failureInfo);
         
-        // Clear output format request with specific structure
+        // Clear output format request with structured sections
         prompt.append("### Output Format ###\n");
-        prompt.append("Provide your analysis in this exact format:\n");
-        prompt.append("- **Issue:** Brief description of what went wrong\n");
-        prompt.append("- **Likely Cause:** Most probable reason for the failure\n");
-        prompt.append("- **Suggested Fix:** Specific action to resolve the issue\n");
+        prompt.append("Provide your analysis in this exact format:\n\n");
+        
+        prompt.append("## Failure Analysis\n");
+        prompt.append("- **Failure Type:** [Assertion/Exception/Configuration/Environment/Other]\n");
+        prompt.append("- **Likely Cause:** [Product Defect/Automation Issue/Data Issue/Environment Issue/Test Design Issue]\n\n");
+        
+        prompt.append("## Technical Details\n");
+        prompt.append("- **What Failed:** [Specific description of what the test was trying to do and what actually happened]\n");
+        prompt.append("- **Why It Failed:** [Technical explanation based on the evidence]\n\n");
+        
+        prompt.append("## Recommended Actions\n");
+        prompt.append("- **Immediate Steps:** [Specific, actionable steps to resolve this issue]\n");
+        prompt.append("- **Test Improvements:** [How to make this test more robust and prevent similar failures]\n");
+        
+        // Add custom rule if present
+        String customRule = AISettings.getInstance().getCustomRule();
+        if (customRule != null && !customRule.trim().isEmpty()) {
+            prompt.append("\n### Custom Instructions ###\n");
+            prompt.append(customRule.trim()).append("\n");
+        }
         
         return prompt.toString();
     }
@@ -162,6 +178,13 @@ public final class LocalPromptGenerationService implements PromptGenerationServi
         
         prompt.append("**Important:** Base your analysis on the evidence provided. If you need more information, specify what additional context would help.\n");
         
+        // Add custom rule if present
+        String customRule = AISettings.getInstance().getCustomRule();
+        if (customRule != null && !customRule.trim().isEmpty()) {
+            prompt.append("\n### Custom Instructions ###\n");
+            prompt.append(customRule.trim()).append("\n");
+        }
+        
         LOG.info("LocalPromptGenerationService: Final generated prompt:\n" + prompt.toString());
         return prompt.toString();
     }
@@ -182,6 +205,67 @@ public final class LocalPromptGenerationService implements PromptGenerationServi
         if (failureInfo.getExpectedValue() != null && failureInfo.getActualValue() != null) {
             prompt.append("**Expected:** ").append(failureInfo.getExpectedValue()).append("\n");
             prompt.append("**Actual:** ").append(failureInfo.getActualValue()).append("\n");
+        }
+        
+        // Add stack trace if available
+        if (failureInfo.getStackTrace() != null && !failureInfo.getStackTrace().trim().isEmpty()) {
+            String cleanStackTrace = cleanStackTrace(failureInfo.getStackTrace());
+            prompt.append("**Stack Trace:**\n```\n").append(cleanStackTrace).append("\n```\n");
+        }
+        
+        // Add Gherkin scenario if available
+        GherkinScenarioInfo scenarioInfo = failureInfo.getGherkinScenarioInfo();
+        if (scenarioInfo != null) {
+            if (scenarioInfo.getFeatureName() != null) {
+                prompt.append("**Feature:** ").append(scenarioInfo.getFeatureName()).append("\n");
+            }
+            
+            List<String> tags = scenarioInfo.getTags();
+            if (tags != null && !tags.isEmpty()) {
+                prompt.append("**Tags:** ").append(String.join(", ", tags)).append("\n");
+            }
+            
+            // Use the full scenario text which includes examples table for scenario outlines
+            String fullScenarioText = scenarioInfo.getFullScenarioText();
+            if (fullScenarioText != null && !fullScenarioText.trim().isEmpty()) {
+                prompt.append("**Full Scenario:**\n```gherkin\n");
+                prompt.append(fullScenarioText);
+                prompt.append("```\n");
+            } else {
+                // Fallback to just steps if full scenario text is not available
+                List<String> steps = scenarioInfo.getSteps();
+                if (steps != null && !steps.isEmpty()) {
+                    prompt.append("**Full Scenario:**\n```gherkin\n");
+                    for (String step : steps) {
+                        prompt.append(step).append("\n");
+                    }
+                    prompt.append("```\n");
+                }
+            }
+        }
+        
+        // Add step definition if available
+        StepDefinitionInfo stepDefInfo = failureInfo.getStepDefinitionInfo();
+        if (stepDefInfo != null && stepDefInfo.getMethodText() != null) {
+            if (stepDefInfo.getClassName() != null) {
+                prompt.append("**Step Definition Class:** ").append(stepDefInfo.getClassName()).append("\n");
+            }
+            
+            if (stepDefInfo.getMethodName() != null) {
+                prompt.append("**Step Definition Method:** ").append(stepDefInfo.getMethodName()).append("\n");
+            }
+            
+            if (stepDefInfo.getStepPattern() != null) {
+                prompt.append("**Step Pattern:** ").append(stepDefInfo.getStepPattern()).append("\n");
+            }
+            
+            List<String> parameters = stepDefInfo.getParameters();
+            if (parameters != null && !parameters.isEmpty()) {
+                prompt.append("**Parameters:** ").append(String.join(", ", parameters)).append("\n");
+            }
+            
+            // Method implementation (crucial for understanding what the step does)
+            prompt.append("**Step Definition Implementation:**\n```java\n").append(stepDefInfo.getMethodText()).append("\n```\n");
         }
         
         prompt.append("\n");
