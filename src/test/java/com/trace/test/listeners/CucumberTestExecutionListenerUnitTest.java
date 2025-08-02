@@ -340,6 +340,35 @@ class CucumberTestExecutionListenerUnitTest extends BasePlatformTestCase {
     }
 
     /**
+     * Test scenario name formatting for scenario outlines.
+     * Verifies that scenario outline names include both title and example identifier.
+     */
+    @Test
+    public void testScenarioOutlineNameFormatting() {
+        // Test scenario outline formatting
+        String gherkinScenarioName = "Verify Home Page has sample of correct links";
+        String basicScenarioName = "Example #1.1";
+        boolean isScenarioOutline = true;
+        String formattedName = listener.formatScenarioName(gherkinScenarioName, basicScenarioName, isScenarioOutline);
+        assertEquals("Verify Home Page has sample of correct links (Example #1.1)", formattedName);
+        
+        // Test regular scenario (no formatting)
+        String regularGherkinName = "User login test";
+        String regularBasicName = "User login test";
+        boolean isRegularScenario = false;
+        String regularFormattedName = listener.formatScenarioName(regularGherkinName, regularBasicName, isRegularScenario);
+        assertEquals("User login test", regularFormattedName);
+        
+        // Test with null gherkin scenario name
+        String nullGherkinFormatted = listener.formatScenarioName(null, basicScenarioName, isScenarioOutline);
+        assertEquals("Example #1.1", nullGherkinFormatted);
+        
+        // Test with null basic scenario name
+        String nullBasicFormatted = listener.formatScenarioName(gherkinScenarioName, null, isScenarioOutline);
+        assertEquals("Verify Home Page has sample of correct links", nullBasicFormatted);
+    }
+
+    /**
      * Helper method to create a test proxy for testing
      */
     private SMTestProxy createTestProxy(String testName, String errorMessage) {

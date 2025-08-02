@@ -738,6 +738,8 @@ public class GherkinScenarioExtractor {
         }
     }
 
+
+    
     /**
      * Removes the Gherkin keyword prefix from a step line.
      * 

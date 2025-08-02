@@ -107,6 +107,50 @@ public class TriagePanelViewUnitTest extends BasePlatformTestCase {
     }
     
     /**
+     * Test the "First Failure Wins" feature.
+     * Verifies that only the first failure of a test run gets analyzed.
+     */
+    @Test
+    public void testFirstFailureWins() {
+        // Create mock failure info
+        FailureInfo firstFailure = new FailureInfo.Builder()
+            .withScenarioName("Test Scenario 1")
+            .withFailedStepText("I should see a link with text 'zoro'")
+            .withErrorMessage("Element not found")
+            .build();
+        
+        FailureInfo secondFailure = new FailureInfo.Builder()
+            .withScenarioName("Test Scenario 2")
+            .withFailedStepText("I should see a link with text 'A/B Testing'")
+            .withErrorMessage("Element not found")
+            .build();
+        
+        // Simulate new test run start
+        triagePanelView.onTestRunStarted();
+        
+        // First failure should be analyzed
+        triagePanelView.updateFailure(firstFailure);
+        assertEquals("First failure should be analyzed", 1, triagePanelView.getChatHistory().size());
+        
+        // Second failure should be ignored
+        triagePanelView.updateFailure(secondFailure);
+        assertEquals("Second failure should be ignored", 1, triagePanelView.getChatHistory().size());
+        
+        // Simulate new test run start
+        triagePanelView.onTestRunStarted();
+        
+        // Third failure should be analyzed (new test run)
+        FailureInfo thirdFailure = new FailureInfo.Builder()
+            .withScenarioName("Test Scenario 3")
+            .withFailedStepText("I should see a link with text 'Checkboxes'")
+            .withErrorMessage("Element not found")
+            .build();
+        
+        triagePanelView.updateFailure(thirdFailure);
+        assertEquals("Third failure should be analyzed in new test run", 1, triagePanelView.getChatHistory().size());
+    }
+    
+    /**
      * Creates a test FailureInfo object for testing purposes.
      *
      * @return A test FailureInfo object

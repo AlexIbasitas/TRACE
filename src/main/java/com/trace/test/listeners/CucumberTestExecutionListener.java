@@ -4,6 +4,7 @@ import com.intellij.execution.testframework.sm.runner.SMTRunnerEventsListener;
 import com.intellij.execution.testframework.sm.runner.SMTestProxy;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.diagnostic.Logger;
+import com.intellij.openapi.application.ApplicationManager;
 import com.trace.chat.ui.TriagePanelToolWindowFactory;
 import com.trace.test.extractors.GherkinScenarioExtractor;
 import com.trace.test.extractors.StackTraceExtractor;
@@ -222,7 +223,29 @@ public class CucumberTestExecutionListener implements SMTRunnerEventsListener {
     // Required interface methods - minimal implementation for unused events
     @Override
     public void onTestingStarted(SMTestProxy.SMRootTestProxy root) {
-        // Not needed for our use case
+        LOG.info("=== TEST RUN STARTED ===");
+        LOG.info("Root Test: " + (root != null ? root.getName() : "null"));
+        LOG.info("Timestamp: " + System.currentTimeMillis());
+        LOG.info("=== END TEST RUN STARTED ===");
+        
+        // Notify TriagePanel that a new test run has started
+        if (project != null) {
+            ApplicationManager.getApplication().invokeLater(() -> {
+                try {
+                    TriagePanelView triagePanel = getTriagePanelForProject(project);
+                    if (triagePanel != null) {
+                        triagePanel.onTestRunStarted();
+                        LOG.info("Successfully notified TriagePanel of new test run");
+                    } else {
+                        LOG.debug("TriagePanel not found for project: " + project.getName());
+                    }
+                } catch (Exception e) {
+                    LOG.error("Error notifying TriagePanel of test run start", e);
+                }
+            });
+        } else {
+            LOG.warn("Project is null, cannot notify TriagePanel");
+        }
     }
 
     @Override
@@ -461,8 +484,13 @@ public class CucumberTestExecutionListener implements SMTRunnerEventsListener {
             }
             
             // Create enhanced failure info with rich structured data
+            // Use Gherkin scenario name if available, otherwise fall back to basic scenario name
+            String finalScenarioName = (scenarioInfo != null && scenarioInfo.getScenarioName() != null) 
+                ? formatScenarioName(scenarioInfo.getScenarioName(), basicFailureInfo.getScenarioName(), scenarioInfo.isScenarioOutline()) 
+                : basicFailureInfo.getScenarioName();
+            
             FailureInfo enhancedFailureInfo = new FailureInfo.Builder()
-                .withScenarioName(basicFailureInfo.getScenarioName())
+                .withScenarioName(finalScenarioName)
                 .withFailedStepText(basicFailureInfo.getFailedStepText())
                 .withStackTrace(basicFailureInfo.getStackTrace())
                 .withSourceFilePath(sourceFilePath)
@@ -475,12 +503,17 @@ public class CucumberTestExecutionListener implements SMTRunnerEventsListener {
                 .withParsingTime(basicFailureInfo.getParsingTime())
                 .build();
             
-            // Notify the TriagePanel about the new failure
-            LOG.debug("Notifying TriagePanel about failure");
-            notifyTriagePanel(enhancedFailureInfo, currentProject);
-            
-            // Trigger AI analysis if configured and enabled
+                    // Notify the TriagePanel about the new failure
+        LOG.debug("Notifying TriagePanel about failure");
+        boolean failureWasProcessed = notifyTriagePanel(enhancedFailureInfo, currentProject);
+        
+        // Only trigger AI analysis if the failure was actually processed
+        if (failureWasProcessed) {
+            LOG.info("Failure was processed by TriagePanel - triggering AI analysis");
             triggerAIAnalysisIfConfigured(enhancedFailureInfo, currentProject);
+        } else {
+            LOG.info("Failure was ignored by TriagePanel (subsequent failure in same test run) - skipping AI analysis");
+        }
             
         } catch (Exception e) {
             LOG.error("Error processing failed test: " + e.getMessage(), e);
@@ -493,30 +526,41 @@ public class CucumberTestExecutionListener implements SMTRunnerEventsListener {
      * 
      * @param failureInfo The failure information to display
      * @param currentProject The current project context
+     * @return true if the failure was processed, false if it was ignored
      */
-    private void notifyTriagePanel(FailureInfo failureInfo, Project currentProject) {
+    private boolean notifyTriagePanel(FailureInfo failureInfo, Project currentProject) {
         if (currentProject == null) {
             LOG.warn("Project is null, cannot notify panel");
-            return;
+            return false;
         }
         
         LOG.debug("Attempting to notify TriagePanel for project: " + currentProject.getName());
         
-        // Run on EDT to ensure thread safety
-        com.intellij.openapi.application.ApplicationManager.getApplication().invokeLater(() -> {
-            try {
-                // Get the TriagePanel instance for this project
-                TriagePanelView triagePanel = getTriagePanelForProject(currentProject);
-                if (triagePanel != null) {
+        // Get the TriagePanel instance for this project
+        TriagePanelView triagePanel = getTriagePanelForProject(currentProject);
+        if (triagePanel == null) {
+            LOG.debug("TriagePanel not found for project: " + currentProject.getName());
+            return false;
+        }
+        
+        // Run on EDT to ensure thread safety and get the result
+        final boolean[] wasProcessed = {false};
+        try {
+            com.intellij.openapi.application.ApplicationManager.getApplication().invokeAndWait(() -> {
+                try {
                     LOG.debug("Found TriagePanel, updating with failure info");
-                    triagePanel.updateFailure(failureInfo);
-                } else {
-                    LOG.debug("TriagePanel not found for project: " + currentProject.getName());
+                    wasProcessed[0] = triagePanel.updateFailure(failureInfo);
+                } catch (Exception e) {
+                    LOG.error("Error notifying panel: " + e.getMessage(), e);
+                    wasProcessed[0] = false;
                 }
-            } catch (Exception e) {
-                LOG.error("Error notifying panel: " + e.getMessage(), e);
-            }
-        });
+            });
+        } catch (Exception e) {
+            LOG.error("Error during EDT execution in notifyTriagePanel", e);
+            wasProcessed[0] = false;
+        }
+        
+        return wasProcessed[0];
     }
     
     /**
@@ -564,7 +608,12 @@ public class CucumberTestExecutionListener implements SMTRunnerEventsListener {
             return;
         }
         
-        LOG.info("Triggering AI analysis for failure: " + failureInfo.getScenarioName());
+        LOG.info("=== AI ANALYSIS TRIGGERED ===");
+        LOG.info("Failure: " + failureInfo.getScenarioName());
+        LOG.info("Failed Step: " + failureInfo.getFailedStepText());
+        LOG.info("Error Message: " + failureInfo.getErrorMessage());
+        LOG.info("Test Run ID: " + (failureInfo.getGherkinScenarioInfo() != null && failureInfo.getGherkinScenarioInfo().isScenarioOutline() ? "Scenario Outline" : "Regular Scenario"));
+        LOG.info("=== END AI ANALYSIS TRIGGER ===");
         
         // Get the current analysis mode from the TriagePanel
         TriagePanelView triagePanel = getTriagePanelForProject(currentProject);
@@ -649,6 +698,30 @@ public class CucumberTestExecutionListener implements SMTRunnerEventsListener {
                 LOG.error("Error displaying AI analysis error: " + e.getMessage(), e);
             }
         });
+    }
+    
+    /**
+     * Formats the scenario name to include both scenario outline title and example identifier.
+     * For scenario outlines, it formats as "Scenario Title (Example #1.1)".
+     * For regular scenarios, it returns the scenario name as is.
+     * 
+     * @param gherkinScenarioName The scenario name from GherkinScenarioInfo
+     * @param basicScenarioName The scenario name from StackTraceExtractor (might contain example identifier)
+     * @param isScenarioOutline Whether this is a scenario outline
+     * @return The formatted scenario name
+     */
+    String formatScenarioName(String gherkinScenarioName, String basicScenarioName, boolean isScenarioOutline) {
+        if (gherkinScenarioName == null || gherkinScenarioName.isEmpty()) {
+            return basicScenarioName != null ? basicScenarioName : "Unknown Scenario";
+        }
+        
+        // Check if this is a scenario outline (basic scenario name contains "Example #")
+        if (isScenarioOutline && basicScenarioName != null && basicScenarioName.matches("Example #\\d+\\.\\d+")) {
+            return gherkinScenarioName + " (" + basicScenarioName + ")";
+        }
+        
+        // Regular scenario, return Gherkin scenario name as is
+        return gherkinScenarioName;
     }
     
     /**

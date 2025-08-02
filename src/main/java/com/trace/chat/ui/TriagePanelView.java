@@ -70,6 +70,9 @@ public class TriagePanelView {
     private String currentAnalysisMode = "Quick Overview";
     private static final String ANALYSIS_MODE_OVERVIEW = "Quick Overview";
     private static final String ANALYSIS_MODE_FULL = "Full Analysis";
+    
+    // Test run tracking for "First Failure Wins" feature
+    private String currentTestRunId = null;
 
     /**
      * Constructor for TriagePanelView.
@@ -131,6 +134,28 @@ public class TriagePanelView {
         // Update the analysis mode button text if it exists
         // We need to find the button in the component hierarchy
         updateAnalysisModeButtonTextInUI();
+    }
+    
+    /**
+     * Called when a new test run starts.
+     * Clears the current test run tracking to allow analysis of the first failure.
+     * This method is called by the CucumberTestExecutionListener when onTestingStarted() fires.
+     */
+    public void onTestRunStarted() {
+        LOG.info("=== TRIAGE PANEL: TEST RUN STARTED ===");
+        LOG.info("Previous Test Run ID: " + currentTestRunId);
+        LOG.info("Clearing test run tracking");
+        currentTestRunId = null;
+        LOG.info("=== END TRIAGE PANEL: TEST RUN STARTED ===");
+    }
+    
+    /**
+     * Gets the chat history for testing purposes.
+     * 
+     * @return The list of chat messages
+     */
+    public List<ChatMessage> getChatHistory() {
+        return new ArrayList<>(chatHistory);
     }
     
     /**
@@ -487,7 +512,7 @@ public class TriagePanelView {
      * @param failureInfo The failure information to analyze
      * @throws IllegalArgumentException if failureInfo is null
      */
-    public void updateFailure(FailureInfo failureInfo) {
+    public boolean updateFailure(FailureInfo failureInfo) {
         if (failureInfo == null) {
             throw new IllegalArgumentException("FailureInfo cannot be null");
         }
@@ -497,15 +522,39 @@ public class TriagePanelView {
         
         // Ensure we're on the EDT
         if (!SwingUtilities.isEventDispatchThread()) {
-            SwingUtilities.invokeLater(() -> updateFailure(failureInfo));
-            return;
+            final boolean[] result = {false};
+            try {
+                SwingUtilities.invokeAndWait(() -> result[0] = updateFailure(failureInfo));
+            } catch (InterruptedException e) {
+                LOG.error("Interrupted while waiting for EDT execution", e);
+                Thread.currentThread().interrupt();
+            } catch (java.lang.reflect.InvocationTargetException e) {
+                LOG.error("Error during EDT execution", e);
+            }
+            return result[0];
         }
         
-        // Clear chat history for new failure
-        clearChat();
+        // Check if we already have a failure in this test run
+        if (currentTestRunId != null) {
+            // Same test run - ignore silently
+            LOG.info("=== TRIAGE PANEL: IGNORING SUBSEQUENT FAILURE ===");
+            LOG.info("Current Test Run ID: " + currentTestRunId);
+            LOG.info("Failure: " + failureInfo.getScenarioName());
+            LOG.info("Failed Step: " + failureInfo.getFailedStepText());
+            LOG.info("=== END TRIAGE PANEL: IGNORING SUBSEQUENT FAILURE ===");
+            return false;
+        }
         
-        // Generate and display initial prompt
+        // First failure of this test run - analyze
+        currentTestRunId = "test_run_" + System.currentTimeMillis();
+        LOG.info("=== TRIAGE PANEL: PROCESSING FIRST FAILURE ===");
+        LOG.info("New Test Run ID: " + currentTestRunId);
+        LOG.info("Failure: " + failureInfo.getScenarioName());
+        LOG.info("Failed Step: " + failureInfo.getFailedStepText());
+        LOG.info("=== END TRIAGE PANEL: PROCESSING FIRST FAILURE ===");
+        clearChat();
         generateAndDisplayPrompt(failureInfo);
+        return true;
     }
 
     /**

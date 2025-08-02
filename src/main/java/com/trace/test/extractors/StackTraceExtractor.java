@@ -466,6 +466,7 @@ public class StackTraceExtractor {
     /**
      * Extracts the proper scenario name from the test, not the step text.
      * For Cucumber tests, this should be the scenario name from the feature file.
+     * For scenario outlines, it combines the scenario title with the example identifier.
      * 
      * @param test The test proxy to extract scenario name from
      * @param failedStepText The failed step text for fallback
@@ -478,14 +479,14 @@ public class StackTraceExtractor {
             if (parent != null && parent != test) {
                 String parentName = parent.getName();
                 if (isValidScenarioName(parentName, failedStepText)) {
-                    return parentName;
+                    return formatScenarioName(parentName, test.getName());
                 }
             }
             
             // If parent name is the same as step text, try to find a more descriptive name
             String testName = test.getName();
             if (isValidScenarioName(testName, failedStepText)) {
-                return testName;
+                return formatScenarioName(testName, null);
             }
             
             // Fallback: try to extract from stack trace
@@ -493,7 +494,7 @@ public class StackTraceExtractor {
             if (stackTrace != null) {
                 String scenarioFromStack = extractScenarioFromStackTrace(stackTrace);
                 if (scenarioFromStack != null) {
-                    return scenarioFromStack;
+                    return formatScenarioName(scenarioFromStack, test.getName());
                 }
             }
             
@@ -504,6 +505,29 @@ public class StackTraceExtractor {
             LOG.debug("Error extracting scenario name", e);
             return "Cucumber Test";
         }
+    }
+    
+    /**
+     * Formats the scenario name to include both scenario outline title and example identifier.
+     * For scenario outlines, it formats as "Scenario Title (Example #1.1)".
+     * For regular scenarios, it returns the scenario name as is.
+     * 
+     * @param scenarioName The base scenario name
+     * @param testName The test name (which might contain example identifier)
+     * @return The formatted scenario name
+     */
+    String formatScenarioName(String scenarioName, String testName) {
+        if (scenarioName == null || scenarioName.isEmpty()) {
+            return testName != null ? testName : "Unknown Scenario";
+        }
+        
+        // Check if this is a scenario outline (test name contains "Example #")
+        if (testName != null && testName.matches("Example #\\d+\\.\\d+")) {
+            return scenarioName + " (" + testName + ")";
+        }
+        
+        // Regular scenario, return as is
+        return scenarioName;
     }
     
     /**

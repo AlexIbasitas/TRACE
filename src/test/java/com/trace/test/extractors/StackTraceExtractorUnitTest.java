@@ -12,6 +12,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.Mockito.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * Unit tests for StackTraceExtractor (pure logic only).
@@ -148,5 +149,32 @@ class StackTraceExtractorUnitTest {
         assertThat(result.getErrorMessage()).isEqualTo("Failed to extract detailed failure information");
         assertThat(result.getStackTrace()).isEqualTo("Stack trace extraction failed");
         assertThat(result.getParsingTime()).isGreaterThan(0);
+    }
+
+    /**
+     * Test scenario name formatting for scenario outlines.
+     * Verifies that scenario outline names include both title and example identifier.
+     */
+    @Test
+    public void testScenarioOutlineNameFormatting() {
+        // Test scenario outline formatting
+        String scenarioName = "Verify Home Page has sample of correct links";
+        String testName = "Example #1.1";
+        String formattedName = extractor.formatScenarioName(scenarioName, testName);
+        assertEquals("Verify Home Page has sample of correct links (Example #1.1)", formattedName);
+        
+        // Test regular scenario (no formatting)
+        String regularScenarioName = "User login test";
+        String regularTestName = "User login test";
+        String regularFormattedName = extractor.formatScenarioName(regularScenarioName, regularTestName);
+        assertEquals("User login test", regularFormattedName);
+        
+        // Test with null testName
+        String nullTestNameFormatted = extractor.formatScenarioName(scenarioName, null);
+        assertEquals("Verify Home Page has sample of correct links", nullTestNameFormatted);
+        
+        // Test with null scenarioName
+        String nullScenarioFormatted = extractor.formatScenarioName(null, testName);
+        assertEquals("Example #1.1", nullScenarioFormatted);
     }
 } 
