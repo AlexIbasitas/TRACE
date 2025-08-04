@@ -1,6 +1,7 @@
 package com.trace.ai.services;
 
-import com.intellij.openapi.diagnostic.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import com.intellij.openapi.project.Project;
 import com.trace.ai.models.AIAnalysisResult;
 import com.trace.ai.models.AIModel;
@@ -45,7 +46,7 @@ import java.util.concurrent.CompletableFuture;
  */
 public final class AINetworkService {
     
-    private static final Logger LOG = Logger.getInstance(AINetworkService.class);
+    private static final Logger LOG = LoggerFactory.getLogger(AINetworkService.class);
     
     // Services
     private final Project project;

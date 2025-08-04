@@ -23,7 +23,45 @@ dependencies {
     implementation 'com.google.code.gson:gson:2.10.1'
     
     // Professional markdown rendering with Flexmark Java
-    implementation 'com.vladsch.flexmark:flexmark-all:0.64.8'
+implementation 'com.vladsch.flexmark:flexmark-all:0.64.8'
+
+// SQLite JDBC driver for frozen vector store
+implementation 'org.xerial:sqlite-jdbc:3.44.1.0'
+
+// For Gradle task execution
+implementation 'org.jetbrains:annotations:24.0.1'
+
+// SLF4J for logging (industry standard)
+implementation 'org.slf4j:slf4j-api:2.0.9'
+runtimeOnly 'org.slf4j:slf4j-simple:2.0.9'
+
+// Simple task to run the document store refresher
+task refreshDocumentStore(type: JavaExec) {
+    group = 'document-store'
+    description = 'Refresh the document store by parsing documents and generating embeddings'
+    
+    classpath = sourceSets.main.runtimeClasspath
+    mainClass = 'com.trace.ai.tasks.DocumentStoreRefresher'
+    
+    doFirst {
+        // Build arguments from system properties
+        List<String> taskArgs = []
+        if (System.getProperty('openai.api.key')) {
+            taskArgs.add("--openai-key=${System.getProperty('openai.api.key')}")
+        }
+        if (System.getProperty('gemini.api.key')) {
+            taskArgs.add("--gemini-key=${System.getProperty('gemini.api.key')}")
+        }
+        
+        if (taskArgs.isEmpty()) {
+            throw new GradleException("No API keys provided! Use -Dopenai.api.key=your_key")
+        }
+        
+        // Set arguments for the JavaExec task
+        args = taskArgs
+        println "✓ Refreshing document store with ${taskArgs.size()} API key(s)"
+    }
+}
     
     // Test Framework Dependencies (JetBrains recommended)
     testImplementation 'org.junit.jupiter:junit-jupiter-api:5.10.2'
@@ -53,6 +91,7 @@ intellij {
         'java'
     ]
     instrumentCode = true // Required for proper IntelliJ Platform testing
+    downloadSources = true // Download IntelliJ Platform sources
 }
 
 
