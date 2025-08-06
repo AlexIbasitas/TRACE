@@ -12,7 +12,7 @@ import com.trace.test.extractors.StepDefinitionExtractor;
 import com.trace.test.models.FailureInfo;
 import com.trace.test.models.StepDefinitionInfo;
 import com.trace.test.models.GherkinScenarioInfo;
-import com.trace.ai.prompts.LocalPromptGenerationService;
+import com.trace.ai.prompts.InitialPromptFailureAnalysisService;
 import com.trace.chat.ui.TriagePanelView;
 import com.trace.ai.configuration.AISettings;
 import com.trace.ai.services.AINetworkService;
@@ -47,7 +47,7 @@ public class CucumberTestExecutionListener implements SMTRunnerEventsListener {
     private final StackTraceExtractor stackTraceExtractor;
     private final StepDefinitionExtractor stepDefinitionExtractor;
     private final GherkinScenarioExtractor gherkinScenarioExtractor;
-    private final LocalPromptGenerationService promptGenerationService;
+    private final InitialPromptFailureAnalysisService promptGenerationService;
     private final AISettings aiSettings;
     private AINetworkService aiNetworkService;
     
@@ -66,7 +66,7 @@ public class CucumberTestExecutionListener implements SMTRunnerEventsListener {
         this.stackTraceExtractor = null;
         this.stepDefinitionExtractor = null;
         this.gherkinScenarioExtractor = null;
-        this.promptGenerationService = new LocalPromptGenerationService();
+        this.promptGenerationService = new InitialPromptFailureAnalysisService();
         this.aiSettings = AISettings.getInstance();
         this.aiNetworkService = null; // Will be initialized when project is available
     }
@@ -79,7 +79,7 @@ public class CucumberTestExecutionListener implements SMTRunnerEventsListener {
      */
     public CucumberTestExecutionListener(Project project) {
         this.project = project;
-        this.promptGenerationService = new LocalPromptGenerationService();
+        this.promptGenerationService = new InitialPromptFailureAnalysisService();
         this.aiSettings = AISettings.getInstance();
         
         // Initialize extractors and AI services only if project is available
@@ -608,42 +608,17 @@ public class CucumberTestExecutionListener implements SMTRunnerEventsListener {
             return;
         }
         
-        LOG.info("=== AI ANALYSIS TRIGGERED ===");
+        // NOTE: AI analysis is now handled directly by TriagePanelView to avoid duplication
+        // The TriagePanelView will handle the AI analysis when updateFailure() is called
+        LOG.info("=== AI ANALYSIS DELEGATED TO TRIAGE PANEL ===");
         LOG.info("Failure: " + failureInfo.getScenarioName());
         LOG.info("Failed Step: " + failureInfo.getFailedStepText());
         LOG.info("Error Message: " + failureInfo.getErrorMessage());
-        LOG.info("Test Run ID: " + (failureInfo.getGherkinScenarioInfo() != null && failureInfo.getGherkinScenarioInfo().isScenarioOutline() ? "Scenario Outline" : "Regular Scenario"));
-        LOG.info("=== END AI ANALYSIS TRIGGER ===");
+        LOG.info("AI analysis will be handled by TriagePanelView to avoid duplication");
+        LOG.info("=== END AI ANALYSIS DELEGATION ===");
         
-        // Get the current analysis mode from the TriagePanel
-        TriagePanelView triagePanel = getTriagePanelForProject(currentProject);
-        String analysisMode = "Full Analysis"; // Default to full analysis
-        if (triagePanel != null) {
-            analysisMode = triagePanel.getCurrentAnalysisMode();
-            LOG.info("Using analysis mode: " + analysisMode);
-        } else {
-            LOG.debug("TriagePanel not found, using default analysis mode: " + analysisMode);
-        }
-        
-        // Perform AI analysis asynchronously to avoid blocking test execution
-        CompletableFuture<AIAnalysisResult> analysisFuture = aiNetworkService.analyze(failureInfo, analysisMode);
-        
-        // Handle the analysis result
-        analysisFuture.thenAccept(result -> {
-            LOG.info("AI analysis callback triggered for: " + failureInfo.getScenarioName());
-            if (result != null) {
-                LOG.info("AI analysis completed successfully for: " + failureInfo.getScenarioName());
-                LOG.info("Result analysis length: " + (result.getAnalysis() != null ? result.getAnalysis().length() : "null"));
-                displayAIAnalysisResult(result, currentProject);
-            } else {
-                LOG.warn("AI analysis returned null result for: " + failureInfo.getScenarioName());
-                displayAIAnalysisError("AI analysis returned no result", currentProject);
-            }
-        }).exceptionally(throwable -> {
-            LOG.error("AI analysis failed for: " + failureInfo.getScenarioName(), throwable);
-            displayAIAnalysisError("AI analysis failed: " + throwable.getMessage(), currentProject);
-            return null;
-        });
+        // No longer trigger AI analysis here - it's handled by TriagePanelView
+        // This prevents duplicate AI responses and token waste
     }
     
     /**

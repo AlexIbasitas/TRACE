@@ -1,7 +1,6 @@
 package com.trace.ai.prompts;
 
 import com.intellij.openapi.components.Service;
-import com.intellij.openapi.diagnostic.Logger;
 import com.trace.test.models.FailureInfo;
 import com.trace.test.models.GherkinScenarioInfo;
 import com.trace.test.models.StepDefinitionInfo;
@@ -9,9 +8,11 @@ import com.trace.ai.configuration.AISettings;
 
 import java.util.List;
 import org.jetbrains.annotations.NotNull;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
- * Local implementation of prompt generation service.
+ * Service for generating AI prompts for initial test failure analysis.
  * 
  * <p>This service generates structured AI prompts from test failure information
  * following OpenAI and Prompting Guide best practices. It creates prompts that are
@@ -22,13 +23,30 @@ import org.jetbrains.annotations.NotNull;
  *   <li><strong>Summary:</strong> Concise prompts for quick triage and analysis</li>
  *   <li><strong>Detailed:</strong> Comprehensive prompts with full context for thorough investigation</li>
  * </ul>
+ * 
+ * <p>This service focuses solely on initial failure analysis and does not include
+ * chat history or user query context. For user query processing, see UserQueryPromptService.</p>
  */
 @Service
-public final class LocalPromptGenerationService implements PromptGenerationService {
+public final class InitialPromptFailureAnalysisService {
     
-    private static final Logger LOG = Logger.getInstance(LocalPromptGenerationService.class);
+    private static final Logger LOG = LoggerFactory.getLogger(InitialPromptFailureAnalysisService.class);
     
-    @Override
+    /**
+     * Generates a concise summary prompt for quick analysis.
+     * 
+     * <p>This method creates a shorter, focused prompt that highlights the key
+     * failure details without extensive context. Ideal for:</p>
+     * <ul>
+     *   <li>Quick triage and initial assessment</li>
+     *   <li>Chat-based AI interactions where space is limited</li>
+     *   <li>When you need a fast overview of the failure</li>
+     * </ul>
+     * 
+     * @param failureInfo The failure information to format
+     * @return A concise prompt for quick analysis
+     * @throws IllegalArgumentException if failureInfo is null
+     */
     public String generateSummaryPrompt(FailureInfo failureInfo) {
         if (failureInfo == null) {
             throw new IllegalArgumentException("failureInfo cannot be null");
@@ -78,7 +96,7 @@ public final class LocalPromptGenerationService implements PromptGenerationServi
     }
     
     /**
-     * Generates a detailed prompt for AI analysis of a test failure.
+     * Generates a detailed analysis prompt with full context.
      * 
      * <p>This method creates a comprehensive prompt that includes all relevant
      * information about the test failure, including the scenario, step definitions,
@@ -104,13 +122,13 @@ public final class LocalPromptGenerationService implements PromptGenerationServi
         LOG.info("Generating detailed prompt for failure: " + failureInfo.getScenarioName());
         StepDefinitionInfo stepDefInfo = failureInfo.getStepDefinitionInfo();
         if (stepDefInfo == null) {
-            LOG.warn("LocalPromptGenerationService: StepDefinitionInfo is null");
+            LOG.warn("InitialPromptFailureAnalysisService: StepDefinitionInfo is null");
         } else {
-            LOG.info("LocalPromptGenerationService: StepDefinitionInfo present. Method: " + stepDefInfo.getMethodName() + ", Class: " + stepDefInfo.getClassName());
+            LOG.info("InitialPromptFailureAnalysisService: StepDefinitionInfo present. Method: " + stepDefInfo.getMethodName() + ", Class: " + stepDefInfo.getClassName());
             if (stepDefInfo.getMethodText() == null) {
-                LOG.warn("LocalPromptGenerationService: StepDefinitionInfo.methodText is null");
+                LOG.warn("InitialPromptFailureAnalysisService: StepDefinitionInfo.methodText is null");
             } else {
-                LOG.info("LocalPromptGenerationService: StepDefinitionInfo.methodText length: " + stepDefInfo.getMethodText().length());
+                LOG.info("InitialPromptFailureAnalysisService: StepDefinitionInfo.methodText length: " + stepDefInfo.getMethodText().length());
             }
         }
         StringBuilder prompt = new StringBuilder();
@@ -148,11 +166,11 @@ public final class LocalPromptGenerationService implements PromptGenerationServi
         
         // Add step definition context only if available
         if (stepDefInfo != null && stepDefInfo.getMethodText() != null) {
-            LOG.info("LocalPromptGenerationService: Including step definition in prompt");
+            LOG.info("InitialPromptFailureAnalysisService: Including step definition in prompt");
             prompt.append("### Step Definition ###\n");
             appendStepDefinition(prompt, failureInfo);
         } else {
-            LOG.warn("LocalPromptGenerationService: Step definition not included in prompt - missing method text");
+            LOG.warn("InitialPromptFailureAnalysisService: Step definition not included in prompt - missing method text");
         }
         
         prompt.append("### Code Context ###\n");
@@ -185,7 +203,7 @@ public final class LocalPromptGenerationService implements PromptGenerationServi
             prompt.append(customRule.trim()).append("\n");
         }
         
-        LOG.info("LocalPromptGenerationService: Final generated prompt:\n" + prompt.toString());
+        LOG.info("InitialPromptFailureAnalysisService: Final generated prompt:\n" + prompt.toString());
         return prompt.toString();
     }
     

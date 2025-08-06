@@ -9,8 +9,9 @@ import com.intellij.ui.components.JBTextArea;
 import com.intellij.util.ui.JBUI;
 import com.trace.ai.configuration.AISettings;
 import com.trace.ai.models.AIAnalysisResult;
-import com.trace.ai.prompts.LocalPromptGenerationService;
-import com.trace.ai.services.AINetworkService;
+import com.trace.ai.services.AIAnalysisOrchestrator;
+import com.trace.ai.services.ChatHistoryService;
+import com.trace.ai.prompts.InitialPromptFailureAnalysisService;
 import com.trace.ai.ui.SettingsPanel;
 import com.trace.chat.components.ChatMessage;
 import com.trace.chat.components.MessageComponent;
@@ -27,6 +28,7 @@ import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 
 /**
  * Chat-style UI component for displaying test failure analysis and user interactions.
@@ -60,8 +62,8 @@ public class TriagePanelView {
     
     // Chat state management
     private final List<ChatMessage> chatHistory;
-    private final LocalPromptGenerationService promptService;
-    private final AINetworkService aiNetworkService;
+    private final AIAnalysisOrchestrator aiAnalysisOrchestrator;
+    private FailureInfo currentFailureInfo;
     private JScrollPane chatScrollPane;
     private JPanel messageContainer;
     private boolean showSettingsTab = false;
@@ -89,8 +91,8 @@ public class TriagePanelView {
         LOG.info("Creating TriagePanelView for project: " + project.getName());
         this.project = project;
         this.chatHistory = new ArrayList<>();
-        this.promptService = project.getService(LocalPromptGenerationService.class);
-        this.aiNetworkService = project.getService(AINetworkService.class);
+        this.aiAnalysisOrchestrator = new AIAnalysisOrchestrator(project);
+        this.currentFailureInfo = null;
         
         // Initialize UI components
         this.mainPanel = new JPanel(new BorderLayout());
@@ -386,10 +388,14 @@ public class TriagePanelView {
     
     /**
      * Handles user messages with AI analysis if configured, otherwise shows configuration guidance.
+     * Enhanced with comprehensive logging for prompt verification and robust error handling.
      *
      * @param messageText The user's message text
      */
     private void handleUserMessageWithAI(String messageText) {
+        LOG.info("=== HANDLING USER MESSAGE WITH AI ===");
+        LOG.info("User Message: " + messageText);
+        
         AISettings aiSettings = AISettings.getInstance();
         
         // Check if TRACE is enabled (power button) - if not, do nothing at all
@@ -403,6 +409,7 @@ public class TriagePanelView {
             String configurationStatus = aiSettings.getConfigurationStatus();
             String guidanceMessage = "AI features are not configured. " + configurationStatus + 
                                    " Please configure AI settings to use AI-powered features.";
+            LOG.info("AI not configured - showing configuration guidance");
             addMessage(new ChatMessage(ChatMessage.Role.AI, guidanceMessage, 
                                     System.currentTimeMillis(), null, null));
             return;
@@ -418,14 +425,89 @@ public class TriagePanelView {
             return;
         }
         
-        // AI is configured and enabled, attempt to process the message
-        LOG.info("Processing user message with AI analysis");
+        // AI is configured and enabled, process the message with orchestrator
+        LOG.info("AI is configured and enabled - processing user query with orchestrator");
         
-        // For now, show a placeholder message indicating AI processing
-        // TODO: Implement actual AI message processing in Phase 1.2
-        addMessage(new ChatMessage(ChatMessage.Role.AI, 
-            "AI analysis is configured and ready. Message processing will be implemented in the next phase.", 
-            System.currentTimeMillis(), null, null));
+        // Check if we have failure context for user queries
+        if (currentFailureInfo == null) {
+            LOG.warn("No failure context available for user query");
+            addMessage(new ChatMessage(ChatMessage.Role.AI, 
+                "No test failure context available. Please run a test first to establish context for AI analysis.", 
+                System.currentTimeMillis(), null, null));
+            return;
+        }
+        
+        LOG.info("Failure Context Available:");
+        LOG.info("  - Scenario Name: " + currentFailureInfo.getScenarioName());
+        LOG.info("  - Failed Step: " + (currentFailureInfo.getFailedStepText() != null ? 
+            currentFailureInfo.getFailedStepText().substring(0, Math.min(currentFailureInfo.getFailedStepText().length(), 50)) + "..." : "null"));
+        LOG.info("  - Error Message: " + (currentFailureInfo.getErrorMessage() != null ? 
+            currentFailureInfo.getErrorMessage().substring(0, Math.min(currentFailureInfo.getErrorMessage().length(), 50)) + "..." : "null"));
+        
+        // Check chat history service availability and log recent queries
+        try {
+            ChatHistoryService chatHistoryService = project.getService(ChatHistoryService.class);
+            if (chatHistoryService == null) {
+                LOG.warn("ChatHistoryService is null - proceeding without chat history");
+            } else {
+                LOG.info("Chat History Service State:");
+                LOG.info("  - User Query Count: " + chatHistoryService.getUserQueryCount());
+                LOG.info("  - Has Failure Context: " + chatHistoryService.hasFailureContext());
+                LOG.info("  - Window Size: " + chatHistoryService.getUserMessageWindowSize());
+                
+                // Log recent user queries for context verification
+                List<String> recentQueries = getLastThreeUserQueries();
+                if (!recentQueries.isEmpty()) {
+                    LOG.info("Recent User Queries Context:");
+                    for (String query : recentQueries) {
+                        LOG.info("  - " + query);
+                    }
+                }
+            }
+        } catch (Exception e) {
+            LOG.warn("Error accessing ChatHistoryService: " + e.getMessage());
+        }
+        
+        // Process the user query with the orchestrator
+        LOG.info("Calling aiAnalysisOrchestrator.analyzeUserQuery()");
+        CompletableFuture<AIAnalysisResult> analysisFuture = 
+            aiAnalysisOrchestrator.analyzeUserQuery(currentFailureInfo, messageText);
+        
+        // Handle the analysis result
+        analysisFuture.thenAccept(result -> {
+            LOG.info("=== USER QUERY ANALYSIS RESULT RECEIVED ===");
+            if (result != null) {
+                LOG.info("AI Analysis Result:");
+                LOG.info("  - Service Type: " + result.getServiceType());
+                LOG.info("  - Timestamp: " + result.getTimestamp());
+                LOG.info("  - Analysis Length: " + (result.getAnalysis() != null ? result.getAnalysis().length() : 0) + " characters");
+                
+                if (result.getAnalysis() != null && !result.getAnalysis().trim().isEmpty()) {
+                    LOG.info("Adding AI response to chat");
+                    addMessage(new ChatMessage(ChatMessage.Role.AI, result.getAnalysis(), 
+                                            System.currentTimeMillis(), null, null));
+                } else {
+                    LOG.warn("AI analysis returned empty content");
+                    addMessage(new ChatMessage(ChatMessage.Role.AI, 
+                        "AI analysis completed but returned no content.", 
+                        System.currentTimeMillis(), null, null));
+                }
+            } else {
+                LOG.warn("AI analysis returned null result");
+                addMessage(new ChatMessage(ChatMessage.Role.AI, 
+                    "AI analysis returned no result.", 
+                    System.currentTimeMillis(), null, null));
+            }
+        }).exceptionally(throwable -> {
+            LOG.error("=== USER QUERY ANALYSIS FAILED ===");
+            LOG.error("Error during AI analysis: " + throwable.getMessage(), throwable);
+            String errorMessage = "AI analysis failed: " + throwable.getMessage();
+            addMessage(new ChatMessage(ChatMessage.Role.AI, errorMessage, 
+                                    System.currentTimeMillis(), null, null));
+            return null;
+        });
+        
+        LOG.info("=== USER MESSAGE HANDLING COMPLETED ===");
     }
 
     /**
@@ -552,6 +634,11 @@ public class TriagePanelView {
         LOG.info("Failure: " + failureInfo.getScenarioName());
         LOG.info("Failed Step: " + failureInfo.getFailedStepText());
         LOG.info("=== END TRIAGE PANEL: PROCESSING FIRST FAILURE ===");
+        
+        // Store failure context for future user queries
+        this.currentFailureInfo = failureInfo;
+        aiAnalysisOrchestrator.storeFailureContext(failureInfo);
+        
         clearChat();
         generateAndDisplayPrompt(failureInfo);
         return true;
@@ -585,17 +672,41 @@ public class TriagePanelView {
         }
         
         try {
-            LOG.debug("Generating " + currentAnalysisMode.toLowerCase() + " prompt for failure");
-            String prompt;
+            LOG.debug("Generating " + currentAnalysisMode.toLowerCase() + " analysis for failure");
             
+            // Generate the prompt for display in "AI thinking" section
+            String prompt;
             if (ANALYSIS_MODE_OVERVIEW.equals(currentAnalysisMode)) {
-                prompt = promptService.generateSummaryPrompt(failureInfo);
+                prompt = aiAnalysisOrchestrator.getInitialOrchestrator().generateSummaryPrompt(failureInfo);
             } else {
-                prompt = promptService.generateDetailedPrompt(failureInfo);
+                prompt = aiAnalysisOrchestrator.getInitialOrchestrator().generateDetailedPrompt(failureInfo);
             }
             
-            // Create a special AI message with the prompt in the collapsible section AND failure info
+            // Show the prompt in collapsible "AI thinking" section
             addMessage(new ChatMessage(ChatMessage.Role.AI, "", System.currentTimeMillis(), prompt, failureInfo));
+            
+            // Send the prompt to AI only ONCE and use the result
+            CompletableFuture<AIAnalysisResult> analysisFuture = 
+                aiAnalysisOrchestrator.getRequestHandler().sendRequest(prompt, currentAnalysisMode);
+            
+            // Handle the analysis result
+            analysisFuture.thenAccept(result -> {
+                if (result != null && result.getAnalysis() != null && !result.getAnalysis().trim().isEmpty()) {
+                    // Create a separate AI message with just the analysis result
+                    addMessage(new ChatMessage(ChatMessage.Role.AI, result.getAnalysis(), 
+                                            System.currentTimeMillis(), null, null));
+                } else {
+                    addMessage(new ChatMessage(ChatMessage.Role.AI, 
+                        "AI analysis completed but returned no content.", 
+                        System.currentTimeMillis(), null, null));
+                }
+            }).exceptionally(throwable -> {
+                LOG.error("Error during initial failure analysis: " + throwable.getMessage(), throwable);
+                String errorMessage = ERROR_GENERATING_PROMPT_PREFIX + throwable.getMessage();
+                addMessage(new ChatMessage(ChatMessage.Role.AI, errorMessage, 
+                                        System.currentTimeMillis(), null, null));
+                return null;
+            });
             
         } catch (Exception e) {
             LOG.error("Error generating prompt: " + e.getMessage(), e);
@@ -607,6 +718,9 @@ public class TriagePanelView {
     /**
      * Displays an AI analysis result in the chat interface.
      * This method is called when AI analysis completes successfully.
+     * 
+     * NOTE: This method is now deprecated in favor of direct orchestrator integration.
+     * The TriagePanelView now handles analysis results directly through the orchestrator.
      *
      * @param result The AI analysis result to display
      */
@@ -623,7 +737,7 @@ public class TriagePanelView {
             return;
         }
         
-        LOG.info("Displaying AI analysis result");
+        LOG.info("Displaying AI analysis result via legacy method");
         
         // Ensure we're on the EDT
         if (!SwingUtilities.isEventDispatchThread()) {
@@ -688,6 +802,45 @@ public class TriagePanelView {
      */
     public JComponent getContent() {
         return mainPanel;
+    }
+    
+    /**
+     * Gets the last 3 user queries from chat history for logging purposes.
+     * This helps verify that the sliding window context is working correctly.
+     *
+     * @return List of the last 3 user queries, or empty list if none available
+     */
+    private List<String> getLastThreeUserQueries() {
+        List<String> recentQueries = new ArrayList<>();
+        try {
+            ChatHistoryService chatHistoryService = project.getService(ChatHistoryService.class);
+            if (chatHistoryService != null) {
+                // Get the last 3 user queries from chat history
+                int queryCount = chatHistoryService.getUserQueryCount();
+                LOG.info("Total user queries in history: " + queryCount);
+                
+                // For now, we'll log the query count since the ChatHistoryService doesn't expose individual queries
+                // In a future enhancement, we could add a method to get the actual query content
+                if (queryCount > 0) {
+                    recentQueries.add("Last " + Math.min(3, queryCount) + " user queries available in chat history");
+                }
+            }
+        } catch (Exception e) {
+            LOG.warn("Error accessing chat history for recent queries: " + e.getMessage());
+        }
+        return recentQueries;
+    }
+    
+    /**
+     * Shuts down the orchestrator and cleans up resources.
+     * This method should be called when the panel is being disposed.
+     */
+    public void shutdown() {
+        LOG.info("Shutting down TriagePanelView");
+        if (aiAnalysisOrchestrator != null) {
+            aiAnalysisOrchestrator.shutdown();
+        }
+        LOG.info("TriagePanelView shutdown completed");
     }
 
 

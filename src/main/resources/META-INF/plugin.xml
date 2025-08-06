@@ -29,8 +29,9 @@
         <!-- Services -->
         <projectService serviceImplementation="com.trace.ai.services.AINetworkService"/>
         <applicationService serviceImplementation="com.trace.ai.services.AIModelService"/>
+        <projectService serviceImplementation="com.trace.ai.services.ChatHistoryService"/>
 
-        <applicationService serviceImplementation="com.trace.ai.prompts.LocalPromptGenerationService"/>
+        <applicationService serviceImplementation="com.trace.ai.prompts.InitialPromptFailureAnalysisService"/>
         <applicationService serviceImplementation="com.trace.ai.configuration.AISettings"/>
     </extensions>
 

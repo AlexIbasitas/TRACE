@@ -5,8 +5,7 @@ import org.slf4j.LoggerFactory;
 import com.intellij.openapi.project.Project;
 import com.trace.ai.models.AIAnalysisResult;
 import com.trace.ai.models.AIModel;
-import com.trace.ai.prompts.LocalPromptGenerationService;
-import com.trace.ai.prompts.PromptGenerationService;
+import com.trace.ai.prompts.InitialPromptFailureAnalysisService;
 import com.trace.ai.services.providers.AIServiceProvider;
 import com.trace.test.models.FailureInfo;
 import com.trace.security.SecureAPIKeyManager;
@@ -50,7 +49,7 @@ public final class AINetworkService {
     
     // Services
     private final Project project;
-    private final PromptGenerationService promptService;
+    private final InitialPromptFailureAnalysisService promptService;
     
     /**
      * Constructor for AINetworkService.
@@ -64,7 +63,7 @@ public final class AINetworkService {
         }
         
         this.project = project;
-        this.promptService = new LocalPromptGenerationService();
+        this.promptService = new InitialPromptFailureAnalysisService();
     }
     
     /**
