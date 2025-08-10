@@ -39,7 +39,7 @@
 **Resolution Steps**:
 1. Mock network calls
 2. Use local stub service
-3. Add fallback assumptions  [oai_citation:37‡Eclipse Foundation](https://www.eclipse.org/forums/index.php/t/156167/?utm_source=chatgpt.com) [oai_citation:38‡Testsigma](https://testsigma.com/blog/exception-in-selenium/?utm_source=chatgpt.com) [oai_citation:39‡Better Homes & Gardens](https://www.bhg.com/cucumbers-are-yellow-7555779?utm_source=chatgpt.com)
+3. Add fallback assumptions
 ---
 ### Title: External Service Rate Limit (General)
 **Summary**: Test fails due to throttling.

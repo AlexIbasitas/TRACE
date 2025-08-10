@@ -124,6 +124,16 @@ public final class AISettings implements PersistentStateComponent<AISettings.Sta
         LOG.info("Setting AI enabled: " + enabled);
         myState.aiEnabled = enabled;
     }
+
+    // New, clearer naming for TRACE power
+    public boolean isTraceEnabled() {
+        return myState.aiEnabled;
+    }
+
+    public void setTraceEnabled(boolean enabled) {
+        LOG.info("Setting TRACE enabled: " + enabled);
+        myState.aiEnabled = enabled;
+    }
     
     /**
      * Checks if the user has given consent for AI features.
@@ -219,6 +229,16 @@ public final class AISettings implements PersistentStateComponent<AISettings.Sta
      */
     public void setAutoAnalyzeEnabled(boolean enabled) {
         LOG.info("Setting auto-analyze enabled: " + enabled);
+        myState.autoAnalyzeEnabled = enabled;
+    }
+
+    // New, clearer naming for AI analysis gate
+    public boolean isAIAnalysisEnabled() {
+        return myState.autoAnalyzeEnabled;
+    }
+
+    public void setAIAnalysisEnabled(boolean enabled) {
+        LOG.info("Setting AI Analysis enabled: " + enabled);
         myState.autoAnalyzeEnabled = enabled;
     }
     

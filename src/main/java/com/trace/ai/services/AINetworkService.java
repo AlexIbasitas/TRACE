@@ -85,7 +85,7 @@ public final class AINetworkService {
         
         // Check if TRACE is enabled (power button) - if not, return early
         AISettings aiSettings = AISettings.getInstance();
-        if (!aiSettings.isAIEnabled()) {
+        if (!aiSettings.isTraceEnabled()) {
             LOG.info("TRACE is disabled (power off) - skipping AI analysis");
             return CompletableFuture.completedFuture(
                 new AIAnalysisResult(
@@ -99,7 +99,7 @@ public final class AINetworkService {
         }
         
         // Check if AI analysis is enabled
-        if (!aiSettings.isAutoAnalyzeEnabled()) {
+        if (!aiSettings.isAIAnalysisEnabled()) {
             LOG.info("AI analysis is disabled - skipping AI model calls");
             return CompletableFuture.completedFuture(
                 new AIAnalysisResult(

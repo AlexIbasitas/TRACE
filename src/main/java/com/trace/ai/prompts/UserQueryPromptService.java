@@ -62,7 +62,7 @@ public final class UserQueryPromptService {
         
         // Check if AI is enabled
         AISettings aiSettings = AISettings.getInstance();
-        if (!aiSettings.isAIEnabled()) {
+        if (!aiSettings.isTraceEnabled()) {
             LOG.info("Skipping user query prompt generation - AI is disabled");
             return "AI Analysis is currently disabled. Enable AI in the header to use AI-powered features.";
         }
@@ -71,26 +71,21 @@ public final class UserQueryPromptService {
         
         StringBuilder prompt = new StringBuilder();
         
-        // Clear instruction with specific role and context
-        prompt.append("### Instruction ###\n");
-        prompt.append("You are an expert test automation engineer analyzing a user's follow-up question ");
-        prompt.append("about a test failure. Use the provided context to answer the user's specific query.\n\n");
+        // Clear role and task definition
+        prompt.append("### Role ###\n");
+        prompt.append("You are an expert test automation engineer analyzing user questions about test failures.\n\n");
         
-        prompt.append("**Your Task:**\n");
-        prompt.append("1. Understand the user's specific question or request\n");
-        prompt.append("2. Use the failure context and conversation history to provide a relevant answer\n");
-        prompt.append("3. Be specific and actionable in your response\n");
-        prompt.append("4. If the user asks for clarification, provide it\n");
-        prompt.append("5. If the user asks for next steps, provide concrete recommendations\n\n");
+        prompt.append("### Task ###\n");
+        prompt.append("Answer the user's specific question about the test failure using the provided context.\n\n");
         
         // Original failure context (always preserved)
-        prompt.append("### Original Test Failure Context ###\n");
+        prompt.append("### Test Failure Context ###\n");
         appendFailureContext(prompt, failureInfo);
         
         // Chat history context (if available)
         String chatHistoryContext = chatHistoryService.buildContextString(userQuery);
         if (chatHistoryContext != null && !chatHistoryContext.trim().isEmpty()) {
-            prompt.append("### Conversation History ###\n");
+            prompt.append("### Recent Conversation ###\n");
             prompt.append(chatHistoryContext).append("\n");
         }
         
@@ -104,14 +99,12 @@ public final class UserQueryPromptService {
         // }
         
         // User's specific query (placed at the end per Gemini best practices)
-        prompt.append("### User Query ###\n");
+        prompt.append("### Current Query ###\n");
         prompt.append(userQuery.trim()).append("\n\n");
         
-        // Output format guidance
+        // Response format guidance
         prompt.append("### Response Guidelines ###\n");
-        prompt.append("Provide a clear, specific answer to the user's question. ");
-        prompt.append("If the question requires additional context, ask for clarification. ");
-        prompt.append("If the question is about next steps, provide actionable recommendations.\n\n");
+        prompt.append("Provide a clear, specific answer to the user's question. Be actionable and relevant.\n\n");
         
         // Add custom rule if present
         String customRule = AISettings.getInstance().getCustomRule();

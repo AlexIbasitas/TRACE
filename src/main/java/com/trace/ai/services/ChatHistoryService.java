@@ -203,9 +203,8 @@ public final class ChatHistoryService implements PersistentStateComponent<ChatHi
             contextBuilder.append("\n");
         }
         
-        // Add the current query at the end (Gemini best practice)
-        contextBuilder.append("### Current Query ###\n");
-        contextBuilder.append(currentQuery.trim());
+        // Note: Current query is added by the calling service (UserQueryPromptService)
+        // This prevents duplication of the query in the final prompt
         
         String contextString = contextBuilder.toString();
         LOG.debug("Built context string with " + recentQueries.size() + " user queries and " + 

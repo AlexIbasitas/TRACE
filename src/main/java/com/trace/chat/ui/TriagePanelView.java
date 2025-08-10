@@ -11,6 +11,7 @@ import com.trace.ai.configuration.AISettings;
 import com.trace.ai.models.AIAnalysisResult;
 import com.trace.ai.services.AIAnalysisOrchestrator;
 import com.trace.ai.services.ChatHistoryService;
+import com.trace.ai.services.AnalysisMode;
 import com.trace.ai.prompts.InitialPromptFailureAnalysisService;
 import com.trace.ai.ui.SettingsPanel;
 import com.trace.chat.components.ChatMessage;
@@ -140,14 +141,28 @@ public class TriagePanelView {
     
     /**
      * Called when a new test run starts.
-     * Clears the current test run tracking to allow analysis of the first failure.
+     * Clears the current test run tracking and chat history to allow analysis of the first failure.
      * This method is called by the CucumberTestExecutionListener when onTestingStarted() fires.
      */
     public void onTestRunStarted() {
         LOG.info("=== TRIAGE PANEL: TEST RUN STARTED ===");
         LOG.info("Previous Test Run ID: " + currentTestRunId);
-        LOG.info("Clearing test run tracking");
+        LOG.info("Clearing test run tracking and chat history");
+        
+        // Clear test run tracking
         currentTestRunId = null;
+        
+        // Clear chat history to prevent context from previous test runs
+        try {
+            ChatHistoryService chatHistoryService = project.getService(ChatHistoryService.class);
+            if (chatHistoryService != null) {
+                chatHistoryService.clearHistory();
+                LOG.info("Chat history cleared for new test run");
+            }
+        } catch (Exception e) {
+            LOG.warn("Error clearing chat history: " + e.getMessage());
+        }
+        
         LOG.info("=== END TRIAGE PANEL: TEST RUN STARTED ===");
     }
     
@@ -398,12 +413,39 @@ public class TriagePanelView {
         
         AISettings aiSettings = AISettings.getInstance();
         
-        // Check if TRACE is enabled (power button) - if not, do nothing at all
-        if (!aiSettings.isAIEnabled()) {
-            LOG.info("TRACE is disabled (power off) - skipping all processing");
-            return; // Complete silence - no messages from TRACE
+        // TRACE gating: If TRACE is OFF, notify user and stop
+        if (!aiSettings.isTraceEnabled()) {
+            LOG.info("TRACE is OFF - notifying user and skipping all processing");
+            addMessage(new ChatMessage(ChatMessage.Role.AI,
+                "TRACE is OFF. Turn TRACE ON to enable context extraction and AI features.",
+                System.currentTimeMillis(), null, null));
+            return;
         }
-        
+
+        // With TRACE ON and Enable AI Analysis OFF: build prompt preview only (no docs, no AI call)
+        if (!aiSettings.isAIAnalysisEnabled()) {
+            LOG.info("Enable AI Analysis is OFF - generating prompt preview without RAG or AI call");
+            if (currentFailureInfo == null) {
+                addMessage(new ChatMessage(ChatMessage.Role.AI,
+                    "No test failure context available. Please run a test first to establish context for prompt preview.",
+                    System.currentTimeMillis(), null, null));
+                return;
+            }
+            ChatHistoryService chatHistoryService = project.getService(ChatHistoryService.class);
+            if (chatHistoryService != null) {
+                chatHistoryService.addUserQuery(messageText);
+            }
+            // Build prompt preview only; do not attach it to Show AI thinking for user messages
+            aiAnalysisOrchestrator.getUserQueryOrchestrator()
+                .generatePrompt(currentFailureInfo, messageText, chatHistoryService);
+            addMessage(new ChatMessage(
+                ChatMessage.Role.AI,
+                "Enable AI Analysis is OFF. Turn it ON to run AI analysis.",
+                System.currentTimeMillis(), null, null));
+            return;
+        }
+
+        // TRACE ON and Enable AI Analysis ON: proceed
         if (!aiSettings.isConfigured()) {
             // AI is not configured, show configuration guidance
             String configurationStatus = aiSettings.getConfigurationStatus();
@@ -412,16 +454,6 @@ public class TriagePanelView {
             LOG.info("AI not configured - showing configuration guidance");
             addMessage(new ChatMessage(ChatMessage.Role.AI, guidanceMessage, 
                                     System.currentTimeMillis(), null, null));
-            return;
-        }
-        
-        // TRACE is enabled, check if AI analysis is enabled
-        if (!aiSettings.isAutoAnalyzeEnabled()) {
-            // Only show local prompt generation, no AI model calls
-            LOG.info("AI analysis is disabled - showing only local prompt generation");
-            addMessage(new ChatMessage(ChatMessage.Role.AI, 
-                "AI Analysis is disabled. Local prompt generation is available.", 
-                System.currentTimeMillis(), null, null));
             return;
         }
         
@@ -468,10 +500,10 @@ public class TriagePanelView {
             LOG.warn("Error accessing ChatHistoryService: " + e.getMessage());
         }
         
-        // Process the user query with the orchestrator
-        LOG.info("Calling aiAnalysisOrchestrator.analyzeUserQuery()");
+        // Process the user query with enhanced analysis and RAG
+        LOG.info("Calling aiAnalysisOrchestrator.analyzeUserQueryWithDocuments()");
         CompletableFuture<AIAnalysisResult> analysisFuture = 
-            aiAnalysisOrchestrator.analyzeUserQuery(currentFailureInfo, messageText);
+            aiAnalysisOrchestrator.analyzeUserQueryWithDocuments(currentFailureInfo, messageText);
         
         // Handle the analysis result
         analysisFuture.thenAccept(result -> {
@@ -481,9 +513,11 @@ public class TriagePanelView {
                 LOG.info("  - Service Type: " + result.getServiceType());
                 LOG.info("  - Timestamp: " + result.getTimestamp());
                 LOG.info("  - Analysis Length: " + (result.getAnalysis() != null ? result.getAnalysis().length() : 0) + " characters");
+                LOG.info("  - Has Prompt: " + result.hasPrompt());
                 
                 if (result.getAnalysis() != null && !result.getAnalysis().trim().isEmpty()) {
                     LOG.info("Adding AI response to chat");
+                    // Do not attach Show AI thinking for user query responses
                     addMessage(new ChatMessage(ChatMessage.Role.AI, result.getAnalysis(), 
                                             System.currentTimeMillis(), null, null));
                 } else {
@@ -666,7 +700,7 @@ public class TriagePanelView {
     private void generateAndDisplayPrompt(FailureInfo failureInfo) {
         // Check if TRACE is enabled (power button) - if not, do nothing at all
         AISettings aiSettings = AISettings.getInstance();
-        if (!aiSettings.isAIEnabled()) {
+        if (!aiSettings.isTraceEnabled()) {
             LOG.info("TRACE is disabled (power off) - skipping prompt generation");
             return; // Complete silence - no messages from TRACE
         }
@@ -674,39 +708,102 @@ public class TriagePanelView {
         try {
             LOG.debug("Generating " + currentAnalysisMode.toLowerCase() + " analysis for failure");
             
-            // Generate the prompt for display in "AI thinking" section
-            String prompt;
-            if (ANALYSIS_MODE_OVERVIEW.equals(currentAnalysisMode)) {
-                prompt = aiAnalysisOrchestrator.getInitialOrchestrator().generateSummaryPrompt(failureInfo);
-            } else {
-                prompt = aiAnalysisOrchestrator.getInitialOrchestrator().generateDetailedPrompt(failureInfo);
-            }
-            
-            // Show the prompt in collapsible "AI thinking" section
-            addMessage(new ChatMessage(ChatMessage.Role.AI, "", System.currentTimeMillis(), prompt, failureInfo));
-            
-            // Send the prompt to AI only ONCE and use the result
-            CompletableFuture<AIAnalysisResult> analysisFuture = 
-                aiAnalysisOrchestrator.getRequestHandler().sendRequest(prompt, currentAnalysisMode);
-            
-            // Handle the analysis result
-            analysisFuture.thenAccept(result -> {
-                if (result != null && result.getAnalysis() != null && !result.getAnalysis().trim().isEmpty()) {
-                    // Create a separate AI message with just the analysis result
-                    addMessage(new ChatMessage(ChatMessage.Role.AI, result.getAnalysis(), 
+            // Check if AI analysis is enabled
+            if (aiSettings.isTraceEnabled()) {
+                LOG.info("=== DEBUG: Using enhanced analysis with RAG (AI enabled) ===");
+                
+                // Show the test failure context immediately (scenario name and failed step)
+                addMessage(new ChatMessage(ChatMessage.Role.AI, "", System.currentTimeMillis(), null, failureInfo));
+                
+                // Use enhanced analysis with RAG for both overview and full analysis modes
+                CompletableFuture<AIAnalysisResult> analysisFuture = 
+                    aiAnalysisOrchestrator.analyzeInitialFailureWithDocuments(
+                        failureInfo,
+                        ANALYSIS_MODE_OVERVIEW.equals(currentAnalysisMode) ? AnalysisMode.OVERVIEW : AnalysisMode.FULL
+                    );
+                
+                // Handle the analysis result
+                analysisFuture.thenAccept(result -> {
+                    if (result != null && result.getAnalysis() != null && !result.getAnalysis().trim().isEmpty()) {
+                        // Update the first message with the enhanced prompt in "Show AI thinking"
+                        String aiThinking = result.hasPrompt() ? result.getPrompt() : null;
+                        if (aiThinking != null && !chatHistory.isEmpty()) {
+                            // Update the first message (failure context) with the AI thinking content
+                            ChatMessage firstMessage = chatHistory.get(0);
+                            ChatMessage updatedMessage = new ChatMessage(
+                                firstMessage.getRole(),
+                                firstMessage.getText(),
+                                firstMessage.getTimestamp(),
+                                aiThinking,
+                                firstMessage.getFailureInfo()
+                            );
+                            chatHistory.set(0, updatedMessage);
+                            
+                            // Update the UI
+                            messageContainer.removeAll();
+                            for (ChatMessage message : chatHistory) {
+                                addMessageToUI(message);
+                            }
+                            messageContainer.add(Box.createVerticalGlue());
+                            scrollToBottom();
+                        }
+                        
+                        // Create a separate AI message with just the analysis result
+                        addMessage(new ChatMessage(ChatMessage.Role.AI, result.getAnalysis(),
+                                                System.currentTimeMillis(), null, null));
+                    } else {
+                        addMessage(new ChatMessage(ChatMessage.Role.AI, 
+                            "AI analysis completed but returned no content.", 
+                            System.currentTimeMillis(), null, null));
+                    }
+                }).exceptionally(throwable -> {
+                    LOG.error("Error during enhanced failure analysis: " + throwable.getMessage(), throwable);
+                    String errorMessage = ERROR_GENERATING_PROMPT_PREFIX + throwable.getMessage();
+                    addMessage(new ChatMessage(ChatMessage.Role.AI, errorMessage, 
                                             System.currentTimeMillis(), null, null));
+                    return null;
+                });
+                
+            } else {
+                LOG.info("=== DEBUG: Using basic prompt generation (AI disabled) ===");
+                
+                // Show the test failure context immediately (scenario name and failed step)
+                addMessage(new ChatMessage(ChatMessage.Role.AI, "", System.currentTimeMillis(), null, failureInfo));
+                
+                // Generate basic prompt for display only (no AI analysis)
+                String prompt;
+                if (ANALYSIS_MODE_OVERVIEW.equals(currentAnalysisMode)) {
+                    prompt = aiAnalysisOrchestrator.getInitialOrchestrator().generateSummaryPrompt(failureInfo);
                 } else {
-                    addMessage(new ChatMessage(ChatMessage.Role.AI, 
-                        "AI analysis completed but returned no content.", 
-                        System.currentTimeMillis(), null, null));
+                    prompt = aiAnalysisOrchestrator.getInitialOrchestrator().generateDetailedPrompt(failureInfo);
                 }
-            }).exceptionally(throwable -> {
-                LOG.error("Error during initial failure analysis: " + throwable.getMessage(), throwable);
-                String errorMessage = ERROR_GENERATING_PROMPT_PREFIX + throwable.getMessage();
-                addMessage(new ChatMessage(ChatMessage.Role.AI, errorMessage, 
-                                        System.currentTimeMillis(), null, null));
-                return null;
-            });
+                
+                // Update the first message with the prompt in "Show AI thinking" section
+                if (!chatHistory.isEmpty()) {
+                    ChatMessage firstMessage = chatHistory.get(0);
+                    ChatMessage updatedMessage = new ChatMessage(
+                        firstMessage.getRole(),
+                        firstMessage.getText(),
+                        firstMessage.getTimestamp(),
+                        prompt,
+                        firstMessage.getFailureInfo()
+                    );
+                    chatHistory.set(0, updatedMessage);
+                    
+                    // Update the UI
+                    messageContainer.removeAll();
+                    for (ChatMessage message : chatHistory) {
+                        addMessageToUI(message);
+                    }
+                    messageContainer.add(Box.createVerticalGlue());
+                    scrollToBottom();
+                }
+                
+                // No AI analysis - just show the prompt
+                addMessage(new ChatMessage(ChatMessage.Role.AI, 
+                    "AI analysis is disabled. Review the prompt above for manual analysis.", 
+                    System.currentTimeMillis(), null, null));
+            }
             
         } catch (Exception e) {
             LOG.error("Error generating prompt: " + e.getMessage(), e);
@@ -948,8 +1045,8 @@ public class TriagePanelView {
         // Add action listener to toggle AI state
         aiToggleButton.addActionListener(e -> {
             AISettings aiSettings = AISettings.getInstance();
-            boolean currentState = aiSettings.isAIEnabled();
-            aiSettings.setAIEnabled(!currentState);
+        boolean currentState = aiSettings.isTraceEnabled();
+        aiSettings.setTraceEnabled(!currentState);
             updateAIToggleButtonAppearance(aiToggleButton);
             LOG.info("AI toggle clicked - new state: " + (!currentState));
         });
@@ -1109,7 +1206,7 @@ public class TriagePanelView {
      */
     private void updateAIToggleButtonAppearance(JButton button) {
         AISettings aiSettings = AISettings.getInstance();
-        boolean aiEnabled = aiSettings.isAIEnabled();
+        boolean aiEnabled = aiSettings.isTraceEnabled();
         
         LOG.info("Updating TRACE toggle button appearance - TRACE enabled: " + aiEnabled);
         

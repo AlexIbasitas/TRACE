@@ -82,40 +82,42 @@ public final class AIRequestHandler {
             throw new IllegalArgumentException("Prompt cannot be null or empty");
         }
         
-        // Check if TRACE is enabled (power button) - if not, return early
+        // Gate on AI Analysis (auto analyze) - do not check TRACE power here
         AISettings aiSettings = AISettings.getInstance();
-        if (!aiSettings.isAIEnabled()) {
-            LOG.info("TRACE is disabled (power off) - skipping AI analysis");
+        if (!aiSettings.isAutoAnalyzeEnabled()) {
+            LOG.info("AI analysis is disabled (auto-analyze OFF) - skipping network call");
             return CompletableFuture.completedFuture(
                 new AIAnalysisResult(
-                    "TRACE is currently disabled. Enable TRACE to use AI analysis features.",
-                    AIServiceType.OPENAI, // Default service type
+                    "AI analysis is disabled. Enable AI Analysis to run model calls.",
+                    AIServiceType.OPENAI,
                     "disabled",
                     System.currentTimeMillis(),
                     0L
                 )
             );
         }
-        
+
         LOG.info("Sending AI analysis request with mode: " + analysisMode);
         
         try {
-            // Get the configured AI service type
-            final AIServiceType serviceType = aiSettings.getPreferredAIService();
-            if (serviceType == null) {
-                LOG.warn("No AI service type configured, using default");
+            // Route by selected default model's service type
+            AIModelService modelService = AIModelService.getInstance();
+            AIModel defaultModel = modelService.getDefaultModel();
+            if (defaultModel == null) {
+                LOG.warn("No default model available");
                 return CompletableFuture.completedFuture(
                     new AIAnalysisResult(
-                        "No AI service type configured. Please configure your AI service in the settings.",
+                        "No default model is configured. Set a default model in Settings.",
                         AIServiceType.OPENAI,
-                        "error",
+                        "disabled",
                         System.currentTimeMillis(),
                         0L
                     )
                 );
             }
-            
-            // Validate API key
+
+            final AIServiceType serviceType = defaultModel.getServiceType();
+            // Validate API key for routed service
             String apiKey = SecureAPIKeyManager.getAPIKey(serviceType);
             if (apiKey == null || apiKey.trim().isEmpty()) {
                 String errorMessage = "API key not configured for " + serviceType.name() + ". Please configure your API key in the settings.";
@@ -138,22 +140,6 @@ public final class AIRequestHandler {
                 return CompletableFuture.completedFuture(
                     new AIAnalysisResult(
                         "No AI provider available for " + serviceType.name(),
-                        serviceType,
-                        "error",
-                        System.currentTimeMillis(),
-                        0L
-                    )
-                );
-            }
-            
-            // Get the default model
-            AIModelService modelService = AIModelService.getInstance();
-            AIModel defaultModel = modelService.getDefaultModel();
-            if (defaultModel == null) {
-                LOG.error("No default model available for service: " + serviceType);
-                return CompletableFuture.completedFuture(
-                    new AIAnalysisResult(
-                        "No default model available for " + serviceType.name(),
                         serviceType,
                         "error",
                         System.currentTimeMillis(),

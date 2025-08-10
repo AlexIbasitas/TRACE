@@ -62,11 +62,11 @@ public class AISettingsUnitTest {
     @Test
     public void shouldInitializeWithDefaultValues() {
         // Verify default values
-        assertFalse(aiSettings.isAIEnabled(), "AI should be disabled by default");
+        assertFalse(aiSettings.isTraceEnabled(), "TRACE should be disabled by default");
         assertFalse(aiSettings.hasUserConsent(), "User consent should be false by default");
         assertNull(aiSettings.getConsentDate(), "Consent date should be null by default");
         assertEquals(AIServiceType.OPENAI, aiSettings.getPreferredAIService(), "Default AI service should be OpenAI");
-        assertTrue(aiSettings.isAutoAnalyzeEnabled(), "Auto-analysis should be enabled by default");
+        assertTrue(aiSettings.isAIAnalysisEnabled(), "AI Analysis should be enabled by default");
         assertTrue(aiSettings.isShowConfidenceScores(), "Confidence scores should be shown by default");
         assertTrue(aiSettings.isPersistChatHistory(), "Chat history should be persisted by default");
         assertEquals(50, aiSettings.getMaxChatHistorySize(), "Default max history size should be 50");
@@ -76,12 +76,12 @@ public class AISettingsUnitTest {
     @Test
     public void shouldManageAIEnabledState() {
         // Test setting AI enabled
-        aiSettings.setAIEnabled(true);
-        assertTrue(aiSettings.isAIEnabled(), "AI should be enabled");
+        aiSettings.setTraceEnabled(true);
+        assertTrue(aiSettings.isTraceEnabled(), "TRACE should be enabled");
         
         // Test setting AI disabled
-        aiSettings.setAIEnabled(false);
-        assertFalse(aiSettings.isAIEnabled(), "AI should be disabled");
+        aiSettings.setTraceEnabled(false);
+        assertFalse(aiSettings.isTraceEnabled(), "TRACE should be disabled");
     }
     
     @Test
@@ -123,12 +123,12 @@ public class AISettingsUnitTest {
     @Test
     public void shouldManageAutoAnalysisSetting() {
         // Test enabling auto-analysis
-        aiSettings.setAutoAnalyzeEnabled(true);
-        assertTrue(aiSettings.isAutoAnalyzeEnabled(), "Auto-analysis should be enabled");
+        aiSettings.setAIAnalysisEnabled(true);
+        assertTrue(aiSettings.isAIAnalysisEnabled(), "AI Analysis should be enabled");
         
         // Test disabling auto-analysis
-        aiSettings.setAutoAnalyzeEnabled(false);
-        assertFalse(aiSettings.isAutoAnalyzeEnabled(), "Auto-analysis should be disabled");
+        aiSettings.setAIAnalysisEnabled(false);
+        assertFalse(aiSettings.isAIAnalysisEnabled(), "AI Analysis should be disabled");
     }
     
     @Test
@@ -182,12 +182,12 @@ public class AISettingsUnitTest {
     @Test
     public void shouldValidateConfigurationStatusCorrectly() {
         // Test when AI is disabled
-        aiSettings.setAIEnabled(false);
+        aiSettings.setTraceEnabled(false);
         assertFalse(aiSettings.isConfigured(), "Should not be configured when AI is disabled");
         assertEquals("AI features are disabled", aiSettings.getConfigurationStatus());
         
         // Test when AI is enabled but no consent
-        aiSettings.setAIEnabled(true);
+        aiSettings.setTraceEnabled(true);
         aiSettings.setUserConsentGiven(false);
         assertFalse(aiSettings.isConfigured(), "Should not be configured without consent");
         assertEquals("User consent required", aiSettings.getConfigurationStatus());
@@ -207,21 +207,21 @@ public class AISettingsUnitTest {
     @Test
     public void shouldResetToDefaultsCorrectly() {
         // Set some custom values
-        aiSettings.setAIEnabled(true);
+        aiSettings.setTraceEnabled(true);
         aiSettings.setUserConsentGiven(true);
         aiSettings.setPreferredAIService(AIServiceType.GEMINI);
-        aiSettings.setAutoAnalyzeEnabled(false);
+        aiSettings.setAIAnalysisEnabled(false);
         aiSettings.setMaxChatHistorySize(100);
         
         // Reset to defaults
         aiSettings.resetToDefaults();
         
         // Verify all values are back to defaults
-        assertFalse(aiSettings.isAIEnabled(), "AI should be disabled after reset");
+        assertFalse(aiSettings.isTraceEnabled(), "TRACE should be disabled after reset");
         assertFalse(aiSettings.hasUserConsent(), "User consent should be false after reset");
         assertNull(aiSettings.getConsentDate(), "Consent date should be null after reset");
         assertEquals(AIServiceType.OPENAI, aiSettings.getPreferredAIService(), "Service should be OpenAI after reset");
-        assertTrue(aiSettings.isAutoAnalyzeEnabled(), "Auto-analysis should be enabled after reset");
+        assertTrue(aiSettings.isAIAnalysisEnabled(), "AI Analysis should be enabled after reset");
         assertEquals(50, aiSettings.getMaxChatHistorySize(), "Max history size should be 50 after reset");
     }
     
@@ -250,7 +250,7 @@ public class AISettingsUnitTest {
         aiSettings.loadState(newState);
         
         // Verify values are updated
-        assertFalse(aiSettings.isAIEnabled(), "AI should be disabled after loading new state");
+        assertFalse(aiSettings.isTraceEnabled(), "TRACE should be disabled after loading new state");
         assertFalse(aiSettings.hasUserConsent(), "User consent should be false after loading new state");
         assertEquals(AIServiceType.OPENAI, aiSettings.getPreferredAIService(), "Service should be OpenAI after loading new state");
     }

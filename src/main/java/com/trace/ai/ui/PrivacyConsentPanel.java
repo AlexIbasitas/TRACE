@@ -76,7 +76,7 @@ public class PrivacyConsentPanel extends JBPanel<PrivacyConsentPanel> {
         this.onAIStateChanged = onAIStateChanged;
         
         // Initialize state tracking
-        this.originalAIEnabled = aiSettings.isAIEnabled();
+        this.originalAIEnabled = aiSettings.isAIAnalysisEnabled();
         this.originalUserConsent = aiSettings.hasUserConsent();
         
         // Create UI components
@@ -195,7 +195,7 @@ public class PrivacyConsentPanel extends JBPanel<PrivacyConsentPanel> {
         if (dialog.showAndGet()) {
             // User accepted consent
             aiSettings.setUserConsentGiven(true);
-            aiSettings.setAIEnabled(true);
+            aiSettings.setAIAnalysisEnabled(true);
             updateExplanationText();
             
             // Notify callback if provided
@@ -224,8 +224,8 @@ public class PrivacyConsentPanel extends JBPanel<PrivacyConsentPanel> {
         );
         
         if (result == Messages.YES) {
-            // User confirmed - disable AI features
-            aiSettings.setAIEnabled(false);
+            // User confirmed - disable AI analysis features
+            aiSettings.setAIAnalysisEnabled(false);
             aiSettings.setUserConsentGiven(false);
             updateExplanationText();
             
@@ -273,7 +273,7 @@ public class PrivacyConsentPanel extends JBPanel<PrivacyConsentPanel> {
     private void updateExplanationText() {
         String baseText = "The plugin examines your project to understand test context and provide better debugging suggestions. See our <a href=\"#\">Privacy Policy</a> for details.";
         
-        if (aiSettings.isAIEnabled() && aiSettings.hasUserConsent()) {
+        if (aiSettings.isAIAnalysisEnabled() && aiSettings.hasUserConsent()) {
             explanationPane.setText(
                 "AI analysis is enabled and provides debugging suggestions for test failures. " + baseText
             );
@@ -288,11 +288,11 @@ public class PrivacyConsentPanel extends JBPanel<PrivacyConsentPanel> {
      * Loads current settings from the AISettings service.
      */
     public void loadCurrentSettings() {
-        aiEnabledCheckBox.setSelected(aiSettings.isAIEnabled());
+        aiEnabledCheckBox.setSelected(aiSettings.isAIAnalysisEnabled());
         updateExplanationText();
         
         // Update original state
-        originalAIEnabled = aiSettings.isAIEnabled();
+        originalAIEnabled = aiSettings.isAIAnalysisEnabled();
         originalUserConsent = aiSettings.hasUserConsent();
     }
     

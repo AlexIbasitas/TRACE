@@ -64,6 +64,15 @@ public class DocumentDatabaseService {
     public void initializeDatabase() throws SQLException {
         LOG.info("Initializing document database");
         
+        // Explicitly load the SQLite JDBC driver
+        try {
+            Class.forName("org.sqlite.JDBC");
+            LOG.info("SQLite JDBC driver loaded successfully");
+        } catch (ClassNotFoundException e) {
+            LOG.error("Failed to load SQLite JDBC driver", e);
+            throw new SQLException("SQLite JDBC driver not found", e);
+        }
+        
         String dbPath = getDatabasePath();
         
         connection = DriverManager.getConnection("jdbc:sqlite:" + dbPath);
@@ -368,6 +377,171 @@ public class DocumentDatabaseService {
         }
     }
     
+    /**
+     * Retrieves the top N most relevant documents for a given query embedding.
+     * 
+     * <p>This method performs vector similarity search using cosine similarity
+     * to find the most relevant documents for the provided query embedding.</p>
+     * 
+     * @param queryEmbedding the query embedding to search against
+     * @param embeddingType the type of embedding to search (OPENAI or GEMINI)
+     * @param maxResults the maximum number of results to return
+     * @param similarityThreshold the minimum similarity score (0.0 to 1.0)
+     * @return list of relevant documents with their similarity scores
+     * @throws SQLException if retrieval fails
+     * @throws IllegalArgumentException if parameters are invalid
+     */
+    public List<DocumentWithSimilarity> findRelevantDocuments(float[] queryEmbedding, 
+                                                             EmbeddingType embeddingType, 
+                                                             int maxResults, 
+                                                             double similarityThreshold) throws SQLException {
+        if (queryEmbedding == null || queryEmbedding.length == 0) {
+            throw new IllegalArgumentException("Query embedding cannot be null or empty");
+        }
+        if (maxResults <= 0) {
+            throw new IllegalArgumentException("Max results must be positive");
+        }
+        if (similarityThreshold < 0.0 || similarityThreshold > 1.0) {
+            throw new IllegalArgumentException("Similarity threshold must be between 0.0 and 1.0");
+        }
+        
+        LOG.info("Starting vector similarity search with " + queryEmbedding.length + " dimensions");
+        LOG.info("Search parameters: maxResults=" + maxResults + ", threshold=" + similarityThreshold);
+        
+        dbLock.readLock().lock();
+        try {
+            String sql = buildRelevantDocumentsQuery(embeddingType);
+            
+            PreparedStatement stmt = connection.prepareStatement(sql);
+            ResultSet rs = stmt.executeQuery();
+            
+            List<DocumentWithSimilarity> documents = new ArrayList<>();
+            int totalDocumentsChecked = 0;
+            int documentsAboveThreshold = 0;
+            
+            while (rs.next()) {
+                totalDocumentsChecked++;
+                byte[] embeddingBytes = rs.getBytes(embeddingType == EmbeddingType.OPENAI ? 
+                    "openai_embedding_data" : "gemini_embedding_data");
+                
+                if (embeddingBytes != null) {
+                    float[] documentEmbedding = deserializeEmbedding(embeddingBytes);
+                    double similarity = calculateCosineSimilarity(queryEmbedding, documentEmbedding);
+                    
+                    LOG.debug("Document " + totalDocumentsChecked + " similarity: " + String.format("%.3f", similarity));
+                    
+                    if (similarity >= similarityThreshold) {
+                        documentsAboveThreshold++;
+                        DocumentWithSimilarity doc = new DocumentWithSimilarity();
+                        doc.setId(rs.getLong("id"));
+                        doc.setCategory(rs.getString("category"));
+                        doc.setTitle(rs.getString("title"));
+                        doc.setContent(rs.getString("content"));
+                        doc.setSummary(rs.getString("summary"));
+                        doc.setRootCauses(rs.getString("root_causes"));
+                        doc.setResolutionSteps(rs.getString("resolution_steps"));
+                        doc.setTags(rs.getString("tags"));
+                        doc.setSimilarityScore(similarity);
+                        
+                        documents.add(doc);
+                        
+                        LOG.info("Found relevant document: " + doc.getTitle() + " (similarity: " + 
+                                String.format("%.3f", similarity) + ")");
+                    }
+                }
+            }
+            
+            // Sort by similarity score (descending) and limit results
+            documents.sort((a, b) -> Double.compare(b.getSimilarityScore(), a.getSimilarityScore()));
+            if (documents.size() > maxResults) {
+                documents = documents.subList(0, maxResults);
+            }
+            
+            LOG.info("Vector similarity search completed:");
+            LOG.info("  - Total documents checked: " + totalDocumentsChecked);
+            LOG.info("  - Documents above threshold: " + documentsAboveThreshold);
+            LOG.info("  - Final results returned: " + documents.size());
+            
+            return documents;
+            
+        } finally {
+            dbLock.readLock().unlock();
+        }
+    }
+    
+    /**
+     * Builds the SQL query for retrieving documents with embeddings.
+     * 
+     * @param embeddingType the type of embedding to search
+     * @return the SQL query string
+     */
+    private String buildRelevantDocumentsQuery(EmbeddingType embeddingType) {
+        String embeddingColumn = embeddingType == EmbeddingType.OPENAI ? 
+            "openai_embedding_data" : "gemini_embedding_data";
+        
+        return "SELECT id, category, title, content, summary, root_causes, " +
+               "resolution_steps, tags, " + embeddingColumn + " " +
+               "FROM documents " +
+               "WHERE " + embeddingColumn + " IS NOT NULL " +
+               "ORDER BY id";
+    }
+    
+    /**
+     * Calculates cosine similarity between two embeddings.
+     * 
+     * <p>This method implements the cosine similarity formula:
+     * similarity = dot_product(a, b) / (norm(a) * norm(b))</p>
+     * 
+     * @param embedding1 the first embedding
+     * @param embedding2 the second embedding
+     * @return the cosine similarity score between 0.0 and 1.0
+     * @throws IllegalArgumentException if embeddings have different dimensions
+     */
+    public double calculateCosineSimilarity(float[] embedding1, float[] embedding2) {
+        if (embedding1.length != embedding2.length) {
+            throw new IllegalArgumentException("Embeddings must have same dimensions");
+        }
+        
+        double dotProduct = 0.0;
+        double norm1 = 0.0;
+        double norm2 = 0.0;
+        
+        for (int i = 0; i < embedding1.length; i++) {
+            dotProduct += embedding1[i] * embedding2[i];
+            norm1 += embedding1[i] * embedding1[i];
+            norm2 += embedding2[i] * embedding2[i];
+        }
+        
+        double denominator = Math.sqrt(norm1) * Math.sqrt(norm2);
+        return denominator == 0 ? 0 : dotProduct / denominator;
+    }
+    
+    /**
+     * Gets the count of documents with embeddings.
+     * 
+     * @param embeddingType the type of embedding to count
+     * @return the number of documents with embeddings
+     * @throws SQLException if query fails
+     */
+    public int getDocumentCountWithEmbeddings(EmbeddingType embeddingType) throws SQLException {
+        dbLock.readLock().lock();
+        try {
+            String embeddingColumn = embeddingType == EmbeddingType.OPENAI ? 
+                "openai_embedding_data" : "gemini_embedding_data";
+            
+            String sql = "SELECT COUNT(*) FROM documents WHERE " + embeddingColumn + " IS NOT NULL";
+            PreparedStatement stmt = connection.prepareStatement(sql);
+            ResultSet rs = stmt.executeQuery();
+            
+            if (rs.next()) {
+                return rs.getInt(1);
+            }
+            return 0;
+            
+        } finally {
+            dbLock.readLock().unlock();
+        }
+    }
 
     
     /**
@@ -469,5 +643,27 @@ public class DocumentDatabaseService {
         }
     }
     
+    /**
+     * Data class for documents with similarity scores.
+     */
+    public static class DocumentWithSimilarity extends DocumentEntry {
+        private double similarityScore;
+        
+        public double getSimilarityScore() {
+            return similarityScore;
+        }
+        
+        public void setSimilarityScore(double similarityScore) {
+            this.similarityScore = similarityScore;
+        }
+    }
+    
+    /**
+     * Enumeration for embedding types.
+     */
+    public enum EmbeddingType {
+        OPENAI,
+        GEMINI
+    }
 
 } 

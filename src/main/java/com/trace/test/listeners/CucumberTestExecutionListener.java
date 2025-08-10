@@ -591,6 +591,12 @@ public class CucumberTestExecutionListener implements SMTRunnerEventsListener {
             return;
         }
         
+        // Master kill switch: TRACE OFF → do not trigger anything
+        if (!aiSettings.isTraceEnabled()) {
+            LOG.debug("TRACE is OFF - not triggering AI analysis");
+            return;
+        }
+
         // Check if AI network service is available
         if (aiNetworkService == null) {
             LOG.warn("AI network service is null, cannot trigger AI analysis");

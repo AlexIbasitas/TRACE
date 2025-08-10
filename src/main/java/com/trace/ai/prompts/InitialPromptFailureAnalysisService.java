@@ -54,7 +54,7 @@ public final class InitialPromptFailureAnalysisService {
         
         // Check if AI is enabled
         AISettings aiSettings = AISettings.getInstance();
-        if (!aiSettings.isAIEnabled()) {
+        if (!aiSettings.isTraceEnabled()) {
             LOG.info("Skipping prompt generation - AI is disabled");
             return "AI Analysis is currently disabled. Enable AI in the header to use AI-powered features.";
         }
@@ -65,32 +65,51 @@ public final class InitialPromptFailureAnalysisService {
         prompt.append("### Instruction ###\n");
         prompt.append("You are an expert test automation engineer. Analyze this test failure and provide a concise summary.\n\n");
         
-        // Context section
-        prompt.append("### Context ###\n");
-        appendSummaryContext(prompt, failureInfo);
+        // Add custom rule if present - moved to beginning with other instructions
+        String customRule = AISettings.getInstance().getCustomRule();
+        if (customRule != null && !customRule.trim().isEmpty()) {
+            prompt.append("**Custom Instructions:**\n");
+            prompt.append(customRule.trim()).append("\n\n");
+        }
         
-        // Clear output format request with structured sections
-        prompt.append("### Output Format ###\n");
+        // Background context (identical structure to full analysis)
+        prompt.append("### Test Failure Context ###\n");
+        appendFailureContext(prompt, failureInfo);
+
+        prompt.append("### Error Details ###\n");
+        appendErrorDetails(prompt, failureInfo);
+
+        // Add Gherkin scenario context only if available
+        GherkinScenarioInfo scenarioInfo = failureInfo.getGherkinScenarioInfo();
+        if (scenarioInfo != null && scenarioInfo.getSteps() != null && !scenarioInfo.getSteps().isEmpty()) {
+            prompt.append("### Gherkin Scenario ###\n");
+            appendGherkinScenario(prompt, failureInfo);
+        }
+
+        // Add step definition context only if available
+        StepDefinitionInfo stepDefInfo = failureInfo.getStepDefinitionInfo();
+        if (stepDefInfo != null && stepDefInfo.getMethodText() != null) {
+            prompt.append("### Step Definition ###\n");
+            appendStepDefinition(prompt, failureInfo);
+        }
+
+        prompt.append("### Code Context ###\n");
+        appendCodeContext(prompt, failureInfo);
+        
+        // Clear analysis request with structured sections (kept last so docs are inserted before it)
+        prompt.append("### Analysis Request ###\n");
         prompt.append("Provide your analysis in this exact format:\n\n");
         
         prompt.append("## Failure Analysis\n");
         prompt.append("- **Failure Type:** [Assertion/Exception/Configuration/Environment/Other]\n");
-        prompt.append("- **Likely Cause:** [Product Defect/Automation Issue/Data Issue/Environment Issue/Test Design Issue]\n\n");
-        
+        prompt.append("- **Likely Cause:** [Product Defect/Automation Issue/Data Issue/Environment Issue/Test Design Issue]\n");
+        prompt.append("- **Confidence:** [High/Medium/Low] - Based on the evidence quality and your analysis\n\n");
+
         prompt.append("## Technical Details\n");
-        prompt.append("- **What Failed:** [Specific description of what the test was trying to do and what actually happened]\n");
-        prompt.append("- **Why It Failed:** [Technical explanation based on the evidence]\n\n");
-        
+        prompt.append("- **Observed vs. Expected:** [Briefly describe what the test was trying to do and what happened instead]\n\n");
+
         prompt.append("## Recommended Actions\n");
         prompt.append("- **Immediate Steps:** [Specific, actionable steps to resolve this issue]\n");
-        prompt.append("- **Test Improvements:** [How to make this test more robust and prevent similar failures]\n");
-        
-        // Add custom rule if present
-        String customRule = AISettings.getInstance().getCustomRule();
-        if (customRule != null && !customRule.trim().isEmpty()) {
-            prompt.append("\n### Custom Instructions ###\n");
-            prompt.append(customRule.trim()).append("\n");
-        }
         
         return prompt.toString();
     }
@@ -114,7 +133,7 @@ public final class InitialPromptFailureAnalysisService {
         
         // Check if TRACE is enabled (power button) - if not, return early
         AISettings aiSettings = AISettings.getInstance();
-        if (!aiSettings.isAIEnabled()) {
+        if (!aiSettings.isTraceEnabled()) {
             LOG.info("TRACE is disabled (power off) - skipping prompt generation");
             return "TRACE is currently disabled. Enable TRACE to generate analysis prompts.";
         }
@@ -149,6 +168,13 @@ public final class InitialPromptFailureAnalysisService {
         prompt.append("- Consider the relationship between the Gherkin scenario, step definition, and error details\n");
         prompt.append("- Base your conclusions on the technical evidence provided\n");
         prompt.append("- Provide confidence levels for your assessments\n\n");
+        
+        // Add custom rule if present - moved to beginning with other instructions
+        String customRule = AISettings.getInstance().getCustomRule();
+        if (customRule != null && !customRule.trim().isEmpty()) {
+            prompt.append("**Custom Instructions:**\n");
+            prompt.append(customRule.trim()).append("\n\n");
+        }
         
         // Structured context with clear sections and improved organization
         prompt.append("### Test Failure Context ###\n");
@@ -195,13 +221,6 @@ public final class InitialPromptFailureAnalysisService {
         prompt.append("- **Test Improvements:** [How to make this test more robust and prevent similar failures]\n\n");
         
         prompt.append("**Important:** Base your analysis on the evidence provided. If you need more information, specify what additional context would help.\n");
-        
-        // Add custom rule if present
-        String customRule = AISettings.getInstance().getCustomRule();
-        if (customRule != null && !customRule.trim().isEmpty()) {
-            prompt.append("\n### Custom Instructions ###\n");
-            prompt.append(customRule.trim()).append("\n");
-        }
         
         LOG.info("InitialPromptFailureAnalysisService: Final generated prompt:\n" + prompt.toString());
         return prompt.toString();

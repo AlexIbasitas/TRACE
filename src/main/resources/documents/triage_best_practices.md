@@ -16,7 +16,7 @@
 **Resolution Steps**:
 1. Rerun failed test immediately
 2. Classify as flaky if passes on rerun
-3. Mark or skip flaky tests in CI  [oai_citation:40‡Savvy Gardening](https://savvygardening.com/cucumber-plant-problems/?utm_source=chatgpt.com) [oai_citation:41‡The Spruce](https://www.thespruce.com/cucumber-problems-bacterial-wilt-1402985?utm_source=chatgpt.com) [oai_citation:42‡Selenium](https://www.selenium.dev/documentation/webdriver/troubleshooting/errors/?utm_source=chatgpt.com) [oai_citation:43‡Medium](https://medium.com/%40rostyslav.ivankiv/dont-make-these-java-unit-testing-mistakes-and-avoid-anti-patterns-3987a1b81a5c?utm_source=chatgpt.com) [oai_citation:44‡Better Homes & Gardens](https://www.bhg.com/cucumbers-are-yellow-7555779?utm_source=chatgpt.com) [oai_citation:45‡arXiv](https://arxiv.org/abs/2401.15788?utm_source=chatgpt.com)
+3. Mark or skip flaky tests in CI
 ---
 ### Title: Use of Logs and Stack Trace
 **Summary**: Logs help identify root cause quickly.
