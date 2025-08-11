@@ -9,6 +9,9 @@ import org.junit.jupiter.api.Test;
 
 import javax.swing.*;
 import java.awt.*;
+import java.awt.datatransfer.DataFlavor;
+import java.awt.datatransfer.UnsupportedFlavorException;
+import java.io.IOException;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -298,9 +301,9 @@ class MessageComponentUnitTest {
             MessageComponent component = new MessageComponent(aiMessage);
 
             // Assert
-            JTextPane textPane = findTextPane(component);
+            JEditorPane textPane = findHtmlPane(component);
             assertNotNull(textPane);
-            // For JTextPane with HTML content, we can't easily check the text content
+            // For JEditorPane with HTML content, we can't easily check the text content
             // but we can verify the component exists and is properly configured
             assertTrue(textPane.getContentType().equals("text/html"));
         }
@@ -390,6 +393,131 @@ class MessageComponentUnitTest {
             CollapsiblePanel collapsiblePanel = findCollapsiblePanel(component);
             assertNotNull(collapsiblePanel);
             assertTrue(collapsiblePanel.isVisible());
+        }
+    }
+
+    @Nested
+    @DisplayName("Copy Button")
+    class CopyButtonTests {
+
+        private JButton findCopyButton(MessageComponent component) {
+            return (JButton) findComponentByName(component, "copyMessageButton");
+        }
+
+        private Component findComponentByName(Container root, String name) {
+            for (Component c : root.getComponents()) {
+                if (name.equals(c.getName())) {
+                    return c;
+                }
+                if (c instanceof Container) {
+                    Component nested = findComponentByName((Container) c, name);
+                    if (nested != null) return nested;
+                }
+            }
+            return null;
+        }
+
+        @Test
+        @DisplayName("should include copy button for user, AI normal, and AI initial failure messages")
+        void shouldIncludeCopyButtonForAllMessageTypes() {
+            MessageComponent userComp = new MessageComponent(userMessage);
+            JButton userBtn = findCopyButton(userComp);
+            assertNotNull(userBtn);
+
+            MessageComponent aiComp = new MessageComponent(aiMessage);
+            JButton aiBtn = findCopyButton(aiComp);
+            assertNotNull(aiBtn);
+
+            FailureInfo failureInfo = new FailureInfo.Builder()
+                .withScenarioName("S")
+                .withFailedStepText("F")
+                .withErrorMessage("E")
+                .build();
+            ChatMessage initialAi = new ChatMessage(ChatMessage.Role.AI, "", System.currentTimeMillis(), "thinking here", failureInfo);
+            MessageComponent initialComp = new MessageComponent(initialAi);
+            JButton initialBtn = findCopyButton(initialComp);
+            assertNotNull(initialBtn);
+        }
+
+        @Test
+        @DisplayName("should disable copy button when source is blank")
+        void shouldDisableWhenSourceBlank() {
+            FailureInfo failureInfo = new FailureInfo.Builder()
+                .withScenarioName("S")
+                .withFailedStepText("F")
+                .withErrorMessage("E")
+                .build();
+            ChatMessage initialAiBlank = new ChatMessage(ChatMessage.Role.AI, "  ", System.currentTimeMillis(), "  ", failureInfo);
+            MessageComponent comp = new MessageComponent(initialAiBlank);
+            JButton btn = findCopyButton(comp);
+            assertNotNull(btn);
+            assertFalse(btn.isEnabled());
+        }
+
+        @Test
+        @DisplayName("should set correct tooltip text per type")
+        void shouldSetCorrectTooltip() {
+            MessageComponent userComp = new MessageComponent(userMessage);
+            JButton userBtn = findCopyButton(userComp);
+            assertEquals("Copy message", userBtn.getToolTipText());
+
+            MessageComponent aiComp = new MessageComponent(aiMessage);
+            JButton aiBtn = findCopyButton(aiComp);
+            assertEquals("Copy message", aiBtn.getToolTipText());
+
+            FailureInfo failureInfo = new FailureInfo.Builder()
+                .withScenarioName("S")
+                .withFailedStepText("F")
+                .withErrorMessage("E")
+                .build();
+            ChatMessage initialAi = new ChatMessage(ChatMessage.Role.AI, "", System.currentTimeMillis(), "thinking here", failureInfo);
+            MessageComponent initialComp = new MessageComponent(initialAi);
+            JButton initialBtn = findCopyButton(initialComp);
+            assertEquals("Copy AI thinking", initialBtn.getToolTipText());
+        }
+
+        @Test
+        @DisplayName("should copy correct text and show visual feedback")
+        void shouldCopyAndShowFeedback() throws InterruptedException, UnsupportedFlavorException, IOException {
+            // User message
+            MessageComponent userComp = new MessageComponent(userMessage);
+            userComp.setCopyFeedbackMs(50);
+            JButton userBtn = findCopyButton(userComp);
+            assertTrue(userBtn.isEnabled());
+            userBtn.doClick();
+            try { javax.swing.SwingUtilities.invokeAndWait(() -> {}); } catch (Exception ignored) {}
+            assertEquals("\u2713", userBtn.getText());
+            Thread.sleep(80);
+            try { javax.swing.SwingUtilities.invokeAndWait(() -> {}); } catch (Exception ignored) {}
+            assertEquals("", userBtn.getText());
+
+            // Attempt clipboard verification if supported in environment
+            try {
+                Object data = Toolkit.getDefaultToolkit().getSystemClipboard().getData(DataFlavor.stringFlavor);
+                if (data instanceof String) {
+                    assertEquals(userMessage.getText(), data);
+                }
+            } catch (IllegalStateException ignored) {
+                // Clipboard not available in headless CI; ignore
+            }
+
+            // Initial AI failure message copies thinking
+            FailureInfo failureInfo = new FailureInfo.Builder()
+                .withScenarioName("S")
+                .withFailedStepText("F")
+                .withErrorMessage("E")
+                .build();
+            ChatMessage initialAi = new ChatMessage(ChatMessage.Role.AI, "  ", System.currentTimeMillis(), "thinking here", failureInfo);
+            MessageComponent initialComp = new MessageComponent(initialAi);
+            initialComp.setCopyFeedbackMs(50);
+            JButton initialBtn = findCopyButton(initialComp);
+            assertTrue(initialBtn.isEnabled());
+            initialBtn.doClick();
+            try { javax.swing.SwingUtilities.invokeAndWait(() -> {}); } catch (Exception ignored) {}
+            assertEquals("\u2713", initialBtn.getText());
+            Thread.sleep(80);
+            try { javax.swing.SwingUtilities.invokeAndWait(() -> {}); } catch (Exception ignored) {}
+            assertEquals("", initialBtn.getText());
         }
     }
 
@@ -552,16 +680,16 @@ class MessageComponentUnitTest {
         return null;
     }
     
-    private JTextPane findTextPane(Container container) {
+    private JEditorPane findHtmlPane(Container container) {
         for (Component comp : container.getComponents()) {
-            if (comp instanceof JTextPane) {
-                JTextPane textPane = (JTextPane) comp;
-                if (textPane.getName() != null && textPane.getName().equals("aiMessageText")) {
-                    return textPane;
+            if (comp instanceof JEditorPane) {
+                JEditorPane pane = (JEditorPane) comp;
+                if (pane.getName() != null && pane.getName().equals("aiMessageText")) {
+                    return pane;
                 }
             }
             if (comp instanceof Container) {
-                JTextPane found = findTextPane((Container) comp);
+                JEditorPane found = findHtmlPane((Container) comp);
                 if (found != null) return found;
             }
         }

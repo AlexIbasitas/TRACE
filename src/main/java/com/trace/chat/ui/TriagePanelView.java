@@ -237,8 +237,8 @@ public class TriagePanelView {
      * Creates the message container and scroll pane for displaying chat messages.
      */
     private void setupChatPanel() {
-        // Create message container with proper layout
-        messageContainer = new JPanel();
+        // Create message container with proper layout and viewport-width tracking
+        messageContainer = new com.trace.chat.components.ViewportWidthTrackingPanel();
         messageContainer.setLayout(new BoxLayout(messageContainer, BoxLayout.Y_AXIS));
         messageContainer.setOpaque(false);
         
@@ -257,6 +257,8 @@ public class TriagePanelView {
         chatScrollPane.getVerticalScrollBar().setUnitIncrement(16);
         chatScrollPane.setBackground(panelBg);
         chatScrollPane.getViewport().setBackground(panelBg);
+        // Enforce vertical-only scrolling at chat level
+        chatScrollPane.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
         
         // Add initial vertical glue to push messages to top
         messageContainer.add(Box.createVerticalGlue());
@@ -713,7 +715,43 @@ public class TriagePanelView {
                 LOG.info("=== DEBUG: Using enhanced analysis with RAG (AI enabled) ===");
                 
                 // Show the test failure context immediately (scenario name and failed step)
-                addMessage(new ChatMessage(ChatMessage.Role.AI, "", System.currentTimeMillis(), null, failureInfo));
+                // Also attach a placeholder so the "Show AI Thinking" section is visible right away
+                addMessage(new ChatMessage(
+                    ChatMessage.Role.AI,
+                    "",
+                    System.currentTimeMillis(),
+                    "Preparing analysis prompt...",
+                    failureInfo
+                ));
+
+                // Populate the AI thinking section with the base prompt before document retrieval
+                try {
+                    final String basePrompt = ANALYSIS_MODE_OVERVIEW.equals(currentAnalysisMode)
+                        ? aiAnalysisOrchestrator.getInitialOrchestrator().generateSummaryPrompt(failureInfo)
+                        : aiAnalysisOrchestrator.getInitialOrchestrator().generateDetailedPrompt(failureInfo);
+
+                    if (!chatHistory.isEmpty()) {
+                        ChatMessage firstMessage = chatHistory.get(0);
+                        ChatMessage updatedWithBasePrompt = new ChatMessage(
+                            firstMessage.getRole(),
+                            firstMessage.getText(),
+                            firstMessage.getTimestamp(),
+                            basePrompt,
+                            firstMessage.getFailureInfo()
+                        );
+                        chatHistory.set(0, updatedWithBasePrompt);
+
+                        // Refresh UI to reflect the base prompt in "Show AI Thinking"
+                        messageContainer.removeAll();
+                        for (ChatMessage message : chatHistory) {
+                            addMessageToUI(message);
+                        }
+                        messageContainer.add(Box.createVerticalGlue());
+                        scrollToBottom();
+                    }
+                } catch (Exception promptBuildError) {
+                    LOG.warn("Failed to build base prompt prior to document retrieval: " + promptBuildError.getMessage());
+                }
                 
                 // Use enhanced analysis with RAG for both overview and full analysis modes
                 CompletableFuture<AIAnalysisResult> analysisFuture = 

@@ -197,7 +197,7 @@ public final class AINetworkService {
                             "# AI Analysis Failed\n\n" +
                             "## Error Details\n\n" +
                             "The AI service encountered an error: " + throwable.getMessage() + "\n\n" +
-                            "## Recommended Actions\n\n" +
+                            "### Recommended Actions\n\n" +
                             "1. **Check API Configuration:** Verify API keys are set correctly\n" +
                             "2. **Check Network Connection:** Ensure internet connectivity\n" +
                             "3. **Review Service Status:** Check if the AI service is available\n\n" +
@@ -216,11 +216,11 @@ public final class AINetworkService {
             LOG.info("Returning fallback AI response for testing");
             return CompletableFuture.completedFuture(
                 new AIAnalysisResult(
-                    "# Failure Analysis\n\n" +
-                    "## Technical Details\n\n" +
+                    "### Failure Analysis\n\n" +
+                    "### Technical Details\n\n" +
                     "• **What Failed:** The test expected title \"Welcome to the-internet delete me\" but got \"Welcome to the-internet\"\n\n" +
                     "• **Why It Failed:** The application title is missing the \" delete me\" suffix\n\n" +
-                    "## Recommended Actions\n\n" +
+                    "### Recommended Actions\n\n" +
                     "### Immediate Steps\n" +
                     "1. Verify the application homepage title\n" +
                     "2. Report a bug if the title is incorrect\n\n" +

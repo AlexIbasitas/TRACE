@@ -100,15 +100,15 @@ public final class InitialPromptFailureAnalysisService {
         prompt.append("### Analysis Request ###\n");
         prompt.append("Provide your analysis in this exact format:\n\n");
         
-        prompt.append("## Failure Analysis\n");
+        prompt.append("### Failure Analysis\n");
         prompt.append("- **Failure Type:** [Assertion/Exception/Configuration/Environment/Other]\n");
         prompt.append("- **Likely Cause:** [Product Defect/Automation Issue/Data Issue/Environment Issue/Test Design Issue]\n");
         prompt.append("- **Confidence:** [High/Medium/Low] - Based on the evidence quality and your analysis\n\n");
 
-        prompt.append("## Technical Details\n");
+        prompt.append("### Technical Details\n");
         prompt.append("- **Observed vs. Expected:** [Briefly describe what the test was trying to do and what happened instead]\n\n");
 
-        prompt.append("## Recommended Actions\n");
+        prompt.append("### Recommended Actions\n");
         prompt.append("- **Immediate Steps:** [Specific, actionable steps to resolve this issue]\n");
         
         return prompt.toString();

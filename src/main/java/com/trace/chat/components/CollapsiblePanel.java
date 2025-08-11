@@ -34,6 +34,8 @@ public class CollapsiblePanel extends JPanel {
     private JLabel toggleLabel;
     private boolean isExpanded = false;
     private final MessageComponent parentMessageComponent;
+    private final String contentText;
+    private JTextArea contentTextArea;
     
     // Layout management support
     private final List<LayoutChangeListener> layoutListeners = new ArrayList<>();
@@ -66,6 +68,7 @@ public class CollapsiblePanel extends JPanel {
         }
         
         this.parentMessageComponent = parent;
+        this.contentText = content;
         
         initializeComponent();
         createToggleLabel();
@@ -119,23 +122,23 @@ public class CollapsiblePanel extends JPanel {
      * @param content The text content to display
      */
     private void addContentTextArea(String content) {
-        JTextArea contentArea = new JTextArea(content);
-        contentArea.setLineWrap(true);
-        contentArea.setWrapStyleWord(true);
-        contentArea.setEditable(false);
-        contentArea.setFont(TriagePanelConstants.COLLAPSIBLE_CONTENT_FONT);
-        contentArea.setForeground(TriagePanelConstants.COLLAPSIBLE_TEXT_COLOR);
-        contentArea.setBackground(TriagePanelConstants.COLLAPSIBLE_BACKGROUND);
-        contentArea.setBorder(TriagePanelConstants.COLLAPSIBLE_TEXT_BORDER_COMPOUND);
-        contentArea.setOpaque(true);
+        contentTextArea = new JTextArea(content);
+        contentTextArea.setLineWrap(true);
+        contentTextArea.setWrapStyleWord(true);
+        contentTextArea.setEditable(false);
+        contentTextArea.setFont(TriagePanelConstants.COLLAPSIBLE_CONTENT_FONT);
+        contentTextArea.setForeground(TriagePanelConstants.COLLAPSIBLE_TEXT_COLOR);
+        contentTextArea.setBackground(TriagePanelConstants.COLLAPSIBLE_BACKGROUND);
+        contentTextArea.setBorder(TriagePanelConstants.COLLAPSIBLE_TEXT_BORDER_COMPOUND);
+        contentTextArea.setOpaque(true);
         
         // Let the text area calculate its own size based on content
         // This allows for dynamic sizing proportional to text amount
-        contentArea.setPreferredSize(null); // Let Swing calculate preferred size
-        contentArea.setMaximumSize(new Dimension(Integer.MAX_VALUE, Integer.MAX_VALUE));
-        contentArea.setMinimumSize(new Dimension(TriagePanelConstants.MIN_CHAT_WIDTH_BEFORE_SCROLL, 50));
+        contentTextArea.setPreferredSize(null); // Let Swing calculate preferred size
+        contentTextArea.setMaximumSize(new Dimension(Integer.MAX_VALUE, Integer.MAX_VALUE));
+        contentTextArea.setMinimumSize(new Dimension(TriagePanelConstants.MIN_CHAT_WIDTH_BEFORE_SCROLL, 50));
         
-        contentPanel.add(contentArea, BorderLayout.CENTER);
+        contentPanel.add(contentTextArea, BorderLayout.CENTER);
     }
     
     /**
@@ -156,7 +159,13 @@ public class CollapsiblePanel extends JPanel {
     private void setupInitialState() {
         // Initially collapsed
         contentPanel.setVisible(false);
-        add(toggleLabel, BorderLayout.NORTH);
+
+        // Build header with toggle on the left
+        JPanel header = new JPanel(new BorderLayout());
+        header.setOpaque(false);
+        header.add(toggleLabel, BorderLayout.WEST);
+
+        add(header, BorderLayout.NORTH);
         add(contentPanel, BorderLayout.CENTER);
     }
     
