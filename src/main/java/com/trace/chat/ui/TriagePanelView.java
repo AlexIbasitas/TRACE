@@ -257,8 +257,14 @@ public class TriagePanelView {
         chatScrollPane.getVerticalScrollBar().setUnitIncrement(16);
         chatScrollPane.setBackground(panelBg);
         chatScrollPane.getViewport().setBackground(panelBg);
-        // Enforce vertical-only scrolling at chat level
-        chatScrollPane.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
+        // Allow horizontal scrolling when the content's minimum width exceeds the viewport
+        chatScrollPane.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_AS_NEEDED);
+
+        // Ensure the message container uses the same cutoff as our constants
+        if (messageContainer instanceof com.trace.chat.components.ViewportWidthTrackingPanel) {
+            ((com.trace.chat.components.ViewportWidthTrackingPanel) messageContainer)
+                .setMinWidthBeforeHorizontalScroll(com.trace.common.constants.TriagePanelConstants.MIN_CHAT_WIDTH_BEFORE_SCROLL);
+        }
         
         // Add initial vertical glue to push messages to top
         messageContainer.add(Box.createVerticalGlue());
@@ -993,7 +999,8 @@ public class TriagePanelView {
         
         LOG.info("Creating custom header panel with ultra-compact layout");
         
-        JPanel header = new JPanel(new BorderLayout());
+        JPanel header = new JPanel();
+        header.setLayout(new BoxLayout(header, BoxLayout.X_AXIS));
         header.setBackground(darkBg);
         
         // Minimal header padding
@@ -1017,14 +1024,30 @@ public class TriagePanelView {
         leftPanel.add(Box.createHorizontalStrut(2));
         
         LOG.info("Creating TRACE title label");
-        JLabel title = new JLabel("TRACE");
+        JLabel title = new JLabel("TRACE") {
+            @Override
+            public Dimension getMaximumSize() {
+                // Permit horizontal shrink (important for BoxLayout)
+                Dimension pref = getPreferredSize();
+                return new Dimension(Integer.MAX_VALUE, pref.height);
+            }
+        };
         title.setFont(new Font("Segoe UI", Font.PLAIN, 14));
         title.setForeground(new Color(180, 180, 180));
         title.setAlignmentX(Component.LEFT_ALIGNMENT);
         leftPanel.add(title);
+
+        // Ultra-narrow polish: hide the title if there isn't enough room for right controls and toggle
+        // Listener is added after rightPanel is created to avoid forward reference issues.
         
+        // Allow the left group to shrink as needed so the right controls remain visible
+        int leftHeight = leftPanel.getPreferredSize().height;
+        leftPanel.setMinimumSize(new Dimension(0, leftHeight));
+        leftPanel.setMaximumSize(new Dimension(Integer.MAX_VALUE, leftHeight));
+
         LOG.info("Adding left panel to header with " + leftPanel.getComponentCount() + " components");
-        header.add(leftPanel, BorderLayout.WEST);
+        header.add(leftPanel);
+        header.add(Box.createHorizontalGlue());
         
         // Log component details for debugging
         LOG.info("AI toggle button preferred size: " + aiToggleButton.getPreferredSize());
@@ -1049,8 +1072,33 @@ public class TriagePanelView {
         settingsButton.setAlignmentX(Component.RIGHT_ALIGNMENT);
         rightPanel.add(settingsButton);
         
-        header.add(rightPanel, BorderLayout.EAST);
-        
+        // Right group keeps natural size at the far right
+        int rightHeight = rightPanel.getPreferredSize().height;
+        rightPanel.setMinimumSize(new Dimension(rightPanel.getPreferredSize().width, rightHeight));
+        rightPanel.setMaximumSize(new Dimension(rightPanel.getPreferredSize().width, rightHeight));
+        header.add(rightPanel);
+
+        // Ultra-narrow polish: hide the title if there isn't enough room for right controls and toggle
+        header.addComponentListener(new java.awt.event.ComponentAdapter() {
+            @Override
+            public void componentResized(java.awt.event.ComponentEvent e) {
+                try {
+                    int available = header.getWidth();
+                    int rightWidth = rightPanel.getPreferredSize().width;
+                    int toggleWidth = aiToggleButton.getPreferredSize().width + 2; // + spacing
+                    int titleWidth = title.getPreferredSize().width;
+                    // Keep a 6px safety margin
+                    boolean show = available >= rightWidth + toggleWidth + titleWidth + 6;
+                    if (title.isVisible() != show) {
+                        title.setVisible(show);
+                        header.revalidate();
+                        header.repaint();
+                    }
+                } catch (Exception ignore) {
+                }
+            }
+        });
+
         LOG.info("Header panel created with dimensions: " + header.getPreferredSize());
         return header;
     }

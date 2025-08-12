@@ -92,8 +92,8 @@ public final class MarkdownRenderer {
             editorPane.setContentType("text/html");
             editorPane.setEditable(false);
             editorPane.setOpaque(false);
-            // Add small bottom inset to prevent last line clipping in some wrap cases
-            editorPane.setBorder(BorderFactory.createEmptyBorder(0, 0, 6, 0));
+            // Increase bottom inset to prevent last line clipping in dynamic wrap scenarios
+            editorPane.setBorder(BorderFactory.createEmptyBorder(0, 0, 14, 0));
             editorPane.setAlignmentX(Component.LEFT_ALIGNMENT);
             editorPane.setAlignmentY(Component.TOP_ALIGNMENT);
 
@@ -116,8 +116,8 @@ public final class MarkdownRenderer {
                 docSheet.addRule("ul, ol { margin-top:2px; margin-bottom:2px; }");
                 docSheet.addRule("li { margin-top:0px; margin-bottom:2px; }");
                 docSheet.addRule("pre { margin-top:3px; margin-bottom:3px; }");
-                // Add small bottom padding to avoid clipped last line after wrapping
-                docSheet.addRule("body { padding-bottom:2px; }");
+                // Add slightly larger bottom padding to avoid last-line clipping during dynamic wrap
+                docSheet.addRule("body { padding-bottom:12px; }");
                 editorPane.setDocument(doc);
                 logHtmlKitAndStyles(editorPane, kit, docSheet);
             } catch (Exception ex) {
@@ -567,8 +567,8 @@ public final class MarkdownRenderer {
                 if (targetWidth > 0) {
                     super.setSize(new Dimension(targetWidth, Integer.MAX_VALUE));
                     Dimension pref = super.getPreferredSize();
-                    // Add a slightly larger safety buffer to height to prevent last-line clipping
-                    return new Dimension(targetWidth, pref.height + 6);
+                    // Add an extra safety buffer to height to prevent last-line clipping during wraps
+                    return new Dimension(targetWidth, pref.height + 16);
                 }
             } catch (Exception ignore) {
                 // fall back to default behavior
@@ -598,8 +598,8 @@ public final class MarkdownRenderer {
                     // First set an arbitrarily large height to allow proper preferred size computation
                     super.setSize(new Dimension(targetWidth, Integer.MAX_VALUE));
                     Dimension pref = getPreferredSize();
-                    // Apply a slightly larger height buffer
-                    super.setSize(new Dimension(targetWidth, pref.height + 6));
+                    // Apply an extra height buffer to account for reflow after wraps
+                    super.setSize(new Dimension(targetWidth, pref.height + 16));
                     revalidate();
                     lastAppliedWidth = targetWidth;
                 }
