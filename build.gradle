@@ -94,6 +94,12 @@ intellij {
     downloadSources = true // Download IntelliJ Platform sources
 }
 
+// Ensure debug logs from our package are visible when running the sandbox IDE
+tasks.named('runIde') {
+    // Show DEBUG level logs for our plugin code
+    jvmArgs '-Didea.log.debug.categories=com.trace'
+}
+
 
 
 patchPluginXml {
