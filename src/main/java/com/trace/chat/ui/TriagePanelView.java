@@ -80,7 +80,22 @@ public class TriagePanelView {
     // Typing indicator state
     private TypingIndicatorRow typingIndicatorRow;
     private boolean typingIndicatorVisible = false;
+    // Tracks if viewport was near bottom before appending a user message
+    private boolean wasNearBottomBeforeUserSend = false;
+     // Small delay to allow layout/HTML wrap to settle before computing scroll target
+     private static final int LAYOUT_SETTLE_DELAY_MS = 40;
+     // If true, maintain alignment to latest user after next append (AI response)
+     private boolean maintainAlignAfterAppend = false;
+     // Anchor to keep latest user row fixed at the same viewport position across AI appends
+     private boolean anchorActiveForAppend = false;
+     private int anchorUserTopYBeforeAppend = 0;
+     private int anchorScrollValueBeforeAppend = 0;
     
+     // Scroll/align tuning constants
+     private static final int NEAR_TARGET_THRESHOLD_PX = 120; // widen near-window
+     private static final int RESCROLL_DEBOUNCE_MS = 80;      // 60–100 ms debounce
+     private static final int SMOOTH_SCROLL_DURATION_MS = 220; // slightly longer ease-out
+ 
     // Analysis mode state management
     private String currentAnalysisMode = "Quick Overview";
     private static final String ANALYSIS_MODE_OVERVIEW = "Quick Overview";
@@ -269,8 +284,28 @@ public class TriagePanelView {
         chatScrollPane.getVerticalScrollBar().setUnitIncrement(16);
         chatScrollPane.setBackground(panelBg);
         chatScrollPane.getViewport().setBackground(panelBg);
+         // Improve large-content scroll performance
+         chatScrollPane.getViewport().setScrollMode(JViewport.BLIT_SCROLL_MODE);
         // Allow horizontal scrolling when the content's minimum width exceeds the viewport
         chatScrollPane.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_AS_NEEDED);
+
+        // Recompute spacer and possibly re-align on viewport size changes (e.g., window resize)
+        chatScrollPane.getViewport().addComponentListener(new java.awt.event.ComponentAdapter() {
+            @Override
+            public void componentResized(java.awt.event.ComponentEvent e) {
+                if (chatScrollPane != null) {
+                    recomputeBottomSpacer();
+                    if (latestUserMessageComponent != null) {
+                        int target = computeAlignTopTarget(chatScrollPane, latestUserMessageComponent);
+                        if (isNearTarget(chatScrollPane, target, NEAR_TARGET_THRESHOLD_PX)) {
+                            scheduleDebouncedReScroll();
+                        } else {
+                            showNewMessagesChip();
+                        }
+                    }
+                }
+            }
+        });
 
         // Ensure the message container uses the same cutoff as our constants
         if (messageContainer instanceof com.trace.chat.components.ViewportWidthTrackingPanel) {
@@ -298,9 +333,12 @@ public class TriagePanelView {
                         chatScrollPane.getViewport().getExtentSize().height,
                         target,
                         chatScrollPane.getVerticalScrollBar().getValue(),
-                        Boolean.toString(isNearTarget(chatScrollPane, target, 80))));
-                    if (isNearTarget(chatScrollPane, target, 80)) {
+                        Boolean.toString(isNearTarget(chatScrollPane, target, NEAR_TARGET_THRESHOLD_PX))));
+                    if (isNearTarget(chatScrollPane, target, NEAR_TARGET_THRESHOLD_PX)) {
                         scheduleDebouncedReScroll();
+                    } else {
+                        // Content grew but user is away; do not yank, show chip
+                        showNewMessagesChip();
                     }
                 }
             }
@@ -486,6 +524,10 @@ public class TriagePanelView {
         }
         
         LOG.info("Sending user message: " + messageText.substring(0, Math.min(messageText.length(), 50)) + "...");
+	        // Capture whether the viewport was at bottom before content growth
+        try {
+            wasNearBottomBeforeUserSend = isNearBottom(chatScrollPane, NEAR_TARGET_THRESHOLD_PX);
+        } catch (Exception ignore) {}
         
         // Add user message to chat
         addMessage(new ChatMessage(ChatMessage.Role.USER, messageText, System.currentTimeMillis(), null, null));
@@ -657,6 +699,39 @@ public class TriagePanelView {
         
         // If assistant content arrives, remove typing indicator before appending
         if (message != null && message.isFromAI()) {
+            // Capture whether we are currently near the latest user target BEFORE appending
+            try {
+                if (chatScrollPane != null && latestUserMessageComponent != null) {
+                    int preTarget = computeAlignTopTarget(chatScrollPane, latestUserMessageComponent);
+                    boolean preNear = isNearTarget(chatScrollPane, preTarget, NEAR_TARGET_THRESHOLD_PX);
+                    maintainAlignAfterAppend = preNear;
+                    // Capture anchor to preserve the user's row fixed position
+                    anchorActiveForAppend = true;
+                    anchorUserTopYBeforeAppend = latestUserMessageComponent.getY();
+                    anchorScrollValueBeforeAppend = chatScrollPane.getVerticalScrollBar().getValue();
+                    LOG.debug("preAppend AI: preNear=" + preNear + " preTarget=" + preTarget +
+                        " value=" + chatScrollPane.getVerticalScrollBar().getValue());
+                } else {
+                    maintainAlignAfterAppend = false;
+                    anchorActiveForAppend = false;
+                }
+            } catch (Exception ignore) {
+                maintainAlignAfterAppend = false;
+                anchorActiveForAppend = false;
+            }
+            // If we have a visible typing indicator, replace it in-place with the AI message component
+            if (typingIndicatorRow != null && typingIndicatorVisible) {
+                try {
+                    chatHistory.add(message);
+                    MessageComponent aiComponent = new MessageComponent(message);
+                    replaceTypingIndicatorWithMessageComponent(aiComponent);
+                    return; // UI updated in-place; skip full rebuild
+                } catch (Exception ex) {
+                    // Fallback to default path
+                    LOG.debug("Failed to replace typing indicator in-place, falling back to rebuild: " + ex.getMessage());
+                }
+            }
+            // No indicator to replace; proceed with normal flow
             hideTypingIndicator();
         }
 
@@ -664,6 +739,77 @@ public class TriagePanelView {
                  message.getText().substring(0, Math.min(message.getText().length(), 30)) + "...");
         chatHistory.add(message);
         addMessageToUI(message);
+    }
+
+    /**
+     * Replaces the typing indicator row with the provided AI message component in-place
+     * to avoid visual jumping. Keeps spacer as last child, and avoids any animated scroll.
+     */
+    private void replaceTypingIndicatorWithMessageComponent(MessageComponent aiComponent) {
+        if (messageContainer == null || aiComponent == null) return;
+
+        int count = messageContainer.getComponentCount();
+        int idx = -1;
+        for (int i = 0; i < count; i++) {
+            if (messageContainer.getComponent(i) == typingIndicatorRow) {
+                idx = i;
+                break;
+            }
+        }
+        if (idx >= 0) {
+            // Stop animation and clear indicator state but do not trigger rebuild
+            try { if (typingIndicatorRow != null) typingIndicatorRow.stopAnimation(); } catch (Exception ignore) {}
+            typingIndicatorVisible = false;
+
+            // Replace indicator with AI component at the same index
+            messageContainer.remove(idx);
+            aiComponent.setAlignmentY(Component.TOP_ALIGNMENT);
+            messageContainer.add(aiComponent, idx);
+
+            // Ensure bottom spacer is the last child
+            if (bottomSpacer != null) {
+                // Remove and re-add to guarantee it is last
+                messageContainer.remove(bottomSpacer);
+                messageContainer.add(bottomSpacer);
+            }
+
+            // Refresh layout and recompute spacer to keep maxScroll tight
+            messageContainer.revalidate();
+            messageContainer.repaint();
+            SwingUtilities.invokeLater(() -> {
+                recomputeBottomSpacer();
+                restoreAnchorAfterAppend();
+            });
+
+            // Reset indicator reference
+            typingIndicatorRow = null;
+        }
+    }
+
+    /**
+     * Restores the viewport so the latest user row remains at the same viewport position
+     * as before the AI append, avoiding any jump to bottom or top.
+     */
+    private void restoreAnchorAfterAppend() {
+        if (!anchorActiveForAppend || chatScrollPane == null) {
+            maintainAlignAfterAppend = false;
+            return;
+        }
+        try {
+            JScrollBar sb = chatScrollPane.getVerticalScrollBar();
+            int extent = sb.getModel().getExtent();
+            int maxScroll = Math.max(0, sb.getMaximum() - extent);
+            int newY = latestUserMessageComponent != null ? latestUserMessageComponent.getY() : anchorUserTopYBeforeAppend;
+            int delta = newY - anchorUserTopYBeforeAppend;
+            int newValue = Math.max(0, Math.min(maxScroll, anchorScrollValueBeforeAppend + delta));
+            isProgrammaticScroll = true;
+            sb.setValue(newValue);
+            isProgrammaticScroll = false;
+        } catch (Exception ignore) {
+        } finally {
+            anchorActiveForAppend = false;
+            maintainAlignAfterAppend = false;
+        }
     }
 
     /**
@@ -746,26 +892,70 @@ public class TriagePanelView {
             }
         }
 
-        // For user sends: remove the "don't yank" rule and smoothly align newest to top
-        if (message != null && message.isFromUser() && latestUserMessageComponent != null) {
+        // For user sends: align newest to top only if the viewport is already near the target
+	        if (message != null && message.isFromUser() && latestUserMessageComponent != null) {
             SwingUtilities.invokeLater(() -> {
                 try {
-                    // Ensure the spacer reflects the latest layout so target is reachable
-                    recomputeBottomSpacer();
-                    // Smoothly scroll to align the latest user row at the top edge
-                    scrollToComponentTopSmooth(chatScrollPane, latestUserMessageComponent, 200);
+                    javax.swing.Timer settleTimer = new javax.swing.Timer(LAYOUT_SETTLE_DELAY_MS, evt -> {
+                        try {
+                            // Ensure the spacer reflects the latest layout so target is reachable
+                            recomputeBottomSpacer();
+                            int target = computeAlignTopTarget(chatScrollPane, latestUserMessageComponent);
+                            boolean nearTarget = isNearTarget(chatScrollPane, target, NEAR_TARGET_THRESHOLD_PX);
+                            boolean allowAlign = nearTarget || wasNearBottomBeforeUserSend;
+                            LOG.debug("userSend align? allow=" + allowAlign +
+                                " start=" + chatScrollPane.getVerticalScrollBar().getValue() +
+                                " target=" + target +
+                                " nearTarget=" + nearTarget +
+                                " wasNearBottom=" + wasNearBottomBeforeUserSend);
+                            if (allowAlign) {
+                                // Smoothly scroll to align the latest user row at the top edge
+                                scrollToComponentTopSmooth(chatScrollPane, latestUserMessageComponent, SMOOTH_SCROLL_DURATION_MS);
+                            } else {
+                                // Do not yank; show the chip instead
+                                showNewMessagesChip();
+                            }
+                        } catch (Exception ignore) {
+                        } finally {
+                            wasNearBottomBeforeUserSend = false;
+                        }
+                    });
+                    settleTimer.setRepeats(false);
+                    settleTimer.start();
                 } catch (Exception ignore) {
                 }
             });
         } else {
-            // For non-user messages, keep conditional align behavior
+            // For non-user (AI) messages, maintain alignment if it was near before append,
+            // otherwise conditionally align-if-near after a brief settle.
             SwingUtilities.invokeLater(() -> {
-                if (latestUserMessageComponent != null) {
-                    int target = computeAlignTopTarget(chatScrollPane, latestUserMessageComponent);
-                    LOG.debug("requestAlign: value=" + chatScrollPane.getVerticalScrollBar().getValue() +
-                        " target=" + target + " near=" + isNearTarget(chatScrollPane, target, 80));
+                try {
+                    javax.swing.Timer settleTimer = new javax.swing.Timer(LAYOUT_SETTLE_DELAY_MS, evt -> {
+                        try {
+                            recomputeBottomSpacer();
+                            if (latestUserMessageComponent != null) {
+                                int target = computeAlignTopTarget(chatScrollPane, latestUserMessageComponent);
+                                boolean stillNear = isNearTarget(chatScrollPane, target, NEAR_TARGET_THRESHOLD_PX);
+                                LOG.debug("aiAppend: maintain=" + maintainAlignAfterAppend +
+                                    " value=" + chatScrollPane.getVerticalScrollBar().getValue() +
+                                    " target=" + target + " stillNear=" + stillNear);
+                                if (maintainAlignAfterAppend || stillNear) {
+                                    // Snap immediately to keep user's message top-aligned; no animation
+                                    alignTopImmediate(chatScrollPane, latestUserMessageComponent);
+                                } else {
+                                    showNewMessagesChip();
+                                }
+                            }
+                        } catch (Exception ignore) {
+                        }
+                        finally {
+                            maintainAlignAfterAppend = false;
+                        }
+                    });
+                    settleTimer.setRepeats(false);
+                    settleTimer.start();
+                } catch (Exception ignore) {
                 }
-                requestAlignNewestIfNear(chatScrollPane);
             });
         }
     }
@@ -855,6 +1045,17 @@ public class TriagePanelView {
         return distance == 0;
     }
 
+    /** Returns true if the viewport is within thresholdPx of the bottom. */
+    private boolean isNearBottom(JScrollPane sp, int thresholdPx) {
+        if (sp == null) return false;
+        JScrollBar sb = sp.getVerticalScrollBar();
+        int value = sb.getValue();
+        int extent = sb.getModel().getExtent();
+        int max = sb.getMaximum();
+        int distance = Math.max(0, max - (value + extent));
+        return distance <= Math.max(0, thresholdPx);
+    }
+
     // ===== Align-newest-to-top helpers =====
 
     private int computeAlignTopTarget(JScrollPane sp, JComponent row) {
@@ -877,9 +1078,11 @@ public class TriagePanelView {
 
     private void requestAlignNewestIfNear(JScrollPane sp) {
         if (sp == null || latestUserMessageComponent == null) return;
+        // Ensure spacer is up-to-date before computing target
+        recomputeBottomSpacer();
         int target = computeAlignTopTarget(sp, latestUserMessageComponent);
-        if (isNearTarget(sp, target, 80)) {
-            scrollToComponentTopSmooth(sp, latestUserMessageComponent, 200);
+        if (isNearTarget(sp, target, NEAR_TARGET_THRESHOLD_PX)) {
+            scrollToComponentTopSmooth(sp, latestUserMessageComponent, SMOOTH_SCROLL_DURATION_MS);
         } else {
             showNewMessagesChip();
         }
@@ -892,8 +1095,7 @@ public class TriagePanelView {
         int start = sb.getValue();
         int target = computeAlignTopTarget(sp, row);
         LOG.debug("smoothStart: start=" + start + " target=" + target + " durationMs=" + duration);
-
-        if (start >= target) {
+        if (Math.abs(start - target) <= 1) {
             isProgrammaticScroll = true;
             sb.setValue(target);
             isProgrammaticScroll = false;
@@ -943,6 +1145,16 @@ public class TriagePanelView {
         isSmoothScrolling = false;
     }
 
+    /** Immediately align a row's top to the viewport top without animation. */
+    private void alignTopImmediate(JScrollPane sp, JComponent row) {
+        if (sp == null || row == null) return;
+        int target = computeAlignTopTarget(sp, row);
+        isProgrammaticScroll = true;
+        sp.getVerticalScrollBar().setValue(target);
+        isProgrammaticScroll = false;
+        hideNewMessagesChip();
+    }
+
     private void showNewMessagesChip() {
         if (newMessagesChip != null && !newMessagesChip.isVisible()) {
             newMessagesChip.setVisible(true);
@@ -967,7 +1179,7 @@ public class TriagePanelView {
         if (rescrollDebounceTimer != null && rescrollDebounceTimer.isRunning()) {
             rescrollDebounceTimer.stop();
         }
-        rescrollDebounceTimer = new javax.swing.Timer(80, evt -> {
+        rescrollDebounceTimer = new javax.swing.Timer(RESCROLL_DEBOUNCE_MS, evt -> {
             if (chatScrollPane != null && latestUserMessageComponent != null) {
                 recomputeBottomSpacer();
                 requestAlignNewestIfNear(chatScrollPane);
@@ -980,15 +1192,32 @@ public class TriagePanelView {
     private void recomputeBottomSpacer() {
         if (chatScrollPane == null || bottomSpacer == null) return;
         int viewportH = chatScrollPane.getViewport().getExtentSize().height;
-        int rowH = 0;
-        int rowY = 0;
-        if (latestUserMessageComponent != null) {
-            rowH = latestUserMessageComponent.getHeight() > 0
-                ? latestUserMessageComponent.getHeight()
-                : latestUserMessageComponent.getPreferredSize().height;
-            rowY = latestUserMessageComponent.getY();
+        if (latestUserMessageComponent == null) {
+            // No user messages yet; avoid introducing artificial bottom whitespace
+            bottomSpacer.setPreferredSize(new Dimension(1, 0));
+            messageContainer.revalidate();
+            messageContainer.repaint();
+            return;
         }
-        int spacerH = Math.max(0, viewportH - rowH);
+
+        int rowH = latestUserMessageComponent.getHeight() > 0
+            ? latestUserMessageComponent.getHeight()
+            : latestUserMessageComponent.getPreferredSize().height;
+        int rowY = latestUserMessageComponent.getY();
+
+        // If the latest user row is taller than the viewport, spacer should be 0
+        if (rowH >= viewportH) {
+            bottomSpacer.setPreferredSize(new Dimension(1, 0));
+            messageContainer.revalidate();
+            messageContainer.repaint();
+            return;
+        }
+
+        // Make after-row height equal to the viewport height so rowY is always reachable as a scroll target
+        int currentSpacerH = bottomSpacer.getPreferredSize() != null ? bottomSpacer.getPreferredSize().height : 0;
+        int totalHNoSpacer = messageContainer.getPreferredSize().height - currentSpacerH;
+        int heightBelowRow = Math.max(0, totalHNoSpacer - rowY);
+        int spacerH = Math.max(0, viewportH - heightBelowRow);
         bottomSpacer.setPreferredSize(new Dimension(1, spacerH));
 
         // Log scroll metrics
@@ -1131,7 +1360,6 @@ public class TriagePanelView {
                         for (ChatMessage message : chatHistory) {
                             addMessageToUI(message);
                         }
-                        messageContainer.add(Box.createVerticalGlue());
                         SwingUtilities.invokeLater(() -> requestAlignNewestIfNear(chatScrollPane));
                     }
                 } catch (Exception promptBuildError) {
@@ -1172,7 +1400,6 @@ public class TriagePanelView {
                             for (ChatMessage message : chatHistory) {
                                 addMessageToUI(message);
                             }
-                            messageContainer.add(Box.createVerticalGlue());
                             SwingUtilities.invokeLater(() -> requestAlignNewestIfNear(chatScrollPane));
                         }
                         
@@ -1224,7 +1451,6 @@ public class TriagePanelView {
                     for (ChatMessage message : chatHistory) {
                         addMessageToUI(message);
                     }
-                    messageContainer.add(Box.createVerticalGlue());
                     SwingUtilities.invokeLater(() -> requestAlignNewestIfNear(chatScrollPane));
                 }
                 
