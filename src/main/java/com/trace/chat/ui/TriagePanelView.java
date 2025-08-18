@@ -4,8 +4,10 @@ import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.util.IconLoader;
 import com.intellij.ui.JBColor;
+import com.intellij.ide.ui.LafManager;
+import com.intellij.ide.ui.LafManagerListener;
 import com.intellij.ui.components.JBLabel;
-import com.intellij.ui.components.JBTextArea;
+
 import com.intellij.util.ui.JBUI;
 import com.trace.ai.configuration.AISettings;
 import com.trace.ai.models.AIAnalysisResult;
@@ -18,6 +20,7 @@ import com.trace.chat.components.ChatMessage;
 import com.trace.chat.components.MessageComponent;
 import com.trace.chat.components.TypingIndicatorRow;
 import com.trace.common.constants.TriagePanelConstants;
+import com.trace.common.utils.ThemeUtils;
 import com.trace.test.models.FailureInfo;
 
 import javax.swing.*;
@@ -57,7 +60,7 @@ public class TriagePanelView {
     private final Project project;
     private final JPanel mainPanel;
     private final JPanel inputPanel;
-    private final JBTextArea inputArea;
+    private final JTextArea inputArea;
     private final JButton sendButton;
     private final JBLabel headerLabel;
     private final JBLabel statusLabel;
@@ -125,13 +128,22 @@ public class TriagePanelView {
         // Initialize UI components
         this.mainPanel = new JPanel(new BorderLayout());
         this.inputPanel = new JPanel(new BorderLayout());
-        this.inputArea = new JBTextArea();
+        this.inputArea = new JTextArea();
         this.sendButton = new JButton("Send");
         this.headerLabel = new JBLabel("No test failure detected");
         this.statusLabel = new JBLabel("");
         
         initializeUI();
         setupEventHandlers();
+        // Listen for LaF/theme changes and refresh visible components
+        try {
+            LafManager.getInstance().addLafManagerListener((LafManagerListener) source -> {
+                LOG.info("LaF change detected - refreshing theme");
+                SwingUtilities.invokeLater(this::refreshTheme);
+            });
+        } catch (Throwable e) {
+            LOG.warn("Failed to add LaF listener: " + e.getMessage());
+        }
         LOG.info("TriagePanelView created successfully");
     }
 
@@ -242,8 +254,7 @@ public class TriagePanelView {
         setupChatPanel();
         setupInputPanel();
         
-        Color panelBg = UIManager.getColor("Panel.background");
-        if (panelBg == null) panelBg = new Color(43, 43, 43);
+        Color panelBg = ThemeUtils.panelBackground();
         
         mainPanel.setLayout(new BorderLayout());
         mainPanel.setBackground(panelBg);
@@ -259,6 +270,207 @@ public class TriagePanelView {
         }
     }
 
+    private void refreshTheme() {
+        try {
+            LOG.info("=== THEME REFRESH STARTED ===");
+            LOG.info("Current theme colors:");
+            LOG.info("  - Panel background: " + ThemeUtils.panelBackground());
+            LOG.info("  - Text foreground: " + ThemeUtils.textForeground());
+            LOG.info("  - Text field background: " + ThemeUtils.textFieldBackground());
+            
+            // Update main panel background
+            if (mainPanel != null) {
+                Color bg = ThemeUtils.panelBackground();
+                mainPanel.setBackground(bg);
+                mainPanel.revalidate();
+                mainPanel.repaint();
+                LOG.info("Updated main panel background to: " + bg);
+            }
+            
+            // Update chat scroll pane and viewport
+            if (chatScrollPane != null && chatScrollPane.getViewport() != null) {
+                Color bg = ThemeUtils.panelBackground();
+                chatScrollPane.setBackground(bg);
+                chatScrollPane.getViewport().setBackground(bg);
+                chatScrollPane.revalidate();
+                chatScrollPane.repaint();
+            }
+            
+            // Update message container and all message components
+            if (messageContainer != null) {
+                Color bg = ThemeUtils.panelBackground();
+                messageContainer.setBackground(bg);
+                
+                // NUCLEAR OPTION: Recreate all message components to ensure proper theme switching
+                // This is the most reliable way to handle JEditorPane HTML content that doesn't refresh properly
+                recreateAllMessageComponents();
+                
+                messageContainer.revalidate();
+                messageContainer.repaint();
+            }
+            
+            // Update input area and input panel
+            if (inputArea != null) {
+                inputArea.setBackground(ThemeUtils.textFieldBackground());
+                inputArea.setForeground(ThemeUtils.textForeground());
+                inputArea.setCaretColor(ThemeUtils.textForeground());
+                inputArea.revalidate();
+                inputArea.repaint();
+            }
+            
+            if (inputPanel != null) {
+                // Keep input panel grey and render white background via the inner inputBoxContainer
+                inputPanel.setBackground(ThemeUtils.panelBackground());
+                inputPanel.setOpaque(true);
+
+                for (Component child : inputPanel.getComponents()) {
+                    if (child instanceof JPanel && "inputBoxContainer".equals(child.getName())) {
+                        JPanel box = (JPanel) child;
+                        box.setOpaque(true);
+                        box.setBackground(ThemeUtils.textFieldBackground());
+                        box.setBorder(javax.swing.BorderFactory.createEmptyBorder(8, 12, 8, 12));
+
+                        for (Component inner : box.getComponents()) {
+                            if (inner instanceof JTextArea) {
+                                JTextArea textArea = (JTextArea) inner;
+                                // Do not paint its own background; rely on the box
+                                textArea.setOpaque(false);
+                                textArea.setForeground(ThemeUtils.textForeground());
+                                textArea.setCaretColor(ThemeUtils.textForeground());
+                                textArea.setBorder(javax.swing.BorderFactory.createEmptyBorder(0, 0, 0, 0));
+                            } else if (inner instanceof JPanel && "buttonPanel".equals(inner.getName())) {
+                                JPanel buttonPanel = (JPanel) inner;
+                                // Let the white box show through
+                                buttonPanel.setOpaque(false);
+                                buttonPanel.setBorder(javax.swing.BorderFactory.createEmptyBorder(0, 0, 0, 0));
+                            }
+                        }
+                    }
+                }
+                inputPanel.revalidate();
+                inputPanel.repaint();
+            }
+            
+            // Update bottom spacer
+            if (bottomSpacer != null) {
+                bottomSpacer.setBackground(ThemeUtils.panelBackground());
+                bottomSpacer.revalidate();
+                bottomSpacer.repaint();
+            }
+            
+            // Update header and status labels
+            if (headerLabel != null) {
+                headerLabel.setForeground(ThemeUtils.textForeground());
+                headerLabel.revalidate();
+                headerLabel.repaint();
+            }
+            
+            if (statusLabel != null) {
+                statusLabel.setForeground(ThemeUtils.textForeground());
+                statusLabel.revalidate();
+                statusLabel.repaint();
+            }
+            
+            LOG.info("Theme refresh completed");
+        } catch (Exception e) {
+            LOG.warn("Error during theme refresh: " + e.getMessage(), e);
+        }
+    }
+    
+    /**
+     * Recreates all message components to ensure proper theme switching.
+     * This is the most reliable way to handle JEditorPane HTML content that doesn't refresh properly.
+     */
+    private void recreateAllMessageComponents() {
+        try {
+            LOG.info("Recreating all message components for theme refresh");
+            
+            // Store current components and their order
+            List<Component> components = new ArrayList<>();
+            for (Component child : messageContainer.getComponents()) {
+                if (child instanceof com.trace.chat.components.MessageComponent) {
+                    components.add(child);
+                }
+            }
+            
+            // Remove all message components
+            for (Component child : components) {
+                messageContainer.remove(child);
+            }
+            
+            // Recreate all message components with current theme
+            for (Component oldComponent : components) {
+                if (oldComponent instanceof com.trace.chat.components.MessageComponent) {
+                    com.trace.chat.components.MessageComponent oldMsg = (com.trace.chat.components.MessageComponent) oldComponent;
+                    com.trace.chat.components.ChatMessage message = oldMsg.getMessage();
+                    
+                    // Create new message component with same message
+                    com.trace.chat.components.MessageComponent newMsg = new com.trace.chat.components.MessageComponent(message);
+                    newMsg.setAlignmentX(Component.LEFT_ALIGNMENT);
+                    
+                    // Add to container
+                    messageContainer.add(newMsg);
+                }
+            }
+            
+            LOG.info("Recreated " + components.size() + " message components");
+        } catch (Exception e) {
+            LOG.warn("Error recreating message components: " + e.getMessage(), e);
+        }
+    }
+
+    private void refreshThemeInContainer(Container container) {
+        for (Component child : container.getComponents()) {
+            // Update markdown content
+            if (child instanceof javax.swing.JEditorPane) {
+                com.trace.chat.components.MarkdownRenderer.reapplyThemeStyles((javax.swing.JEditorPane) child);
+            }
+            
+            // Update JPanels and other containers
+            if (child instanceof JPanel) {
+                JPanel panel = (JPanel) child;
+                // Only update panels that are opaque (have explicit backgrounds)
+                if (panel.isOpaque()) {
+                    panel.setBackground(ThemeUtils.panelBackground());
+                    panel.revalidate();
+                    panel.repaint();
+                }
+            }
+            
+            // Update JLabels
+            if (child instanceof JLabel) {
+                JLabel label = (JLabel) child;
+                label.setForeground(ThemeUtils.textForeground());
+                label.revalidate();
+                label.repaint();
+            }
+            
+            // Update JTextAreas
+            if (child instanceof JTextArea) {
+                JTextArea textArea = (JTextArea) child;
+                // Use textFieldBackground for all text areas to ensure proper theme switching
+                textArea.setBackground(ThemeUtils.textFieldBackground());
+                textArea.setForeground(ThemeUtils.textForeground());
+                textArea.setCaretColor(ThemeUtils.textForeground());
+                textArea.revalidate();
+                textArea.repaint();
+            }
+            
+            // Update JButtons
+            if (child instanceof JButton) {
+                JButton button = (JButton) child;
+                button.setForeground(ThemeUtils.textForeground());
+                button.revalidate();
+                button.repaint();
+            }
+            
+            // Recursively update containers
+            if (child instanceof Container) {
+                refreshThemeInContainer((Container) child);
+            }
+        }
+    }
+
     /**
      * Sets up the chat panel with proper layout management.
      * Creates the message container and scroll pane for displaying chat messages.
@@ -267,14 +479,8 @@ public class TriagePanelView {
         // Create message container with proper layout and viewport-width tracking
         messageContainer = new com.trace.chat.components.ViewportWidthTrackingPanel();
         messageContainer.setLayout(new BoxLayout(messageContainer, BoxLayout.Y_AXIS));
-        messageContainer.setOpaque(false);
-        
-        // Get theme-aware background color
-        Color panelBg = UIManager.getColor("Panel.background");
-        if (panelBg == null) {
-            panelBg = new Color(43, 43, 43);
-        }
-        
+        messageContainer.setOpaque(true);
+        Color panelBg = ThemeUtils.panelBackground();
         messageContainer.setBackground(panelBg);
         messageContainer.setBorder(BorderFactory.createEmptyBorder(8, 16, 8, 16));
         
@@ -315,7 +521,8 @@ public class TriagePanelView {
         
         // Create a dynamic bottom spacer to guarantee enough scroll range
         bottomSpacer = new JPanel();
-        bottomSpacer.setOpaque(false);
+        bottomSpacer.setOpaque(true);
+        bottomSpacer.setBackground(panelBg);
         bottomSpacer.setPreferredSize(new Dimension(1, 0));
         messageContainer.add(bottomSpacer);
 
@@ -346,12 +553,14 @@ public class TriagePanelView {
 
         // Create overlay container to host a floating "New messages" chip over the scroll area
         JPanel overlay = new JPanel();
-        overlay.setOpaque(false);
+        overlay.setOpaque(true);
+        overlay.setBackground(panelBg);
         overlay.setLayout(new OverlayLayout(overlay));
 
         // Create chip host panel aligned bottom-right using GridBagLayout
         JPanel chipHost = new JPanel(new GridBagLayout());
-        chipHost.setOpaque(false);
+        chipHost.setOpaque(true);
+        chipHost.setBackground(panelBg);
         GridBagConstraints gbc = new GridBagConstraints();
         gbc.gridx = 0;
         gbc.gridy = 0;
@@ -411,11 +620,12 @@ public class TriagePanelView {
         // Create input container with rounded border
         JPanel inputBoxContainer = new JPanel(new BorderLayout());
         inputBoxContainer.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createLineBorder(new Color(60, 60, 60), 1, true),
+            BorderFactory.createLineBorder(ThemeUtils.uiColor("Component.borderColor", new Color(60, 60, 60)), 1, true),
             BorderFactory.createEmptyBorder(8, 12, 8, 0)
         ));
-        inputBoxContainer.setBackground(new Color(50, 50, 50));
+        inputBoxContainer.setBackground(ThemeUtils.textFieldBackground());
         inputBoxContainer.setOpaque(true);
+        inputBoxContainer.setName("inputBoxContainer");
         
         // Configure text area for multi-line input
         inputArea.setFont(new Font("Segoe UI", Font.PLAIN, 14));
@@ -423,10 +633,10 @@ public class TriagePanelView {
         inputArea.setLineWrap(true);
         inputArea.setWrapStyleWord(true);
         inputArea.setBorder(BorderFactory.createEmptyBorder(0, 0, 0, 0));
-        inputArea.setBackground(new Color(50, 50, 50));
-        inputArea.setForeground(Color.WHITE);
-        inputArea.setCaretColor(Color.WHITE);
-        inputArea.setOpaque(false);
+        inputArea.setBackground(ThemeUtils.textFieldBackground());
+        inputArea.setForeground(ThemeUtils.textForeground());
+        inputArea.setCaretColor(ThemeUtils.textForeground());
+        inputArea.setOpaque(true);
         inputArea.putClientProperty("JTextField.placeholderText", TriagePanelConstants.INPUT_PLACEHOLDER_TEXT);
         
         // Create modern send button with custom icon
@@ -1603,10 +1813,7 @@ public class TriagePanelView {
      * @return The configured header panel
      */
     private JPanel createCustomHeaderPanel() {
-        Color darkBg = UIManager.getColor("Panel.background");
-        if (darkBg == null) {
-            darkBg = new Color(43, 43, 43);
-        }
+        Color darkBg = ThemeUtils.panelBackground();
         
         LOG.info("Creating custom header panel with ultra-compact layout");
         
@@ -1616,7 +1823,7 @@ public class TriagePanelView {
         
         // Minimal header padding
         header.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createMatteBorder(0, 0, 1, 0, new Color(68, 68, 68)),
+            BorderFactory.createMatteBorder(0, 0, 1, 0, ThemeUtils.uiColor("Component.borderColor", new Color(68, 68, 68))),
             BorderFactory.createEmptyBorder(6, 8, 6, 8) // Increased from (2, 4, 2, 4) for better visual balance
         ));
         
@@ -1644,7 +1851,7 @@ public class TriagePanelView {
             }
         };
         title.setFont(new Font("Segoe UI", Font.PLAIN, 14));
-        title.setForeground(new Color(180, 180, 180));
+        title.setForeground(ThemeUtils.textForeground());
         title.setAlignmentX(Component.LEFT_ALIGNMENT);
         leftPanel.add(title);
 
@@ -1805,7 +2012,7 @@ public class TriagePanelView {
     private JButton createSettingsButton() {
         JButton settingsButton = new JButton("⚙");
         settingsButton.setFont(new Font("Segoe UI", Font.PLAIN, 16)); // Increased from 14 to 16
-        settingsButton.setForeground(new Color(180, 180, 180));
+        settingsButton.setForeground(ThemeUtils.textForeground());
         settingsButton.setBorderPainted(false);
         settingsButton.setFocusPainted(false);
         settingsButton.setContentAreaFilled(false);
@@ -1844,7 +2051,7 @@ public class TriagePanelView {
         
         // Minimal styling - reverted to original approach
         analysisModeButton.setFont(new Font("Segoe UI", Font.PLAIN, 11));
-        analysisModeButton.setForeground(new Color(200, 200, 200)); // Lighter gray for better contrast
+        analysisModeButton.setForeground(ThemeUtils.textForeground());
         analysisModeButton.setBorderPainted(false);
         analysisModeButton.setFocusPainted(false);
         analysisModeButton.setContentAreaFilled(false);
@@ -2023,10 +2230,7 @@ public class TriagePanelView {
         mainPanel.removeAll();
         mainPanel.setLayout(new BorderLayout());
         
-        Color panelBg = UIManager.getColor("Panel.background");
-        if (panelBg == null) {
-            panelBg = new Color(43, 43, 43);
-        }
+        Color panelBg = ThemeUtils.panelBackground();
         mainPanel.setBackground(panelBg);
         mainPanel.setOpaque(true);
         

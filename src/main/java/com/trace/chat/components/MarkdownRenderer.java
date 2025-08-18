@@ -16,6 +16,7 @@ import java.awt.event.HierarchyEvent;
 import java.awt.event.HierarchyListener;
 import java.util.Arrays;
 import com.trace.common.constants.TriagePanelConstants;
+import com.trace.common.utils.ThemeUtils;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import javax.swing.text.html.HTMLEditorKit;
@@ -91,7 +92,8 @@ public final class MarkdownRenderer {
             JEditorPane editorPane = new ResponsiveHtmlPane();
             editorPane.setContentType("text/html");
             editorPane.setEditable(false);
-            editorPane.setOpaque(false);
+            editorPane.setOpaque(true);
+            editorPane.setBackground(ThemeUtils.panelBackground());
             // Increase bottom inset to prevent last line clipping in dynamic wrap scenarios
             editorPane.setBorder(BorderFactory.createEmptyBorder(0, 0, 14, 0));
             editorPane.setAlignmentX(Component.LEFT_ALIGNMENT);
@@ -100,15 +102,24 @@ public final class MarkdownRenderer {
             // Apply professional styling
             configureEditorPane(editorPane);
 
-            // Force wrapping behavior and a stylesheet that sets text color to white
+            // Force wrapping behavior and a theme-aware stylesheet
             try {
                 HTMLEditorKit kit = new WrappingHtmlEditorKit();
                 editorPane.setEditorKit(kit);
                 // Create a fresh HTMLDocument and apply rules at the document level for max precedence
                 HTMLDocument doc = (HTMLDocument) kit.createDefaultDocument();
                 StyleSheet docSheet = doc.getStyleSheet();
-                docSheet.addRule("body, p, li, ul, ol, h1, h2, h3, h4, h5, h6, span, div, td, th, a, b, i { color:#ffffff; }");
-                docSheet.addRule("code, pre { color:#e6e6e6; }");
+                String textFg = ThemeUtils.toHex(ThemeUtils.textForeground());
+                String panelBg = ThemeUtils.toHex(ThemeUtils.panelBackground());
+                String codeBg = ThemeUtils.toHex(ThemeUtils.codeBackground());
+                String codeFg = ThemeUtils.toHex(ThemeUtils.codeForeground());
+                String inlineBg = ThemeUtils.toHex(ThemeUtils.inlineCodeBackground());
+
+                docSheet.addRule("body, p, li, ul, ol, h1, h2, h3, h4, h5, h6, span, div, td, th, a, b, i { color:" + textFg + "; }");
+                docSheet.addRule("body { background-color:" + panelBg + "; padding-bottom:12px; }");
+                // Monospace font and themed background for code
+                docSheet.addRule("pre { font-family:'Monospaced'; background:" + codeBg + "; color:" + codeFg + "; padding:6px; margin-top:4px; margin-bottom:4px; }");
+                docSheet.addRule("code { font-family:'Monospaced'; background:" + inlineBg + "; color:" + codeFg + "; padding:0 3px; }");
                 // Set base body text size (reduce by 1px from previous 12px → 11px)
                 docSheet.addRule("body, p, li { font-size:11px; }");
                 // Tighten vertical spacing globally (supported subset of CSS in Swing)
@@ -116,8 +127,6 @@ public final class MarkdownRenderer {
                 docSheet.addRule("ul, ol { margin-top:2px; margin-bottom:2px; }");
                 docSheet.addRule("li { margin-top:0px; margin-bottom:2px; }");
                 docSheet.addRule("pre { margin-top:3px; margin-bottom:3px; }");
-                // Add slightly larger bottom padding to avoid last-line clipping during dynamic wrap
-                docSheet.addRule("body { padding-bottom:12px; }");
                 editorPane.setDocument(doc);
                 logHtmlKitAndStyles(editorPane, kit, docSheet);
             } catch (Exception ex) {
@@ -178,8 +187,8 @@ public final class MarkdownRenderer {
         Font smallerFont = new Font(TriagePanelConstants.FONT_FAMILY, Font.PLAIN, 11);
         editorPane.setFont(smallerFont);
         
-        editorPane.setForeground(TriagePanelConstants.WHITE);
-        editorPane.setBackground(TriagePanelConstants.PANEL_BACKGROUND);
+        editorPane.setForeground(ThemeUtils.textForeground());
+        editorPane.setBackground(ThemeUtils.panelBackground());
 
         // Enable proper HTML rendering
         editorPane.putClientProperty("JEditorPane.honorDisplayProperties", Boolean.TRUE);
@@ -196,7 +205,7 @@ public final class MarkdownRenderer {
         try {
             LOG.info("HTML Kit class: " + kit.getClass().getName());
             LOG.info("Pane EditorKit class: " + (pane.getEditorKit() != null ? pane.getEditorKit().getClass().getName() : "null"));
-            LOG.info("Custom StyleSheet rules applied: * { color:#ffffff } and code/pre dimming");
+            LOG.info("Custom StyleSheet rules applied: theme-aware body/text colors and code styles");
         } catch (Exception e) {
             LOG.warn("Failed logging kit/styles: " + e.getMessage());
         }
@@ -219,6 +228,40 @@ public final class MarkdownRenderer {
     }
 
     /**
+     * Re-applies the current theme stylesheet to an existing HTML JEditorPane.
+     * Keeps the pane's current HTML content while rebuilding the document/styles.
+     */
+    public static void reapplyThemeStyles(JEditorPane pane) {
+        if (pane == null) return;
+        try {
+            String currentHtml = pane.getText();
+            HTMLEditorKit kit = new WrappingHtmlEditorKit();
+            pane.setEditorKit(kit);
+            HTMLDocument doc = (HTMLDocument) kit.createDefaultDocument();
+            StyleSheet ss = doc.getStyleSheet();
+            String textFg = ThemeUtils.toHex(ThemeUtils.textForeground());
+            String panelBg = ThemeUtils.toHex(ThemeUtils.panelBackground());
+            String codeBg = ThemeUtils.toHex(ThemeUtils.codeBackground());
+            String codeFg = ThemeUtils.toHex(ThemeUtils.codeForeground());
+            String inlineBg = ThemeUtils.toHex(ThemeUtils.inlineCodeBackground());
+            ss.addRule("body, p, li, ul, ol, h1, h2, h3, h4, h5, h6, span, div, td, th, a, b, i { color:" + textFg + "; }");
+            ss.addRule("body { background-color:" + panelBg + "; padding-bottom:12px; }");
+            ss.addRule("pre { font-family:'Monospaced'; background:" + codeBg + "; color:" + codeFg + "; padding:6px; margin-top:4px; margin-bottom:4px; }");
+            ss.addRule("code { font-family:'Monospaced'; background:" + inlineBg + "; color:" + codeFg + "; padding:0 3px; }");
+            ss.addRule("body, p, li { font-size:11px; }");
+            ss.addRule("p { margin-top:2px; margin-bottom:2px; }");
+            ss.addRule("ul, ol { margin-top:2px; margin-bottom:2px; }");
+            ss.addRule("li { margin-top:0px; margin-bottom:2px; }");
+            ss.addRule("pre { margin-top:3px; margin-bottom:3px; }");
+            pane.setDocument(doc);
+            pane.setBackground(ThemeUtils.panelBackground());
+            pane.setForeground(ThemeUtils.textForeground());
+            pane.setText(currentHtml);
+        } catch (Exception ignore) {
+        }
+    }
+
+    /**
      * Wraps HTML content with professional CSS styling for Swing compatibility.
      *
      * <p>This method adds inline CSS styles that work with Swing's HTML 3.2 support,
@@ -232,67 +275,252 @@ public final class MarkdownRenderer {
         // Keep HTML minimal and safe for Swing; prefer global stylesheet for colors
         String safeHtml = convertToLegacyHtmlTags(html);
         safeHtml = escapeHtmlCommentOpeners(safeHtml);
-        // Optionally dim code/pre using inline element-level styles which Swing honors with highest precedence
-        safeHtml = dimCodeAndPreColorsInline(safeHtml);
+        // Transform PRE/CODE blocks into div-per-line markup (no syntax highlighting)
+        safeHtml = transformPreBlocksToDivLines(safeHtml);
+        // Ensure inline styles on PRE and CODE with theme-aware values for maximum precedence
+        String codeBg = ThemeUtils.toHex(ThemeUtils.codeBackground());
+        String codeFg = ThemeUtils.toHex(ThemeUtils.codeForeground());
+        String inlineBg = ThemeUtils.toHex(ThemeUtils.inlineCodeBackground());
+        safeHtml = ensureInlineStyleOnTag(safeHtml, "pre", "color:" + codeFg + "; font-family:Monospaced; background:" + codeBg + "; padding:6px; margin-top:4px; margin-bottom:4px");
+        safeHtml = ensureInlineStyleOnTag(safeHtml, "code", "color:" + codeFg + "; font-family:Monospaced; background:" + inlineBg + "; padding:0 3px");
         // Apply inline heading styles (h1–h6) so headings render visually as headings in Swing
         safeHtml = applyHeadingStylesInline(safeHtml);
         // Replace heading tags with styled divs to bypass Swing's default heading sizing
         safeHtml = replaceHeadingsWithStyledDivs(safeHtml);
 
+        String textFg = ThemeUtils.toHex(ThemeUtils.textForeground());
+        String panelBg = ThemeUtils.toHex(ThemeUtils.panelBackground());
         String styledHtml = """
             <html>
             <head></head>
-            <body style="color:#ffffff">
-            """ + safeHtml + """
+            <body style="color:%s; background-color:%s;">
+            %s
             </body>
             </html>
-            """;
+            """.formatted(textFg, panelBg, safeHtml);
         
         LOG.info("Final styled HTML length: " + styledHtml.length());
         LOG.info("Final HTML contains font-size: " + styledHtml.contains("font-size: 14px"));
         return styledHtml;
     }
 
-    /**
-     * Applies inline color to content inside <pre> and <code> to keep them slightly dimmer than body text.
-     * Uses element-level attributes for maximum precedence in Swing's HTML renderer.
-     */
-    private static String dimCodeAndPreColorsInline(String html) {
+    private static String applyBasicSyntaxHighlighting(String html) {
         try {
             String updated = html;
-            // Wrap <pre>...</pre> contents
-            try {
-                Pattern pre = Pattern.compile("(?is)<pre>(.*?)</pre>");
-                Matcher m = pre.matcher(updated);
-                StringBuffer sb = new StringBuffer();
-                while (m.find()) {
-                    String inner = m.group(1);
-                    String replacement = "<pre><span style=\"color:#e6e6e6\">" + inner + "</span></pre>";
-                    m.appendReplacement(sb, Matcher.quoteReplacement(replacement));
+            // Only attempt if language class is present to avoid false positives
+            updated = highlightLanguageBlock(updated, "java",
+                new String[]{
+                    "public","private","protected","class","interface","enum","void","int","long","double","float","boolean","char","new","return","if","else","switch","case","break","continue","try","catch","finally","throw","throws","static","final","abstract","synchronized","volatile","transient","this","super","extends","implements","package","import"
                 }
-                m.appendTail(sb);
-                updated = sb.toString();
-            } catch (Exception ignore) { /* best-effort */ }
-
-            // Wrap <code>...</code> contents
-            try {
-                Pattern code = Pattern.compile("(?is)<code>(.*?)</code>");
-                Matcher m = code.matcher(updated);
-                StringBuffer sb = new StringBuffer();
-                while (m.find()) {
-                    String inner = m.group(1);
-                    String replacement = "<code><span style=\"color:#e6e6e6\">" + inner + "</span></code>";
-                    m.appendReplacement(sb, Matcher.quoteReplacement(replacement));
+            );
+            updated = highlightLanguageBlock(updated, "json",
+                new String[]{
+                    "true","false","null"
                 }
-                m.appendTail(sb);
-                updated = sb.toString();
-            } catch (Exception ignore) { /* best-effort */ }
-
+            );
+            updated = highlightLanguageBlock(updated, "sql",
+                new String[]{
+                    "select","from","where","and","or","join","left","right","inner","outer","on","group","by","order","limit","insert","into","values","update","set","delete"
+                }
+            );
             return updated;
         } catch (Exception e) {
             return html;
         }
     }
+
+    /**
+     * Swing-friendly replacement for PRE/CODE blocks without syntax highlighting.
+     */
+    private static String transformPreBlocksToDivLines(String html) {
+        try {
+            Pattern p = Pattern.compile("(?is)<pre>\\s*(?:<code([^>]*)>)?(.*?)(?:</code>)?\\s*</pre>");
+            Matcher m = p.matcher(html);
+            StringBuffer out = new StringBuffer();
+            while (m.find()) {
+                String codeAttrs = m.group(1);
+                String innerHtml = m.group(2) != null ? m.group(2) : "";
+                String rawCode = htmlUnescape(innerHtml);
+                String[] lines = rawCode.split("\\r?\\n", -1);
+                String codeBg = ThemeUtils.toHex(ThemeUtils.codeBackground());
+                String codeFg = ThemeUtils.toHex(ThemeUtils.codeForeground());
+                StringBuilder block = new StringBuilder();
+                block.append("<div style=\"font-family:Monospaced; background:" + codeBg + 
+                             "; padding:6px; margin-top:4px; margin-bottom:4px; color:" + codeFg + ";\">");
+                for (String line : lines) {
+                    String lineHtml = htmlEscape(line.replace("\t", "    "));
+                    lineHtml = lineHtml.replace(" ", "&nbsp;");
+                    block.append("<div>").append(lineHtml).append("</div>");
+                }
+                block.append("</div>");
+                m.appendReplacement(out, Matcher.quoteReplacement(block.toString()));
+            }
+            m.appendTail(out);
+            return out.toString();
+        } catch (Exception e) {
+            return html;
+        }
+    }
+
+    private static String extractLanguageFromClassAttr(String attrs) {
+        if (attrs == null) return null;
+        try {
+            Matcher m = Pattern.compile("(?i)class\\s*=\\s*\"([^\"]*)\"").matcher(attrs);
+            if (m.find()) {
+                String cls = m.group(1);
+                Matcher lm = Pattern.compile("(?i)language-([A-Za-z0-9_+-]+)").matcher(cls);
+                if (lm.find()) {
+                    return lm.group(1).toLowerCase();
+                }
+            }
+        } catch (Exception ignore) {}
+        return null;
+    }
+
+    private static String highlightEscapedLine(String escapedLine, String language) {
+        try {
+            String s = escapedLine;
+            if ("java".equals(language)) {
+                s = replaceRegex(s, "//.*$", "#6A9955", Pattern.MULTILINE);
+                s = replaceRegex(s, "(?<![A-Za-z0-9_])(abstract|assert|boolean|break|byte|case|catch|char|class|const|continue|default|do|double|else|enum|extends|final|finally|float|for|goto|if|implements|import|instanceof|int|interface|long|native|new|package|private|protected|public|return|short|static|strictfp|super|switch|synchronized|this|throw|throws|transient|try|void|volatile|while)(?![A-Za-z0-9_])", "#4FC1FF", 0);
+                s = replaceRegex(s, "(?<![A-Za-z0-9_])(true|false|null)(?![A-Za-z0-9_])", "#569CD6", Pattern.CASE_INSENSITIVE);
+            } else if ("json".equals(language)) {
+                s = replaceRegex(s, "(?<![A-Za-z0-9_])(true|false|null)(?![A-Za-z0-9_])", "#569CD6", Pattern.CASE_INSENSITIVE);
+                // JSON keys inside quotes: color strings
+            } else if ("sql".equals(language)) {
+                s = replaceRegex(s, "(?<![A-Za-z0-9_])(select|from|where|and|or|join|left|right|inner|outer|on|group|by|order|limit|insert|into|values|update|set|delete)(?![A-Za-z0-9_])", "#C586C0", Pattern.CASE_INSENSITIVE);
+                s = replaceRegex(s, "--.*$", "#6A9955", Pattern.MULTILINE);
+            }
+            s = replaceRegex(s, "(?<![A-Za-z0-9_])\\d+(?![A-Za-z0-9_])", "#CE9178", 0);
+            // Strings in quotes for JSON/Java/SQL
+            s = replaceRegex(s, "\"([^\"]*)\"", "#CE9178", 0);
+            return s;
+        } catch (Exception e) {
+            return escapedLine;
+        }
+    }
+
+    private static String replaceRegex(String input, String regex, String color, int flags) {
+        Pattern pattern = (flags == 0) ? Pattern.compile(regex) : Pattern.compile(regex, flags);
+        Matcher m = pattern.matcher(input);
+        StringBuffer sb = new StringBuffer();
+        while (m.find()) {
+            // Use <font color> which is supported by Swing HTMLEditorKit; style attributes on span are not reliable
+            String repl = "<font color=\"" + color + "\">" + m.group(0) + "</font>";
+            m.appendReplacement(sb, Matcher.quoteReplacement(repl));
+        }
+        m.appendTail(sb);
+        return sb.toString();
+    }
+
+    private static String htmlUnescape(String s) {
+        if (s == null) return null;
+        String out = s;
+        try { out = out.replace("&lt;", "<"); } catch (Exception ignore) {}
+        try { out = out.replace("&gt;", ">"); } catch (Exception ignore) {}
+        try { out = out.replace("&quot;", "\""); } catch (Exception ignore) {}
+        try { out = out.replace("&#39;", "'"); } catch (Exception ignore) {}
+        try { out = out.replace("&amp;", "&"); } catch (Exception ignore) {}
+        return out;
+    }
+
+    private static String htmlEscape(String s) {
+        if (s == null) return "";
+        StringBuilder out = new StringBuilder(s.length() + 16);
+        for (int i = 0; i < s.length(); i++) {
+            char c = s.charAt(i);
+            switch (c) {
+                case '&': out.append("&amp;"); break;
+                case '<': out.append("&lt;"); break;
+                case '>': out.append("&gt;"); break;
+                case '"': out.append("&quot;"); break;
+                case '\'': out.append("&#39;"); break;
+                default: out.append(c);
+            }
+        }
+        return out.toString();
+    }
+
+    private static String highlightLanguageBlock(String html, String language, String[] keywords) {
+        try {
+            // Match <code class="language-xxx">...</code> (optionally wrapped in <pre>)
+            Pattern p = Pattern.compile("(?is)(<code[^>]*class=\\\"[^\\\"]*language-" + language + "[^\\\"]*\\\"[^>]*>)(.*?)(</code>)");
+            Matcher m = p.matcher(html);
+            StringBuffer out = new StringBuffer();
+            while (m.find()) {
+                String open = m.group(1);
+                String body = m.group(2);
+                String close = m.group(3);
+                String highlighted = highlightKeywordsInCode(body, keywords);
+                m.appendReplacement(out, Matcher.quoteReplacement(open + highlighted + close));
+            }
+            m.appendTail(out);
+            return out.toString();
+        } catch (Exception e) {
+            return html;
+        }
+    }
+
+    private static String highlightKeywordsInCode(String codeHtml, String[] keywords) {
+        try {
+            String result = codeHtml;
+            for (String kw : keywords) {
+                // Highlight whole-word keywords; keep case-insensitive for SQL/JSON
+                result = result.replaceAll("(?i)(?<![A-Za-z0-9_])(" + java.util.regex.Pattern.quote(kw) + ")(?![A-Za-z0-9_])",
+                        "<span style=\"color:#4FC1FF\">$1</span>");
+            }
+            // Numbers
+            result = result.replaceAll("(?<![A-Za-z0-9_])(\\d+)(?![A-Za-z0-9_])", "<span style=\"color:#CE9178\">$1</span>");
+            // Strings in double quotes
+            result = result.replaceAll("\"([^\"]*)\"", "<span style=\"color:#CE9178\">\"$1\"</span>");
+            return result;
+        } catch (Exception e) {
+            return codeHtml;
+        }
+    }
+
+    private static String ensureInlineStyleOnTag(String html, String tag, String styleToMerge) {
+        try {
+            Pattern openTag = Pattern.compile("(?is)<" + tag + "(\\b[^>]*)>");
+            Matcher m = openTag.matcher(html);
+            StringBuffer out = new StringBuffer();
+            while (m.find()) {
+                String attrs = m.group(1) != null ? m.group(1) : "";
+                String newAttrs = attrs;
+                try {
+                    Pattern styleAttr = Pattern.compile("(?i)style\\s*=\\s*\"([^\"]*)\"");
+                    Matcher sm = styleAttr.matcher(attrs);
+                    if (sm.find()) {
+                        String existing = sm.group(1) != null ? sm.group(1) : "";
+                        String combined = existing.trim();
+                        if (!combined.endsWith(";") && combined.length() > 0) {
+                            combined = combined + "; ";
+                        }
+                        combined = combined + styleToMerge;
+                        newAttrs = sm.replaceFirst("style=\"" + Matcher.quoteReplacement(combined) + "\"");
+                    } else {
+                        newAttrs = (newAttrs == null || newAttrs.trim().isEmpty()) ?
+                                " style=\"" + styleToMerge + "\"" : newAttrs + " style=\"" + styleToMerge + "\"";
+                    }
+                } catch (Exception ignore) {
+                    newAttrs = (newAttrs == null || newAttrs.trim().isEmpty()) ?
+                            " style=\"" + styleToMerge + "\"" : newAttrs + " style=\"" + styleToMerge + "\"";
+                }
+                String replacement = "<" + tag + newAttrs + ">";
+                m.appendReplacement(out, Matcher.quoteReplacement(replacement));
+            }
+            m.appendTail(out);
+            return out.toString();
+        } catch (Exception e) {
+            return html;
+        }
+    }
+
+    /**
+     * Applies inline color to content inside <pre> and <code> to keep them slightly dimmer than body text.
+     * Uses element-level attributes for maximum precedence in Swing's HTML renderer.
+     */
+    private static String dimCodeAndPreColorsInline(String html) { return html; }
 
     /**
      * Adds inline styles to heading tags h1–h6 to ensure they render with larger font and bold

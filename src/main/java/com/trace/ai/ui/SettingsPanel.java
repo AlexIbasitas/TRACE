@@ -3,6 +3,7 @@ package com.trace.ai.ui;
 import com.trace.ai.configuration.AISettings;
 import com.intellij.openapi.diagnostic.Logger;
 import com.trace.common.constants.TriagePanelConstants;
+import com.trace.common.utils.ThemeUtils;
 
 import javax.swing.*;
 import java.awt.*;
@@ -54,7 +55,7 @@ public class SettingsPanel extends JPanel {
      */
     private void initializePanel() {
         setLayout(new BorderLayout());
-        setBackground(getDarkBackgroundColor());
+        setBackground(ThemeUtils.panelBackground());
         setBorder(BorderFactory.createEmptyBorder(16, 16, 16, 16));
     }
     
@@ -64,8 +65,8 @@ public class SettingsPanel extends JPanel {
     private void setupLayout() {
         // Create scrollable settings content
         JPanel settingsContent = new JPanel(new BorderLayout());
-        settingsContent.setBackground(getDarkBackgroundColor());
-        settingsContent.setOpaque(false);
+        settingsContent.setBackground(ThemeUtils.panelBackground());
+        settingsContent.setOpaque(true);
         
         // Create container for settings sections
         JPanel sectionsContainer = createSectionsContainer();
@@ -85,8 +86,8 @@ public class SettingsPanel extends JPanel {
     private JPanel createSectionsContainer() {
         JPanel container = new JPanel();
         container.setLayout(new BoxLayout(container, BoxLayout.Y_AXIS));
-        container.setBackground(getDarkBackgroundColor());
-        container.setOpaque(false);
+        container.setBackground(ThemeUtils.panelBackground());
+        container.setOpaque(true);
         
         // Set minimum width to enable soft wrapping before horizontal scrollbar appears
         container.setMinimumSize(new Dimension(TriagePanelConstants.MIN_SETTINGS_WIDTH_BEFORE_SCROLL, 0));
@@ -104,8 +105,9 @@ public class SettingsPanel extends JPanel {
         JScrollPane scrollPane = new JScrollPane(view);
         scrollPane.setBorder(BorderFactory.createEmptyBorder());
         scrollPane.getVerticalScrollBar().setUnitIncrement(16);
-        scrollPane.setBackground(getDarkBackgroundColor());
-        scrollPane.getViewport().setBackground(getDarkBackgroundColor());
+        Color bg = ThemeUtils.panelBackground();
+        scrollPane.setBackground(bg);
+        scrollPane.getViewport().setBackground(bg);
         
         // Configure for better horizontal responsiveness with soft wrapping
         scrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
@@ -145,10 +147,10 @@ public class SettingsPanel extends JPanel {
     private void createNavigationButton() {
         backToChatButton = new JButton("← Back to Chat");
         backToChatButton.setFont(new Font("Segoe UI", Font.PLAIN, 13));
-        backToChatButton.setForeground(Color.WHITE);
-        backToChatButton.setBackground(new Color(60, 60, 60));
+        backToChatButton.setForeground(ThemeUtils.textForeground());
+        backToChatButton.setBackground(ThemeUtils.panelBackground());
         backToChatButton.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createLineBorder(new Color(80, 80, 80), 1, true),
+            BorderFactory.createLineBorder(ThemeUtils.uiColor("Component.borderColor", new Color(80, 80, 80)), 1, true),
             BorderFactory.createEmptyBorder(8, 16, 8, 16)
         ));
         backToChatButton.setFocusPainted(false);
@@ -162,8 +164,8 @@ public class SettingsPanel extends JPanel {
     private void assemblePanel() {
         // Button container
         JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 10));
-        buttonPanel.setBackground(getDarkBackgroundColor());
-        buttonPanel.setOpaque(false);
+        buttonPanel.setBackground(ThemeUtils.panelBackground());
+        buttonPanel.setOpaque(true);
         buttonPanel.add(backToChatButton);
         
         add(buttonPanel, BorderLayout.SOUTH);
@@ -174,13 +176,7 @@ public class SettingsPanel extends JPanel {
      * 
      * @return The dark background color
      */
-    private Color getDarkBackgroundColor() {
-        Color darkBg = UIManager.getColor("Panel.background");
-        if (darkBg == null) {
-            darkBg = new Color(43, 43, 43);
-        }
-        return darkBg;
-    }
+    private Color getDarkBackgroundColor() { return ThemeUtils.panelBackground(); }
     
     /**
      * Adds a new settings section to the panel.

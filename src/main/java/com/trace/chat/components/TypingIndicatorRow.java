@@ -1,6 +1,7 @@
 package com.trace.chat.components;
 
 import com.trace.common.constants.TriagePanelConstants;
+import com.trace.common.utils.ThemeUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -31,7 +32,8 @@ public class TypingIndicatorRow extends JPanel {
     private int tickCounter = 0;
 
     public TypingIndicatorRow() {
-        setOpaque(false);
+        setOpaque(true);
+        setBackground(ThemeUtils.panelBackground());
         setBorder(TriagePanelConstants.MESSAGE_COMPONENT_BORDER);
         setAlignmentX(Component.LEFT_ALIGNMENT);
         setAlignmentY(Component.TOP_ALIGNMENT);

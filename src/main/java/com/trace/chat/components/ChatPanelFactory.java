@@ -2,6 +2,7 @@ package com.trace.chat.components;
 
 import com.intellij.openapi.diagnostic.Logger;
 import com.trace.common.constants.TriagePanelConstants;
+import com.trace.common.utils.ThemeUtils;
 
 import javax.swing.*;
 import java.awt.*;
@@ -40,7 +41,7 @@ public final class ChatPanelFactory {
      */
     public static JPanel createChatPanel() {
         JPanel chatPanel = new JPanel(new BorderLayout());
-        chatPanel.setBackground(TriagePanelConstants.getPanelBackground());
+        chatPanel.setBackground(ThemeUtils.panelBackground());
         chatPanel.setBorder(TriagePanelConstants.MESSAGE_CONTAINER_BORDER);
         chatPanel.setOpaque(true);
         chatPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
@@ -60,8 +61,8 @@ public final class ChatPanelFactory {
     public static JPanel createMessageContainer() {
         JPanel messageContainer = new JPanel();
         messageContainer.setLayout(new BoxLayout(messageContainer, BoxLayout.Y_AXIS));
-        messageContainer.setBackground(TriagePanelConstants.getPanelBackground());
-        messageContainer.setOpaque(false);
+        messageContainer.setBackground(ThemeUtils.panelBackground());
+        messageContainer.setOpaque(true);
         messageContainer.setBorder(TriagePanelConstants.MESSAGE_CONTAINER_BORDER);
         messageContainer.setAlignmentX(Component.LEFT_ALIGNMENT);
         messageContainer.setAlignmentY(Component.TOP_ALIGNMENT);
@@ -96,9 +97,10 @@ public final class ChatPanelFactory {
         scrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
         scrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
         scrollPane.setBorder(TriagePanelConstants.EMPTY_BORDER);
-        scrollPane.setOpaque(false);
-        scrollPane.getViewport().setOpaque(false);
-        scrollPane.getViewport().setBackground(TriagePanelConstants.getPanelBackground());
+        scrollPane.setOpaque(true);
+        scrollPane.setBackground(ThemeUtils.panelBackground());
+        scrollPane.getViewport().setOpaque(true);
+        scrollPane.getViewport().setBackground(ThemeUtils.panelBackground());
         
         // Configure scroll bar for smooth scrolling
         JScrollBar verticalBar = scrollPane.getVerticalScrollBar();

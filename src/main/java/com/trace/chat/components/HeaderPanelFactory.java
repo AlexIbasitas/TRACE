@@ -1,6 +1,7 @@
 package com.trace.chat.components;
 
 import com.trace.common.constants.TriagePanelConstants;
+import com.trace.common.utils.ThemeUtils;
 
 import javax.swing.*;
 import java.awt.*;
@@ -45,7 +46,7 @@ public final class HeaderPanelFactory {
             throw new IllegalArgumentException("Settings action listener cannot be null");
         }
         
-        Color darkBg = TriagePanelConstants.getPanelBackground();
+        Color darkBg = ThemeUtils.panelBackground();
         
         JPanel header = new JPanel(new BorderLayout());
         header.setBackground(darkBg);
@@ -72,11 +73,12 @@ public final class HeaderPanelFactory {
      */
     private static JPanel createHeaderLeftPanel() {
         JPanel leftPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
-        leftPanel.setOpaque(false);
+        leftPanel.setOpaque(true);
+        leftPanel.setBackground(ThemeUtils.panelBackground());
         
         JLabel title = new JLabel(TriagePanelConstants.HEADER_TITLE_TEXT);
         title.setFont(TriagePanelConstants.HEADER_TITLE_FONT);
-        title.setForeground(TriagePanelConstants.HEADER_TEXT);
+        title.setForeground(ThemeUtils.textForeground());
         leftPanel.add(title);
         
         return leftPanel;
@@ -95,7 +97,8 @@ public final class HeaderPanelFactory {
         JButton settingsButton = createSettingsButton(settingsActionListener);
         
         JPanel rightPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 0, 0));
-        rightPanel.setOpaque(false);
+        rightPanel.setOpaque(true);
+        rightPanel.setBackground(ThemeUtils.panelBackground());
         rightPanel.add(settingsButton);
         
         return rightPanel;
@@ -118,8 +121,8 @@ public final class HeaderPanelFactory {
         
         JButton settingsButton = new JButton(TriagePanelConstants.SETTINGS_BUTTON_TEXT);
         settingsButton.setFont(TriagePanelConstants.HEADER_BUTTON_FONT);
-        settingsButton.setForeground(TriagePanelConstants.HEADER_TEXT);
-        settingsButton.setBackground(TriagePanelConstants.getPanelBackground());
+        settingsButton.setForeground(ThemeUtils.textForeground());
+        settingsButton.setBackground(ThemeUtils.panelBackground());
         settingsButton.setBorderPainted(false);
         settingsButton.setFocusPainted(false);
         settingsButton.setContentAreaFilled(false);

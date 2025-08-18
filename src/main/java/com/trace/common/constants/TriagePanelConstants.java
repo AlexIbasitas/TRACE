@@ -30,7 +30,7 @@ public final class TriagePanelConstants {
     // COLOR CONSTANTS
     // ============================================================================
     
-    /** Default panel background color */
+    /** Default panel background color (legacy fallback; prefer ThemeUtils.panelBackground()) */
     public static final Color PANEL_BACKGROUND = new Color(43, 43, 43);
     
     /** Input container background color */
@@ -45,7 +45,7 @@ public final class TriagePanelConstants {
     /** Header text color */
     public static final Color HEADER_TEXT = new Color(180, 180, 180);
     
-    /** White color for text */
+    /** White color for text (legacy constant; prefer ThemeUtils.textForeground()) */
     public static final Color WHITE = Color.WHITE;
     
     /** Timestamp text color */
@@ -172,7 +172,7 @@ public final class TriagePanelConstants {
     /** Input panel border */
     public static final Border INPUT_PANEL_BORDER = BorderFactory.createEmptyBorder(8, 16, 16, 16);
     
-    /** Input container border */
+    /** Input container border - DEPRECATED: Use theme-aware borders instead */
     public static final Border INPUT_CONTAINER_BORDER_COMPOUND = BorderFactory.createCompoundBorder(
         BorderFactory.createLineBorder(INPUT_CONTAINER_BORDER, 1, true),
         BorderFactory.createEmptyBorder(8, 12, 8, 0)

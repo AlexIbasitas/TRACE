@@ -4,6 +4,7 @@ import com.intellij.icons.AllIcons;
 import com.intellij.openapi.ide.CopyPasteManager;
 import com.intellij.openapi.util.IconLoader;
 import com.trace.common.constants.TriagePanelConstants;
+import com.trace.common.utils.ThemeUtils;
 
 import javax.swing.*;
 import java.awt.*;
@@ -56,7 +57,8 @@ public class MessageComponent extends JPanel {
      */
     private void initializeComponent() {
         setLayout(new BorderLayout());
-        setOpaque(false);
+        setOpaque(true);
+        setBackground(ThemeUtils.panelBackground());
         setBorder(TriagePanelConstants.MESSAGE_COMPONENT_BORDER);
         setMaximumSize(new Dimension(Integer.MAX_VALUE, getPreferredSize().height + TriagePanelConstants.COMPONENT_SPACING));
         setAlignmentX(Component.LEFT_ALIGNMENT);
@@ -80,19 +82,21 @@ public class MessageComponent extends JPanel {
      */
     private JPanel createHeader() {
         JPanel headerPanel = new JPanel(new BorderLayout());
-        headerPanel.setOpaque(false);
+        headerPanel.setOpaque(true);
+        headerPanel.setBackground(ThemeUtils.panelBackground());
         headerPanel.setBorder(TriagePanelConstants.MESSAGE_HEADER_BORDER);
         
         // Left side: logo + sender name
         JPanel leftPanel = new JPanel(new BorderLayout());
-        leftPanel.setOpaque(false);
+        leftPanel.setOpaque(true);
+        leftPanel.setBackground(ThemeUtils.panelBackground());
         
         // Add logo for all messages (both user and AI)
         addSenderIcon(leftPanel);
         
         JLabel senderLabel = new JLabel(message.isFromUser() ? TriagePanelConstants.USER_DISPLAY_NAME : TriagePanelConstants.AI_DISPLAY_NAME);
         senderLabel.setFont(TriagePanelConstants.SENDER_FONT);
-        senderLabel.setForeground(TriagePanelConstants.WHITE);
+        senderLabel.setForeground(ThemeUtils.textForeground());
         leftPanel.add(senderLabel, BorderLayout.CENTER);
         
         headerPanel.add(leftPanel, BorderLayout.WEST);
@@ -100,7 +104,7 @@ public class MessageComponent extends JPanel {
         // Right side: full timestamp
         JLabel timeLabel = new JLabel(formatFullTimestamp(message.getTimestamp()));
         timeLabel.setFont(TriagePanelConstants.TIMESTAMP_FONT);
-        timeLabel.setForeground(TriagePanelConstants.TIMESTAMP_COLOR);
+        timeLabel.setForeground(ThemeUtils.textForeground());
         headerPanel.add(timeLabel, BorderLayout.EAST);
         
         return headerPanel;
@@ -135,7 +139,8 @@ public class MessageComponent extends JPanel {
         // Inner content panel retains existing layout/margins
         JPanel contentPanel = new JPanel();
         contentPanel.setLayout(new BoxLayout(contentPanel, BoxLayout.Y_AXIS));
-        contentPanel.setOpaque(false);
+        contentPanel.setOpaque(true);
+        contentPanel.setBackground(ThemeUtils.panelBackground());
 
         // Add scenario and failed step information for AI messages if available
         if (message.isFromAI() && message.hasFailureInfo()) {
@@ -154,11 +159,13 @@ public class MessageComponent extends JPanel {
 
         // Wrap in container to host footer without altering margins
         JPanel container = new JPanel(new BorderLayout());
-        container.setOpaque(false);
+        container.setOpaque(true);
+        container.setBackground(ThemeUtils.panelBackground());
         container.add(contentPanel, BorderLayout.CENTER);
 
         JPanel footer = new JPanel(new FlowLayout(FlowLayout.RIGHT, 0, 0));
-        footer.setOpaque(false);
+        footer.setOpaque(true);
+        footer.setBackground(ThemeUtils.panelBackground());
 
         JButton copyButton = new JButton(AllIcons.Actions.Copy);
         copyButton.setName("copyMessageButton");
@@ -227,14 +234,18 @@ public class MessageComponent extends JPanel {
         html.append("<html><body style='margin:0;padding:0;'>");
         html.append("<div style=\"font-family:")
             .append(TriagePanelConstants.FONT_FAMILY)
-            .append(", sans-serif;font-size:11px;color:#ffffff;\">")
+            .append(", sans-serif;font-size:11px;color:")
+            .append(ThemeUtils.toHex(ThemeUtils.textForeground()))
+            .append(";\">")
             .append("<span style=\"color:#FFA500;font-weight:bold\">Scenario:</span> ")
             .append(safeScenario)
             .append("</div>");
         if (safeFailedStep != null && !safeFailedStep.isEmpty()) {
             html.append("<div style=\"font-family:")
                 .append(TriagePanelConstants.FONT_FAMILY)
-                .append(", sans-serif;font-size:11px;color:#ffffff;\">")
+                .append(", sans-serif;font-size:11px;color:")
+                .append(ThemeUtils.toHex(ThemeUtils.textForeground()))
+                .append(";\">")
                 .append("<span style=\"color:#FF6B6B;font-weight:bold\">ⓧ Failed Step:</span> ")
                 .append(safeFailedStep)
                 .append("</div>");
@@ -292,7 +303,8 @@ public class MessageComponent extends JPanel {
         JEditorPane pane = new MarkdownRenderer.ResponsiveHtmlPane();
         pane.setContentType("text/html");
         pane.setEditable(false);
-        pane.setOpaque(false);
+        pane.setOpaque(true);
+        pane.setBackground(ThemeUtils.panelBackground());
         pane.putClientProperty("JEditorPane.honorDisplayProperties", Boolean.TRUE);
 
         try {
@@ -300,7 +312,10 @@ public class MessageComponent extends JPanel {
             pane.setEditorKit(kit);
             javax.swing.text.html.HTMLDocument doc = (javax.swing.text.html.HTMLDocument) kit.createDefaultDocument();
             javax.swing.text.html.StyleSheet ss = doc.getStyleSheet();
-            ss.addRule("body, p, li, ul, ol, h1, h2, h3, h4, h5, h6, span, div, td, th, a, b, i { color:#ffffff; font-family: '" + TriagePanelConstants.FONT_FAMILY + "', sans-serif; }");
+            String textFg = ThemeUtils.toHex(ThemeUtils.textForeground());
+            String panelBg = ThemeUtils.toHex(ThemeUtils.panelBackground());
+            ss.addRule("body, p, li, ul, ol, h1, h2, h3, h4, h5, h6, span, div, td, th, a, b, i { color:" + textFg + "; font-family: '" + TriagePanelConstants.FONT_FAMILY + "', sans-serif; }");
+            ss.addRule("body { background-color:" + panelBg + "; }");
             ss.addRule("body, p, li { font-size:11px; }");
             ss.addRule("p { margin-top:2px; margin-bottom:2px; }");
             ss.addRule("ul, ol { margin-top:2px; margin-bottom:2px; }");
@@ -387,10 +402,11 @@ public class MessageComponent extends JPanel {
         messageText.setWrapStyleWord(true);
         messageText.setEditable(false);
         messageText.setFont(TriagePanelConstants.MESSAGE_FONT);
-        messageText.setBackground(getBackground());
-        messageText.setForeground(TriagePanelConstants.WHITE);
-        messageText.setBorder(TriagePanelConstants.EMPTY_BORDER);
-        messageText.setOpaque(false);
+        messageText.setBackground(ThemeUtils.panelBackground());
+        messageText.setForeground(ThemeUtils.textForeground());
+        // Match AI message bottom padding so the copy button spacing is consistent
+        messageText.setBorder(BorderFactory.createEmptyBorder(0, 0, 14, 0));
+        messageText.setOpaque(true);
         messageText.setAlignmentX(Component.LEFT_ALIGNMENT);
         
         // Ensure text area is visible and properly sized
@@ -494,4 +510,75 @@ public class MessageComponent extends JPanel {
     void setCopyFeedbackMs(int milliseconds) {
         this.copyFeedbackMs = milliseconds > 0 ? milliseconds : 1;
     }
+    
+    /**
+     * Refreshes the theme colors for this message component.
+     * Updates all child components to use the current theme colors.
+     */
+    public void refreshTheme() {
+        try {
+            // Update main component background
+            setBackground(ThemeUtils.panelBackground());
+            
+            // Update all child components recursively
+            refreshThemeInContainer(this);
+            
+            // Update collapsible panel if present
+            if (collapsiblePanel != null) {
+                collapsiblePanel.refreshTheme();
+            }
+            
+            revalidate();
+            repaint();
+        } catch (Exception e) {
+            // Log error but don't fail
+            System.err.println("Error refreshing theme in MessageComponent: " + e.getMessage());
+        }
+    }
+    
+    /**
+     * Recursively refreshes theme colors in a container and its children.
+     */
+    private void refreshThemeInContainer(Container container) {
+        for (Component child : container.getComponents()) {
+            // Update JEditorPanes (HTML content like scenario/failed step)
+            if (child instanceof javax.swing.JEditorPane) {
+                com.trace.chat.components.MarkdownRenderer.reapplyThemeStyles((javax.swing.JEditorPane) child);
+            }
+            
+            // Update JLabels
+            if (child instanceof JLabel) {
+                JLabel label = (JLabel) child;
+                label.setForeground(ThemeUtils.textForeground());
+                label.revalidate();
+                label.repaint();
+            }
+            
+            // Update JTextAreas
+            if (child instanceof JTextArea) {
+                JTextArea textArea = (JTextArea) child;
+                textArea.setBackground(ThemeUtils.panelBackground());
+                textArea.setForeground(ThemeUtils.textForeground());
+                textArea.setCaretColor(ThemeUtils.textForeground());
+                textArea.revalidate();
+                textArea.repaint();
+            }
+            
+            // Update JPanels
+            if (child instanceof JPanel) {
+                JPanel panel = (JPanel) child;
+                if (panel.isOpaque()) {
+                    panel.setBackground(ThemeUtils.panelBackground());
+                    panel.revalidate();
+                    panel.repaint();
+                }
+            }
+            
+            // Recursively update containers
+            if (child instanceof Container) {
+                refreshThemeInContainer((Container) child);
+            }
+        }
+    }
+    
 } 

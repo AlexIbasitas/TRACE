@@ -4,7 +4,6 @@ import javax.swing.text.*;
 import javax.swing.text.html.HTMLEditorKit;
 import javax.swing.text.html.HTML;
 import javax.swing.text.html.InlineView;
-import javax.swing.text.html.ParagraphView;
 import javax.swing.text.LabelView;
 
 /**
@@ -32,33 +31,33 @@ public class WrappingHtmlEditorKit extends HTMLEditorKit {
             Object o = elem.getAttributes().getAttribute(StyleConstants.NameAttribute);
             if (o instanceof HTML.Tag) {
                 HTML.Tag t = (HTML.Tag) o;
-                // Only apply aggressive wrapping to PRE/CODE blocks and their inline/text children
-                if (t == HTML.Tag.PRE || t == HTML.Tag.CODE) {
-                    return new WrappingParagraphView(elem);
+                // 1) Preserve true preformatted behavior for PRE containers
+                if (t == HTML.Tag.PRE) {
+                    return super.create(elem);
                 }
+                // 2) If CODE is inside PRE, treat it as part of the block (no overrides)
+                if (t == HTML.Tag.CODE && isInside(elem, HTML.Tag.PRE)) {
+                    return super.create(elem);
+                }
+                // 3) For plain text content, only wrap outside of PRE
                 if (t == HTML.Tag.CONTENT) {
-                    if (isInsidePreOrCode(elem)) {
-                        return new WrappingLabelView(elem);
-                    }
-                    return super.create(elem);
+                    return isInside(elem, HTML.Tag.PRE) ? super.create(elem) : new WrappingLabelView(elem);
                 }
+                // 4) For inline spans, only wrap outside of PRE
                 if (t == HTML.Tag.SPAN) {
-                    if (isInsidePreOrCode(elem)) {
-                        return new WrappingInlineView(elem);
-                    }
-                    return super.create(elem);
+                    return isInside(elem, HTML.Tag.PRE) ? super.create(elem) : new WrappingInlineView(elem);
                 }
             }
             return super.create(elem);
         }
 
-        private boolean isInsidePreOrCode(Element elem) {
+        private static boolean isInside(Element elem, HTML.Tag ancestor) {
             Element e = elem;
             while (e != null) {
                 Object name = e.getAttributes().getAttribute(StyleConstants.NameAttribute);
                 if (name instanceof HTML.Tag) {
                     HTML.Tag tag = (HTML.Tag) name;
-                    if (tag == HTML.Tag.PRE || tag == HTML.Tag.CODE) {
+                    if (tag == ancestor) {
                         return true;
                     }
                 }
@@ -141,35 +140,6 @@ public class WrappingHtmlEditorKit extends HTMLEditorKit {
         }
     }
 
-    /**
-     * Paragraph view that allows wrapping even for pre/code containers.
-     */
-    private static class WrappingParagraphView extends ParagraphView {
-        WrappingParagraphView(Element elem) { super(elem); }
-
-        @Override
-        public int getBreakWeight(int axis, float pos, float len) {
-            if (axis == View.X_AXIS) {
-                return GoodBreakWeight;
-            }
-            return super.getBreakWeight(axis, pos, len);
-        }
-
-        @Override
-        public View breakView(int axis, int p0, float pos, float len) {
-            if (axis == View.X_AXIS) {
-                return super.breakView(axis, p0, pos, len);
-            }
-            return super.breakView(axis, p0, pos, len);
-        }
-
-        @Override
-        public float getMinimumSpan(int axis) {
-            if (axis == View.X_AXIS) {
-                return 0f;
-            }
-            return super.getMinimumSpan(axis);
-        }
-    }
+    // Removed ParagraphView override for PRE/CODE to preserve true preformatted behavior
 }
 

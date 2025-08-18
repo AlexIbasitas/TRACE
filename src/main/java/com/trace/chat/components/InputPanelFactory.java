@@ -2,8 +2,8 @@ package com.trace.chat.components;
 
 import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.openapi.util.IconLoader;
-import com.intellij.ui.components.JBTextArea;
 import com.trace.common.constants.TriagePanelConstants;
+import com.trace.common.utils.ThemeUtils;
 
 import javax.swing.*;
 import java.awt.*;
@@ -46,7 +46,7 @@ public final class InputPanelFactory {
      */
     public static JPanel createInputPanel() {
         JPanel inputPanel = new JPanel(new BorderLayout());
-        inputPanel.setBackground(TriagePanelConstants.getPanelBackground());
+        inputPanel.setBackground(ThemeUtils.panelBackground());
         inputPanel.setBorder(TriagePanelConstants.INPUT_PANEL_BORDER);
         inputPanel.setOpaque(true);
         inputPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
@@ -66,8 +66,10 @@ public final class InputPanelFactory {
      */
     public static JPanel createInputContainer() {
         JPanel inputContainer = new JPanel(new BorderLayout());
-        inputContainer.setBorder(TriagePanelConstants.INPUT_CONTAINER_BORDER_COMPOUND);
-        inputContainer.setBackground(TriagePanelConstants.INPUT_CONTAINER_BACKGROUND);
+        // Use a simple empty border so the input area appears as a single, uniform block
+        inputContainer.setBorder(BorderFactory.createEmptyBorder(8, 12, 8, 12));
+        
+        inputContainer.setBackground(ThemeUtils.textFieldBackground());
         inputContainer.setOpaque(true);
         inputContainer.setAlignmentX(Component.LEFT_ALIGNMENT);
         inputContainer.setAlignmentY(Component.CENTER_ALIGNMENT);
@@ -88,17 +90,19 @@ public final class InputPanelFactory {
      * @param sendActionListener The action listener for send functionality (can be null)
      * @return The configured input text area with proper naming for identification
      */
-    public static JBTextArea createInputArea(ActionListener sendActionListener) {
-        JBTextArea inputArea = new JBTextArea();
+    public static JTextArea createInputArea(ActionListener sendActionListener) {
+        JTextArea inputArea = new JTextArea();
         inputArea.setRows(TriagePanelConstants.INPUT_AREA_ROWS);
         inputArea.setFont(TriagePanelConstants.INPUT_FONT);
-        inputArea.setBackground(TriagePanelConstants.INPUT_CONTAINER_BACKGROUND);
-        inputArea.setForeground(TriagePanelConstants.WHITE);
-        inputArea.setCaretColor(TriagePanelConstants.WHITE);
+        inputArea.setBackground(ThemeUtils.textFieldBackground());
+        inputArea.setForeground(ThemeUtils.textForeground());
+        inputArea.setCaretColor(ThemeUtils.textForeground());
         inputArea.setLineWrap(true);
         inputArea.setWrapStyleWord(true);
         inputArea.setBorder(TriagePanelConstants.EMPTY_BORDER);
-        inputArea.setOpaque(false);
+        // Add internal padding so the text does not touch the edges
+        inputArea.setMargin(new Insets(6, 8, 6, 8));
+        inputArea.setOpaque(true);
         inputArea.setAlignmentX(Component.LEFT_ALIGNMENT);
         inputArea.setAlignmentY(Component.CENTER_ALIGNMENT);
         inputArea.setName("inputArea");
@@ -140,7 +144,8 @@ public final class InputPanelFactory {
      */
     public static JPanel createButtonContainer() {
         JPanel buttonContainer = new JPanel(new FlowLayout(FlowLayout.CENTER, 0, 0));
-        buttonContainer.setOpaque(false);
+        buttonContainer.setOpaque(true);
+        buttonContainer.setBackground(ThemeUtils.textFieldBackground());
         buttonContainer.setPreferredSize(TriagePanelConstants.BUTTON_CONTAINER_SIZE);
         buttonContainer.setMaximumSize(TriagePanelConstants.BUTTON_CONTAINER_SIZE);
         buttonContainer.setMinimumSize(TriagePanelConstants.BUTTON_CONTAINER_SIZE);
@@ -273,29 +278,40 @@ public final class InputPanelFactory {
             LOG.warn("InputPanelFactory: createCompleteInputPanelSetup called with null sendActionListener - creating limited functionality components");
         }
         
-        // Create main components with proper naming
+        // Create main input panel (grey background)
         JPanel inputPanel = createInputPanel();
         inputPanel.setName("inputPanel");
-        
-        JPanel inputContainer = createInputContainer();
-        inputContainer.setName("inputContainer");
-        
-        JBTextArea inputArea = createInputArea(sendActionListener);
+
+        // Create a single opaque white container that paints the entire input box background
+        JPanel inputBoxContainer = new JPanel(new BorderLayout());
+        inputBoxContainer.setOpaque(true);
+        inputBoxContainer.setBackground(ThemeUtils.textFieldBackground());
+        inputBoxContainer.setBorder(BorderFactory.createEmptyBorder(8, 12, 8, 12));
+        inputBoxContainer.setName("inputBoxContainer");
+
+        // Create text area but make it non-opaque so it does not paint its own background
+        JTextArea inputArea = createInputArea(sendActionListener);
         inputArea.setName("inputArea");
-        
-        JPanel buttonContainer = createButtonContainer();
-        buttonContainer.setName("buttonContainer");
-        
+        inputArea.setOpaque(false);
+
+        // Create send button
         JButton sendButton = createModernSendButton(sendActionListener);
         sendButton.setName("sendButton");
-        
-        // Assemble the components according to hierarchy
-        buttonContainer.add(sendButton);
-        inputContainer.add(inputArea, BorderLayout.CENTER);
-        inputContainer.add(buttonContainer, BorderLayout.EAST);
-        inputPanel.add(inputContainer, BorderLayout.CENTER);
-        
-        return new Object[]{inputPanel, inputContainer, inputArea, buttonContainer, sendButton};
+
+        // Button panel sits on top of the white container; keep it non-opaque
+        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 0, 0));
+        buttonPanel.setOpaque(false);
+        buttonPanel.setName("buttonPanel");
+        buttonPanel.add(sendButton);
+
+        // Assemble hierarchy: inputPanel (grey) -> inputBoxContainer (white) -> inputArea + buttonPanel
+        inputBoxContainer.add(inputArea, BorderLayout.CENTER);
+        inputBoxContainer.add(buttonPanel, BorderLayout.EAST);
+        inputPanel.setLayout(new BorderLayout());
+        inputPanel.add(inputBoxContainer, BorderLayout.CENTER);
+
+        // Return structure: [inputPanel, inputBoxContainer, inputArea, buttonPanel, sendButton]
+        return new Object[]{inputPanel, inputBoxContainer, inputArea, buttonPanel, sendButton};
     }
     
     /**
@@ -331,7 +347,7 @@ public final class InputPanelFactory {
      *
      * @param inputArea The input text area to clear (can be null)
      */
-    public static void clearInputArea(JBTextArea inputArea) {
+    public static void clearInputArea(JTextArea inputArea) {
         // Defensive programming: handle null input area gracefully
         if (inputArea == null) {
             LOG.warn("InputPanelFactory: clearInputArea called with null inputArea - skipping clear operation");
@@ -354,7 +370,7 @@ public final class InputPanelFactory {
      * @param inputArea The input text area to get text from (can be null)
      * @return The trimmed text content, or empty string if inputArea is null
      */
-    public static String getInputText(JBTextArea inputArea) {
+    public static String getInputText(JTextArea inputArea) {
         // Defensive programming: handle null input area gracefully
         if (inputArea == null) {
             LOG.warn("InputPanelFactory: getInputText called with null inputArea - returning empty string");
@@ -376,7 +392,7 @@ public final class InputPanelFactory {
      * @param inputArea The input text area to check (can be null)
      * @return true if the input area has content, false otherwise or if inputArea is null
      */
-    public static boolean hasInputContent(JBTextArea inputArea) {
+    public static boolean hasInputContent(JTextArea inputArea) {
         // Defensive programming: handle null input area gracefully
         if (inputArea == null) {
             LOG.warn("InputPanelFactory: hasInputContent called with null inputArea - returning false");
@@ -397,7 +413,7 @@ public final class InputPanelFactory {
      * @param inputArea The input text area to configure (can be null)
      * @param enabled Whether the input area should be enabled
      */
-    public static void setInputEnabled(JBTextArea inputArea, boolean enabled) {
+    public static void setInputEnabled(JTextArea inputArea, boolean enabled) {
         // Defensive programming: handle null input area gracefully
         if (inputArea == null) {
             LOG.warn("InputPanelFactory: setInputEnabled called with null inputArea - skipping enable operation");
@@ -466,12 +482,12 @@ public final class InputPanelFactory {
      * @param components The component array from createCompleteInputPanelSetup
      * @return The input text area, or null if components is null or invalid
      */
-    public static JBTextArea getInputArea(Object[] components) {
+    public static JTextArea getInputArea(Object[] components) {
         if (components == null || components.length < 3) {
             LOG.warn("InputPanelFactory: getInputArea called with invalid components array");
             return null;
         }
-        return (JBTextArea) components[2];
+        return (JTextArea) components[2];
     }
     
     /**
@@ -521,7 +537,7 @@ public final class InputPanelFactory {
         
         // Validate component types
         if (!(components[0] instanceof JPanel) || !(components[1] instanceof JPanel) || 
-            !(components[2] instanceof JBTextArea) || !(components[3] instanceof JPanel) || 
+            !(components[2] instanceof JTextArea) || !(components[3] instanceof JPanel) || 
             !(components[4] instanceof JButton)) {
             LOG.warn("InputPanelFactory: isValidComponentArray called with wrong component types");
             return false;

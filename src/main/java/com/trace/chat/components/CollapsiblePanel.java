@@ -2,8 +2,10 @@ package com.trace.chat.components;
 
 import com.intellij.openapi.diagnostic.Logger;
 import com.trace.common.constants.TriagePanelConstants;
+import com.trace.common.utils.ThemeUtils;
 
 import javax.swing.*;
+import javax.swing.border.Border;
 import java.awt.*;
 import java.awt.event.ComponentAdapter;
 import java.awt.event.ComponentEvent;
@@ -83,7 +85,8 @@ public class CollapsiblePanel extends JPanel {
      */
     private void initializeComponent() {
         setLayout(new BorderLayout());
-        setOpaque(false);
+        setOpaque(true);
+        setBackground(ThemeUtils.panelBackground());
         setBorder(TriagePanelConstants.COLLAPSIBLE_PANEL_BORDER);
         setMaximumSize(TriagePanelConstants.MAX_EXPANDABLE_SIZE);
         setAlignmentX(Component.LEFT_ALIGNMENT);
@@ -95,7 +98,7 @@ public class CollapsiblePanel extends JPanel {
     private void createToggleLabel() {
         toggleLabel = new JLabel(TriagePanelConstants.EXPAND_ICON + TriagePanelConstants.TOGGLE_TEXT);
         toggleLabel.setFont(TriagePanelConstants.COLLAPSIBLE_TOGGLE_FONT);
-        toggleLabel.setForeground(TriagePanelConstants.WHITE);
+        toggleLabel.setForeground(ThemeUtils.textForeground());
         toggleLabel.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         toggleLabel.setToolTipText(TriagePanelConstants.TOOLTIP_EXPAND);
     }
@@ -107,7 +110,8 @@ public class CollapsiblePanel extends JPanel {
      */
     private void createContentPanel(String content) {
         contentPanel = new JPanel(new BorderLayout());
-        contentPanel.setOpaque(false);
+        contentPanel.setOpaque(true);
+        contentPanel.setBackground(ThemeUtils.panelBackground());
         contentPanel.setBorder(TriagePanelConstants.COLLAPSIBLE_CONTENT_BORDER);
         contentPanel.setMaximumSize(TriagePanelConstants.MAX_EXPANDABLE_SIZE);
         
@@ -127,9 +131,9 @@ public class CollapsiblePanel extends JPanel {
         contentTextArea.setWrapStyleWord(true);
         contentTextArea.setEditable(false);
         contentTextArea.setFont(TriagePanelConstants.COLLAPSIBLE_CONTENT_FONT);
-        contentTextArea.setForeground(TriagePanelConstants.COLLAPSIBLE_TEXT_COLOR);
-        contentTextArea.setBackground(TriagePanelConstants.COLLAPSIBLE_BACKGROUND);
-        contentTextArea.setBorder(TriagePanelConstants.COLLAPSIBLE_TEXT_BORDER_COMPOUND);
+        contentTextArea.setForeground(ThemeUtils.textForeground());
+        contentTextArea.setBackground(ThemeUtils.panelBackground());
+        contentTextArea.setBorder(createThemeAwareBorder());
         contentTextArea.setOpaque(true);
         
         // Let the text area calculate its own size based on content
@@ -139,6 +143,19 @@ public class CollapsiblePanel extends JPanel {
         contentTextArea.setMinimumSize(new Dimension(TriagePanelConstants.MIN_CHAT_WIDTH_BEFORE_SCROLL, 50));
         
         contentPanel.add(contentTextArea, BorderLayout.CENTER);
+    }
+    
+    /**
+     * Creates a theme-aware border for the content text area.
+     * 
+     * @return A compound border with theme-aware colors
+     */
+    private Border createThemeAwareBorder() {
+        Color borderColor = ThemeUtils.uiColor("Component.borderColor", new Color(80, 80, 80));
+        return BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(borderColor, 1),
+            BorderFactory.createEmptyBorder(8, 8, 8, 8)
+        );
     }
     
     /**
@@ -162,7 +179,8 @@ public class CollapsiblePanel extends JPanel {
 
         // Build header with toggle on the left
         JPanel header = new JPanel(new BorderLayout());
-        header.setOpaque(false);
+        header.setOpaque(true);
+        header.setBackground(ThemeUtils.panelBackground());
         header.add(toggleLabel, BorderLayout.WEST);
 
         add(header, BorderLayout.NORTH);
@@ -217,30 +235,32 @@ public class CollapsiblePanel extends JPanel {
         
         // Notify layout listeners
         notifyLayoutListeners();
+        
+        // Notify parent containers
+        notifyParentContainers();
+        
+        LOG.debug("CollapsiblePanel: Toggled to " + 
+                 (isExpanded ? "expanded" : "collapsed") + " state");
     }
     
     /**
-     * Performs comprehensive layout update with proper EDT safety and parent notification.
-     * This method implements the complete layout update chain: revalidate() → repaint() → parent revalidation.
+     * Performs a comprehensive layout update with proper EDT safety and error handling.
+     * This method ensures all parent containers are properly notified of layout changes.
      */
     private void performLayoutUpdate() {
-        // Ensure we're on the EDT for all UI operations
-        if (!SwingUtilities.isEventDispatchThread()) {
-            SwingUtilities.invokeLater(this::performLayoutUpdate);
-            return;
-        }
-        
         try {
-            // Step 1: Revalidate this component
-            revalidate();
+            // Ensure we're on the EDT
+            if (!SwingUtilities.isEventDispatchThread()) {
+                SwingUtilities.invokeLater(this::performLayoutUpdate);
+                return;
+            }
             
-            // Step 2: Repaint this component
+            // Update our own layout
+            revalidate();
             repaint();
             
-            // Step 3: Notify parent components for layout updates
-            notifyParentContainers();
-            
-            LOG.debug("CollapsiblePanel: Layout update completed for " + (isExpanded ? "expanded" : "collapsed") + " state");
+            LOG.debug("CollapsiblePanel: Layout update completed for " + 
+                     (isExpanded ? "expanded" : "collapsed") + " state");
             
         } catch (Exception e) {
             LOG.warn("CollapsiblePanel: Error during layout update", e);
@@ -287,31 +307,30 @@ public class CollapsiblePanel extends JPanel {
      * @return true if the component is disposed or invalid, false otherwise
      */
     private boolean isComponentDisposed(Component component) {
-        return component == null || !component.isDisplayable() || !component.isVisible();
+        try {
+            return component == null || !component.isDisplayable() || !component.isVisible();
+        } catch (Exception e) {
+            return true;
+        }
     }
     
     /**
-     * Notifies all registered layout listeners of the state change.
+     * Notifies all registered layout change listeners.
      */
     private void notifyLayoutListeners() {
-        if (layoutListeners.isEmpty()) {
-            return;
-        }
-        
-        // Notify listeners on EDT to ensure thread safety
-        SwingUtilities.invokeLater(() -> {
-            for (LayoutChangeListener listener : new ArrayList<>(layoutListeners)) {
-                try {
+        for (LayoutChangeListener listener : new ArrayList<>(layoutListeners)) {
+            try {
+                if (listener != null) {
                     listener.onLayoutChanged(this, isExpanded);
-                } catch (Exception e) {
-                    LOG.warn("CollapsiblePanel: Error notifying layout listener", e);
                 }
+            } catch (Exception e) {
+                LOG.warn("CollapsiblePanel: Error notifying layout listener", e);
             }
-        });
+        }
     }
     
     /**
-     * Adds a layout change listener to be notified when the panel's state changes.
+     * Adds a layout change listener to this collapsible panel.
      * 
      * @param listener The listener to add
      */
@@ -322,7 +341,7 @@ public class CollapsiblePanel extends JPanel {
     }
     
     /**
-     * Removes a layout change listener.
+     * Removes a layout change listener from this collapsible panel.
      * 
      * @param listener The listener to remove
      */
@@ -335,10 +354,16 @@ public class CollapsiblePanel extends JPanel {
      * This method should be called when the component is no longer needed.
      */
     public void dispose() {
+        if (isDisposed) {
+            return;
+        }
+        
         isDisposed = true;
+        
+        // Clear listeners
         layoutListeners.clear();
         
-        // Remove all listeners
+        // Remove mouse listeners
         if (toggleLabel != null) {
             for (java.awt.event.MouseListener listener : toggleLabel.getMouseListeners()) {
                 toggleLabel.removeMouseListener(listener);
@@ -428,11 +453,69 @@ public class CollapsiblePanel extends JPanel {
     }
     
     /**
-     * Checks if the component has been disposed.
+     * Gets the content text area for external access.
      *
-     * @return true if the component has been disposed, false otherwise
+     * @return The content text area, or null if not available
+     */
+    public JTextArea getContentTextArea() {
+        return contentTextArea;
+    }
+    
+    /**
+     * Gets the content text for external access.
+     *
+     * @return The content text, or null if not available
+     */
+    public String getContentText() {
+        return contentText;
+    }
+    
+    /**
+     * Checks if the component is disposed.
+     *
+     * @return true if the component is disposed, false otherwise
      */
     public boolean isDisposed() {
         return isDisposed;
+    }
+    
+    /**
+     * Refreshes the theme colors for this collapsible panel.
+     * Updates all child components to use the current theme colors.
+     */
+    public void refreshTheme() {
+        try {
+            // Update main component background
+            setBackground(ThemeUtils.panelBackground());
+            
+            // Update toggle label
+            if (toggleLabel != null) {
+                toggleLabel.setForeground(ThemeUtils.textForeground());
+                toggleLabel.revalidate();
+                toggleLabel.repaint();
+            }
+            
+            // Update content panel
+            if (contentPanel != null) {
+                contentPanel.setBackground(ThemeUtils.panelBackground());
+                contentPanel.revalidate();
+                contentPanel.repaint();
+            }
+            
+            // Update content text area
+            if (contentTextArea != null) {
+                contentTextArea.setBackground(ThemeUtils.panelBackground());
+                contentTextArea.setForeground(ThemeUtils.textForeground());
+                contentTextArea.setBorder(createThemeAwareBorder());
+                contentTextArea.revalidate();
+                contentTextArea.repaint();
+            }
+            
+            revalidate();
+            repaint();
+        } catch (Exception e) {
+            // Log error but don't fail
+            System.err.println("Error refreshing theme in CollapsiblePanel: " + e.getMessage());
+        }
     }
 } 
