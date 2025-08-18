@@ -99,6 +99,8 @@ public final class InputPanelFactory {
         inputArea.setCaretColor(ThemeUtils.textForeground());
         inputArea.setLineWrap(true);
         inputArea.setWrapStyleWord(true);
+        // Add bottom margin to prevent text cutoff
+        inputArea.setMargin(new Insets(6, 8, 12, 8));
         inputArea.setBorder(TriagePanelConstants.EMPTY_BORDER);
         // Add internal padding so the text does not touch the edges
         inputArea.setMargin(new Insets(6, 8, 6, 8));

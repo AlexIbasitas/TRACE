@@ -5,6 +5,7 @@ import javax.swing.text.html.HTMLEditorKit;
 import javax.swing.text.html.HTML;
 import javax.swing.text.html.InlineView;
 import javax.swing.text.LabelView;
+import javax.swing.text.Segment;
 
 /**
  * HTMLEditorKit that enables soft-wrapping for all inline text, including content inside
@@ -85,12 +86,15 @@ public class WrappingHtmlEditorKit extends HTMLEditorKit {
         public View breakView(int axis, int p0, float pos, float len) {
             if (axis == View.X_AXIS) {
                 checkPainter();
-                int p = getGlyphPainter().getBoundedPosition(this, p0, pos, len);
-                if (p == getStartOffset()) {
-                    // Ensure forward progress
-                    p = Math.min(getEndOffset(), p0 + 1);
+                // Initial char-level break suggestion
+                int bounded = getGlyphPainter().getBoundedPosition(this, p0, pos, len);
+                // Try to move the break back to the last word boundary before 'bounded'
+                int breakAt = findWordBreak(getDocument(), p0, bounded);
+                if (breakAt <= p0) {
+                    // Ensure forward progress if we couldn't find a boundary
+                    breakAt = Math.min(getEndOffset(), Math.max(bounded, p0 + 1));
                 }
-                return createFragment(p0, p);
+                return createFragment(p0, breakAt);
             }
             return super.breakView(axis, p0, pos, len);
         }
@@ -122,11 +126,12 @@ public class WrappingHtmlEditorKit extends HTMLEditorKit {
         public View breakView(int axis, int p0, float pos, float len) {
             if (axis == View.X_AXIS) {
                 checkPainter();
-                int p = getGlyphPainter().getBoundedPosition(this, p0, pos, len);
-                if (p == getStartOffset()) {
-                    p = Math.min(getEndOffset(), p0 + 1);
+                int bounded = getGlyphPainter().getBoundedPosition(this, p0, pos, len);
+                int breakAt = findWordBreak(getDocument(), p0, bounded);
+                if (breakAt <= p0) {
+                    breakAt = Math.min(getEndOffset(), Math.max(bounded, p0 + 1));
                 }
-                return createFragment(p0, p);
+                return createFragment(p0, breakAt);
             }
             return super.breakView(axis, p0, pos, len);
         }
@@ -138,6 +143,30 @@ public class WrappingHtmlEditorKit extends HTMLEditorKit {
             }
             return super.getMinimumSpan(axis);
         }
+    }
+
+    /**
+     * Returns a position at or before 'end' to break the line, preferring whitespace
+     * and common delimiters. Falls back to the provided end position if no boundary exists.
+     */
+    private static int findWordBreak(Document doc, int start, int end) {
+        if (end <= start) {
+            return start;
+        }
+        try {
+            Segment seg = new Segment();
+            doc.getText(start, end - start, seg);
+            // Scan backwards for whitespace or natural delimiters
+            for (int i = seg.count - 1; i >= 0; i--) {
+                char ch = seg.array[seg.offset + i];
+                if (Character.isWhitespace(ch) || ch == '-' || ch == '/' || ch == '_' || ch == '.') {
+                    return start + i + 1; // include the delimiter/space in the first fragment
+                }
+            }
+        } catch (BadLocationException ignored) {
+            return end;
+        }
+        return end; // no better break point found
     }
 
     // Removed ParagraphView override for PRE/CODE to preserve true preformatted behavior

@@ -316,7 +316,7 @@ public class MessageComponent extends JPanel {
             String panelBg = ThemeUtils.toHex(ThemeUtils.panelBackground());
             ss.addRule("body, p, li, ul, ol, h1, h2, h3, h4, h5, h6, span, div, td, th, a, b, i { color:" + textFg + "; font-family: '" + TriagePanelConstants.FONT_FAMILY + "', sans-serif; }");
             ss.addRule("body { background-color:" + panelBg + "; }");
-            ss.addRule("body, p, li { font-size:11px; }");
+            ss.addRule("body, p, li { font-size:14px; }");
             ss.addRule("p { margin-top:2px; margin-bottom:2px; }");
             ss.addRule("ul, ol { margin-top:2px; margin-bottom:2px; }");
             ss.addRule("li { margin-top:0px; margin-bottom:2px; }");

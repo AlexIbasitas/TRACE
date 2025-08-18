@@ -95,7 +95,7 @@ public final class MarkdownRenderer {
             editorPane.setOpaque(true);
             editorPane.setBackground(ThemeUtils.panelBackground());
             // Increase bottom inset to prevent last line clipping in dynamic wrap scenarios
-            editorPane.setBorder(BorderFactory.createEmptyBorder(0, 0, 14, 0));
+            editorPane.setBorder(BorderFactory.createEmptyBorder(0, 0, 16, 0));
             editorPane.setAlignmentX(Component.LEFT_ALIGNMENT);
             editorPane.setAlignmentY(Component.TOP_ALIGNMENT);
 
@@ -116,11 +116,12 @@ public final class MarkdownRenderer {
                 String inlineBg = ThemeUtils.toHex(ThemeUtils.inlineCodeBackground());
 
                 docSheet.addRule("body, p, li, ul, ol, h1, h2, h3, h4, h5, h6, span, div, td, th, a, b, i { color:" + textFg + "; }");
-                docSheet.addRule("body { background-color:" + panelBg + "; padding-bottom:12px; }");
+                docSheet.addRule("div { word-break: break-word; overflow-wrap: break-word; }");
+                docSheet.addRule("body { background-color:" + panelBg + "; padding-bottom:16px; }");
                 // Monospace font and themed background for code
                 docSheet.addRule("pre { font-family:'Monospaced'; background:" + codeBg + "; color:" + codeFg + "; padding:6px; margin-top:4px; margin-bottom:4px; }");
                 docSheet.addRule("code { font-family:'Monospaced'; background:" + inlineBg + "; color:" + codeFg + "; padding:0 3px; }");
-                // Set base body text size (reduce by 1px from previous 12px → 11px)
+                // Set base body text size to match Scenario/Failed Step
                 docSheet.addRule("body, p, li { font-size:11px; }");
                 // Tighten vertical spacing globally (supported subset of CSS in Swing)
                 docSheet.addRule("p { margin-top:2px; margin-bottom:2px; }");
@@ -183,7 +184,7 @@ public final class MarkdownRenderer {
         // Apply consistent styling to match other chat elements
         LOG.info("Configuring JEditorPane with smaller font to match IDE");
         
-        // Set a smaller font to match IDE's default text size
+        // Keep base Swing font small; actual content size controlled by stylesheet
         Font smallerFont = new Font(TriagePanelConstants.FONT_FAMILY, Font.PLAIN, 11);
         editorPane.setFont(smallerFont);
         
@@ -245,10 +246,11 @@ public final class MarkdownRenderer {
             String codeFg = ThemeUtils.toHex(ThemeUtils.codeForeground());
             String inlineBg = ThemeUtils.toHex(ThemeUtils.inlineCodeBackground());
             ss.addRule("body, p, li, ul, ol, h1, h2, h3, h4, h5, h6, span, div, td, th, a, b, i { color:" + textFg + "; }");
-            ss.addRule("body { background-color:" + panelBg + "; padding-bottom:12px; }");
+            ss.addRule("div { word-break: break-word; overflow-wrap: break-word; }");
+            ss.addRule("body { background-color:" + panelBg + "; padding-bottom:16px; }");
             ss.addRule("pre { font-family:'Monospaced'; background:" + codeBg + "; color:" + codeFg + "; padding:6px; margin-top:4px; margin-bottom:4px; }");
             ss.addRule("code { font-family:'Monospaced'; background:" + inlineBg + "; color:" + codeFg + "; padding:0 3px; }");
-            ss.addRule("body, p, li { font-size:11px; }");
+            ss.addRule("body, p, li { font-size:14px; }");
             ss.addRule("p { margin-top:2px; margin-bottom:2px; }");
             ss.addRule("ul, ol { margin-top:2px; margin-bottom:2px; }");
             ss.addRule("li { margin-top:0px; margin-bottom:2px; }");
@@ -287,13 +289,18 @@ public final class MarkdownRenderer {
         safeHtml = applyHeadingStylesInline(safeHtml);
         // Replace heading tags with styled divs to bypass Swing's default heading sizing
         safeHtml = replaceHeadingsWithStyledDivs(safeHtml);
+        // Force inline font-size for common body elements so Swing honors the size
+        safeHtml = ensureInlineStyleOnTag(safeHtml, "p", "font-size:11px");
+        safeHtml = ensureInlineStyleOnTag(safeHtml, "li", "font-size:11px");
+        // Add word breaking to prevent character-by-character wrapping
+        safeHtml = addWordBreaking(safeHtml);
 
         String textFg = ThemeUtils.toHex(ThemeUtils.textForeground());
         String panelBg = ThemeUtils.toHex(ThemeUtils.panelBackground());
         String styledHtml = """
             <html>
             <head></head>
-            <body style="color:%s; background-color:%s;">
+            <body style="color:%s; background-color:%s; font-size:11px;">
             %s
             </body>
             </html>
@@ -533,9 +540,9 @@ public final class MarkdownRenderer {
             result = applyHeadingStyleForLevel(result, 1, "font-size:13px; font-weight:bold; margin-top:6px; margin-bottom:4px");
             result = applyHeadingStyleForLevel(result, 2, "font-size:12px; font-weight:bold; margin-top:6px; margin-bottom:4px");
             result = applyHeadingStyleForLevel(result, 3, "font-size:12px; font-weight:bold; margin-top:5px; margin-bottom:3px");
-            result = applyHeadingStyleForLevel(result, 4, "font-size:11px; font-weight:bold; margin-top:5px; margin-bottom:3px");
-            result = applyHeadingStyleForLevel(result, 5, "font-size:11px; font-weight:bold; margin-top:4px; margin-bottom:2px");
-            result = applyHeadingStyleForLevel(result, 6, "font-size:11px; font-weight:bold; margin-top:4px; margin-bottom:2px");
+                    result = applyHeadingStyleForLevel(result, 4, "font-size:12px; font-weight:bold; margin-top:5px; margin-bottom:3px");
+        result = applyHeadingStyleForLevel(result, 5, "font-size:12px; font-weight:bold; margin-top:4px; margin-bottom:2px");
+        result = applyHeadingStyleForLevel(result, 6, "font-size:12px; font-weight:bold; margin-top:4px; margin-bottom:2px");
             return result;
         } catch (Exception e) {
             return html;
@@ -597,10 +604,10 @@ public final class MarkdownRenderer {
             // One pass per level for simplicity and clarity
             result = replaceSingleHeadingLevel(result, 1, "font-size:12px; font-weight:bold; margin-top:6px; margin-bottom:4px");
             result = replaceSingleHeadingLevel(result, 2, "font-size:12px; font-weight:bold; margin-top:6px; margin-bottom:4px");
-            result = replaceSingleHeadingLevel(result, 3, "font-size:11px; font-weight:bold; margin-top:5px; margin-bottom:3px");
-            result = replaceSingleHeadingLevel(result, 4, "font-size:11px; font-weight:bold; margin-top:5px; margin-bottom:3px");
-            result = replaceSingleHeadingLevel(result, 5, "font-size:11px; font-weight:bold; margin-top:4px; margin-bottom:2px");
-            result = replaceSingleHeadingLevel(result, 6, "font-size:11px; font-weight:bold; margin-top:4px; margin-bottom:2px");
+                    result = replaceSingleHeadingLevel(result, 3, "font-size:12px; font-weight:bold; margin-top:5px; margin-bottom:3px");
+        result = replaceSingleHeadingLevel(result, 4, "font-size:12px; font-weight:bold; margin-top:5px; margin-bottom:3px");
+        result = replaceSingleHeadingLevel(result, 5, "font-size:12px; font-weight:bold; margin-top:4px; margin-bottom:2px");
+        result = replaceSingleHeadingLevel(result, 6, "font-size:12px; font-weight:bold; margin-top:4px; margin-bottom:2px");
             return result;
         } catch (Exception e) {
             return html;
@@ -888,6 +895,23 @@ public final class MarkdownRenderer {
             }
             return Math.max(width, -1);
         }
+    }
+
+    /**
+     * Adds word breaking to prevent character-by-character wrapping.
+     * Inserts soft hyphens in long words to allow them to break naturally.
+     *
+     * @param html The HTML content to process
+     * @return HTML with word breaking added
+     */
+    private static String addWordBreaking(String html) {
+        // Find long words (more than 12 characters) and insert soft hyphens
+        // This allows words to break at natural points rather than character-by-character
+        // Also handle URLs and other long strings that might cause wrapping issues
+        String result = html.replaceAll("([a-zA-Z]{12,})", "$1&shy;");
+        // Also break very long URLs or paths
+        result = result.replaceAll("([a-zA-Z0-9/\\-\\.]{20,})", "$1&shy;");
+        return result;
     }
 
     /**

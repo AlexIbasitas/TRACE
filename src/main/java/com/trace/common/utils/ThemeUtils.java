@@ -81,9 +81,9 @@ public final class ThemeUtils {
         // Check if we're in a high contrast theme by looking at the panel background
         Color panelBg = panelBackground();
         if (panelBg != null) {
-            // If panel background is very dark (high contrast), make input box lighter
+            // If panel background is very dark (high contrast), make input box darker to match sidebar
             if (isHighContrastTheme(panelBg)) {
-                return new JBColor(Color.WHITE, new Color(80, 80, 80)); // Lighter grey for dark high contrast
+                return new JBColor(Color.WHITE, new Color(45, 45, 45)); // Much darker grey to match sidebar
             }
         }
         
