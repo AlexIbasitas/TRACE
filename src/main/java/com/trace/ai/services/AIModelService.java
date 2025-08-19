@@ -43,6 +43,10 @@ public class AIModelService implements PersistentStateComponent<AIModelService.S
     
     private static final Logger LOG = Logger.getInstance(AIModelService.class);
     
+    // Cache configuration
+    private static final long MODEL_CACHE_DURATION_MS = 5000; // 5 seconds
+    private static final String DEFAULT_MODEL_CACHE_KEY = "default_model";
+    
     // Stupid simple - hardcoded list of known deprecated models
     private static final Set<String> DEPRECATED_MODELS = Set.of(
         "gemini-1.0-pro-vision-latest",
@@ -58,8 +62,28 @@ public class AIModelService implements PersistentStateComponent<AIModelService.S
     // In-memory cache for fast access
     private final Map<String, AIModel> modelCache = new ConcurrentHashMap<>();
     
+    // Time-based cache for model retrieval to prevent spam
+    private final Map<String, CachedModelResult> retrievalCache = new ConcurrentHashMap<>();
+    
     // Flag to ensure cleanup only runs once
     private boolean cleanupPerformed = false;
+    
+    /**
+     * Cached model result with timestamp for deduplication.
+     */
+    private static class CachedModelResult {
+        final AIModel model;
+        final long timestamp;
+        
+        CachedModelResult(AIModel model) {
+            this.model = model;
+            this.timestamp = System.currentTimeMillis();
+        }
+        
+        boolean isValid() {
+            return System.currentTimeMillis() - timestamp < MODEL_CACHE_DURATION_MS;
+        }
+    }
     
     /**
      * State class for persistence.
@@ -98,13 +122,13 @@ public class AIModelService implements PersistentStateComponent<AIModelService.S
         }
         
         public AIModel toAIModel() {
-            LOG.info("Converting AIModelData to AIModel: serviceType=" + this.serviceType + ", modelId=" + this.modelId);
+            LOG.debug("Converting AIModelData to AIModel: serviceType=" + this.serviceType + ", modelId=" + this.modelId);
             AIServiceType serviceType = AIServiceType.valueOf(this.serviceType);
-            LOG.info("Parsed service type: " + serviceType);
+            LOG.debug("Parsed service type: " + serviceType);
             
             AIModel model = new AIModel(id, name, serviceType, modelId, enabled, notes,
                              createdAt, lastModified);
-            LOG.info("Created AIModel: " + model.getFullDisplayName() + 
+            LOG.debug("Created AIModel: " + model.getFullDisplayName() + 
                     " (Service: " + model.getServiceType() + 
                     ", ID: " + model.getModelId() + ")");
             return model;
@@ -230,12 +254,16 @@ public class AIModelService implements PersistentStateComponent<AIModelService.S
         cleanupDeprecatedModels();
         
         List<AIModel> models = new ArrayList<>(modelCache.values());
-        LOG.info("Getting all models, count: " + models.size());
-        for (AIModel model : models) {
-            LOG.info("Model in cache: " + model.getFullDisplayName() + 
-                    " (Service: " + model.getServiceType() + 
-                    ", ID: " + model.getModelId() + 
-                    ", Enabled: " + model.isEnabled() + ")");
+        LOG.debug("Getting all models, count: " + models.size());
+        
+        // Only log model details at DEBUG level to reduce spam
+        if (LOG.isDebugEnabled()) {
+            for (AIModel model : models) {
+                LOG.debug("Model in cache: " + model.getFullDisplayName() + 
+                        " (Service: " + model.getServiceType() + 
+                        ", ID: " + model.getModelId() + 
+                        ", Enabled: " + model.isEnabled() + ")");
+            }
         }
         
         return models;
@@ -309,6 +337,9 @@ public class AIModelService implements PersistentStateComponent<AIModelService.S
             
             // Notify IntelliJ that state has changed
             notifyStateChanged();
+            
+            // Invalidate cache since model data changed
+            invalidateRetrievalCache();
             
             LOG.info("Updated AI model: " + model.getFullDisplayName());
             return true;
@@ -391,37 +422,61 @@ public class AIModelService implements PersistentStateComponent<AIModelService.S
     // ============================================================================
     
     /**
-     * Gets the default model.
+     * Gets the default model with time-based caching to prevent logging spam.
      * 
      * @return the default model, or null if no default is set
      */
     @Nullable
     public AIModel getDefaultModel() {
-        LOG.info("Getting default model, defaultModelId: " + myState.defaultModelId);
+        // Check cache first to prevent redundant operations
+        CachedModelResult cached = retrievalCache.get(DEFAULT_MODEL_CACHE_KEY);
+        if (cached != null && cached.isValid()) {
+            LOG.debug("Returning cached default model: " + 
+                     (cached.model != null ? cached.model.getFullDisplayName() : "null"));
+            return cached.model;
+        }
+        
+        // Perform actual model retrieval
+        AIModel model = retrieveDefaultModelInternal();
+        
+        // Cache the result
+        retrievalCache.put(DEFAULT_MODEL_CACHE_KEY, new CachedModelResult(model));
+        
+        return model;
+    }
+    
+    /**
+     * Internal method to retrieve the default model with detailed logging.
+     * 
+     * @return the default model, or null if no default is set
+     */
+    @Nullable
+    private AIModel retrieveDefaultModelInternal() {
+        LOG.debug("Retrieving default model, defaultModelId: " + myState.defaultModelId);
         
         if (myState.defaultModelId == null) {
-            LOG.info("No default model ID set");
+            LOG.debug("No default model ID set");
             return null;
         }
         
         AIModel model = modelCache.get(myState.defaultModelId);
-        LOG.info("Retrieved model from cache: " + (model != null ? model.getFullDisplayName() : "null"));
+        LOG.debug("Retrieved model from cache: " + (model != null ? model.getFullDisplayName() : "null"));
         
         if (model == null || !model.isEnabled()) {
             LOG.info("Default model not found or disabled, finding new default");
             // Default model not found or disabled, try to find a new default
             myState.defaultModelId = getNextDefaultModelId();
-            LOG.info("New default model ID: " + myState.defaultModelId);
+            LOG.debug("New default model ID: " + myState.defaultModelId);
             if (myState.defaultModelId != null) {
                 model = modelCache.get(myState.defaultModelId);
-                LOG.info("New default model: " + (model != null ? model.getFullDisplayName() : "null"));
+                LOG.debug("New default model: " + (model != null ? model.getFullDisplayName() : "null"));
             }
         }
         
         if (model != null) {
-            LOG.info("Returning default model: " + model.getFullDisplayName());
-            LOG.info("Default model service type: " + model.getServiceType());
-            LOG.info("Default model ID: " + model.getModelId());
+            LOG.debug("Returning default model: " + model.getFullDisplayName());
+            LOG.debug("Default model service type: " + model.getServiceType());
+            LOG.debug("Default model ID: " + model.getModelId());
         }
         
         return model;
@@ -448,6 +503,9 @@ public class AIModelService implements PersistentStateComponent<AIModelService.S
         
         // Notify IntelliJ that state has changed
         notifyStateChanged();
+        
+        // Invalidate cache since default model changed
+        invalidateRetrievalCache();
         
         LOG.info("Set default model: " + modelId);
         return true;
@@ -581,6 +639,14 @@ public class AIModelService implements PersistentStateComponent<AIModelService.S
     }
     
     /**
+     * Invalidates the retrieval cache to ensure fresh data on next request.
+     */
+    private void invalidateRetrievalCache() {
+        retrievalCache.clear();
+        LOG.debug("Retrieval cache invalidated");
+    }
+    
+    /**
      * Notifies IntelliJ that the service state has changed and needs to be persisted.
      */
     private void notifyStateChanged() {
@@ -610,8 +676,8 @@ public class AIModelService implements PersistentStateComponent<AIModelService.S
     
     @Override
     public void loadState(@NotNull State state) {
-        LOG.info("Loading state with " + state.models.size() + " models");
-        LOG.info("Default model ID in state: " + state.defaultModelId);
+        LOG.debug("Loading state with " + state.models.size() + " models");
+        LOG.debug("Default model ID in state: " + state.defaultModelId);
         
         myState = state;
         
@@ -619,16 +685,16 @@ public class AIModelService implements PersistentStateComponent<AIModelService.S
         modelCache.clear();
         for (AIModelData modelData : myState.models) {
             try {
-                LOG.info("Loading model data: id=" + modelData.id + 
+                LOG.debug("Loading model data: id=" + modelData.id + 
                         ", name=" + modelData.name + 
                         ", serviceType=" + modelData.serviceType + 
                         ", modelId=" + modelData.modelId);
                 
                 AIModel model = modelData.toAIModel();
                 modelCache.put(model.getId(), model);
-                LOG.info("Loaded model from state: " + model.getFullDisplayName());
-                LOG.info("Loaded model service type: " + model.getServiceType());
-                LOG.info("Loaded model ID: " + model.getModelId());
+                LOG.debug("Loaded model from state: " + model.getFullDisplayName());
+                LOG.debug("Loaded model service type: " + model.getServiceType());
+                LOG.debug("Loaded model ID: " + model.getModelId());
             } catch (Exception e) {
                 LOG.error("Failed to load model from state: " + modelData.id, e);
             }
@@ -639,7 +705,7 @@ public class AIModelService implements PersistentStateComponent<AIModelService.S
         
         // Initialize default models if none exist
         if (modelCache.isEmpty()) {
-            LOG.info("No models found in state, initializing defaults");
+            LOG.debug("No models found in state, initializing defaults");
             initializeDefaultModels();
         }
     }
@@ -691,30 +757,30 @@ public class AIModelService implements PersistentStateComponent<AIModelService.S
      * Initializes default models if no models exist.
      */
     private void initializeDefaultModels() {
-        LOG.info("Initializing default models");
+        LOG.debug("Initializing default models");
         
         // Create default OpenAI model
         AIModel openaiModel = addDiscoveredModel("GPT-3.5 Turbo (Default)", AIServiceType.OPENAI, "gpt-3.5-turbo");
         if (openaiModel != null) {
-            LOG.info("Created OpenAI model: " + openaiModel.getFullDisplayName());
-            LOG.info("OpenAI model service type: " + openaiModel.getServiceType());
-            LOG.info("OpenAI model ID: " + openaiModel.getModelId());
+            LOG.debug("Created OpenAI model: " + openaiModel.getFullDisplayName());
+            LOG.debug("OpenAI model service type: " + openaiModel.getServiceType());
+            LOG.debug("OpenAI model ID: " + openaiModel.getModelId());
         }
         
         // Create default Gemini model
         AIModel geminiModel = addDiscoveredModel("Gemini 1.5 Flash (Default)", AIServiceType.GEMINI, "gemini-1.5-flash");
         if (geminiModel != null) {
-            LOG.info("Created Gemini model: " + geminiModel.getFullDisplayName());
-            LOG.info("Gemini model service type: " + geminiModel.getServiceType());
-            LOG.info("Gemini model ID: " + geminiModel.getModelId());
+            LOG.debug("Created Gemini model: " + geminiModel.getFullDisplayName());
+            LOG.debug("Gemini model service type: " + geminiModel.getServiceType());
+            LOG.debug("Gemini model ID: " + geminiModel.getModelId());
         }
         
         // Also create the specific model that's causing the issue
         AIModel geminiProModel = addDiscoveredModel("Gemini 1.5 Pro (Default)", AIServiceType.GEMINI, "gemini-1.5-pro");
         if (geminiProModel != null) {
-            LOG.info("Created Gemini Pro model: " + geminiProModel.getFullDisplayName());
-            LOG.info("Gemini Pro model service type: " + geminiProModel.getServiceType());
-            LOG.info("Gemini Pro model ID: " + geminiProModel.getModelId());
+            LOG.debug("Created Gemini Pro model: " + geminiProModel.getFullDisplayName());
+            LOG.debug("Gemini Pro model service type: " + geminiProModel.getServiceType());
+            LOG.debug("Gemini Pro model ID: " + geminiProModel.getModelId());
         }
     }
     

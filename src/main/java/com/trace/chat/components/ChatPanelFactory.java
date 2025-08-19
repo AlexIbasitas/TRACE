@@ -1,5 +1,6 @@
 package com.trace.chat.components;
 
+import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.openapi.diagnostic.Logger;
 import com.trace.common.constants.TriagePanelConstants;
 import com.trace.common.utils.ThemeUtils;
@@ -287,7 +288,7 @@ public final class ChatPanelFactory {
             return;
         }
         
-        SwingUtilities.invokeLater(() -> {
+        ApplicationManager.getApplication().invokeLater(() -> {
             try {
                 JScrollBar verticalBar = scrollPane.getVerticalScrollBar();
                 if (verticalBar != null) {

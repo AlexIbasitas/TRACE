@@ -4,6 +4,7 @@ import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.ui.components.JBTextArea;
 import com.intellij.ui.JBColor;
 import com.trace.chat.components.CollapsiblePanel;
+import com.intellij.openapi.application.ApplicationManager;
 
 import javax.swing.*;
 import java.awt.*;
@@ -630,7 +631,7 @@ public final class TriagePanelEventHandlers {
         if (SwingUtilities.isEventDispatchThread()) {
             action.run();
         } else {
-            SwingUtilities.invokeLater(action);
+            ApplicationManager.getApplication().invokeLater(action);
         }
     }
     
@@ -652,7 +653,7 @@ public final class TriagePanelEventHandlers {
         if (SwingUtilities.isEventDispatchThread()) {
             action.run();
         } else {
-            SwingUtilities.invokeAndWait(action);
+            ApplicationManager.getApplication().invokeAndWait(action);
         }
     }
     

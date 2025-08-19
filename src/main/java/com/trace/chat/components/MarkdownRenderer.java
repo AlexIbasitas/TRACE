@@ -22,6 +22,7 @@ import java.util.regex.Pattern;
 import javax.swing.text.html.HTMLEditorKit;
 import javax.swing.text.html.StyleSheet;
 import javax.swing.text.html.HTMLDocument;
+import com.intellij.openapi.application.ApplicationManager;
 
 /**
  * Professional markdown renderer using Flexmark Java library with Swing integration.
@@ -147,7 +148,7 @@ public final class MarkdownRenderer {
             
             editorPane.setText(styledHtml);
             // Trigger reflow after text is set
-            SwingUtilities.invokeLater(() -> {
+            ApplicationManager.getApplication().invokeLater(() -> {
                 if (editorPane instanceof ResponsiveHtmlPane) {
                     ((ResponsiveHtmlPane) editorPane).applyWidthFromParent();
                 }
@@ -775,7 +776,7 @@ public final class MarkdownRenderer {
                     if ((e.getChangeFlags() & HierarchyEvent.SHOWING_CHANGED) != 0
                         || (e.getChangeFlags() & HierarchyEvent.DISPLAYABILITY_CHANGED) != 0
                         || (e.getChangeFlags() & HierarchyEvent.PARENT_CHANGED) != 0) {
-                        SwingUtilities.invokeLater(ResponsiveHtmlPane.this::applyWidthFromParent);
+                        ApplicationManager.getApplication().invokeLater(ResponsiveHtmlPane.this::applyWidthFromParent);
                     }
                 }
             });
@@ -820,7 +821,7 @@ public final class MarkdownRenderer {
         @Override
         public void setText(String t) {
             super.setText(t);
-            SwingUtilities.invokeLater(this::applyWidthFromParent);
+            ApplicationManager.getApplication().invokeLater(this::applyWidthFromParent);
         }
 
         void applyWidthFromParent() {

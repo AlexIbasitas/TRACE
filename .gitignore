@@ -12,6 +12,9 @@ build/
 gradle-app.setting
 !gradle-wrapper.jar
 
+# IntelliJ Platform
+.intellijPlatform/
+
 # Java
 *.class
 *.log

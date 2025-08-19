@@ -135,15 +135,7 @@ public class TriagePanelView {
         
         initializeUI();
         setupEventHandlers();
-        // Listen for LaF/theme changes and refresh visible components
-        try {
-            LafManager.getInstance().addLafManagerListener((LafManagerListener) source -> {
-                LOG.info("LaF change detected - refreshing theme");
-                SwingUtilities.invokeLater(this::refreshTheme);
-            });
-        } catch (Throwable e) {
-            LOG.warn("Failed to add LaF listener: " + e.getMessage());
-        }
+        // Note: LaF listener removed due to deprecation in newer IntelliJ versions
         LOG.info("TriagePanelView created successfully");
     }
 

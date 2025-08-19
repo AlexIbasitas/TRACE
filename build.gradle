@@ -1,7 +1,9 @@
 plugins {
     id 'java'
-    id 'org.jetbrains.intellij' version '1.17.2'
+    id 'org.jetbrains.intellij.platform' version '2.7.2'
 }
+
+
 
 group = 'com.trace'
 version = '1.0-SNAPSHOT'
@@ -12,6 +14,9 @@ version = '1.0-SNAPSHOT'
 
 repositories {
     mavenCentral()
+    intellijPlatform {
+        defaultRepositories()
+    }
 }
 
 // ============================================================================
@@ -19,6 +24,12 @@ repositories {
 // ============================================================================
 
 dependencies {
+    // IntelliJ Platform dependencies
+    intellijPlatform {
+        local('/Applications/IntelliJ IDEA.app')  // Use local IntelliJ IDEA Ultimate installation
+        bundledPlugin('com.intellij.java')  // Use correct plugin ID for Java support
+    }
+    
     // JSON serialization for backend communication
     implementation 'com.google.code.gson:gson:2.10.1'
     
@@ -84,36 +95,38 @@ task refreshDocumentStore(type: JavaExec) {
 // INTELLIJ PLATFORM CONFIGURATION
 // ============================================================================
 
-intellij {
-    version = '2024.1'
-    type = 'IU' // IntelliJ IDEA Ultimate Edition
-    plugins = [
-        'java'
-    ]
+intellijPlatform {
+    pluginConfiguration {
+        name = 'TRACE'
+    }
     instrumentCode = true // Required for proper IntelliJ Platform testing
-    downloadSources = true // Download IntelliJ Platform sources
+}
+
+patchPluginXml {
+    sinceBuild = '243'  // 2024.3 (your local installation version)
+    untilBuild = '251.*'  // 2025.x series (forward compatibility)
+    changeNotes = """
+      <ul>
+        <li>Migrated to IntelliJ Platform Gradle Plugin 2.x</li>
+        <li>Enhanced compatibility with IntelliJ 2024.1+ and 2025.x</li>
+        <li>Improved build configuration and dependency management</li>
+        <li>Enhanced Cucumber step definition extraction</li>
+        <li>Improved stack trace parsing strategies</li>
+      </ul>
+    """
 }
 
 // Ensure debug logs from our package are visible when running the sandbox IDE
 tasks.named('runIde') {
     // Show DEBUG level logs for our plugin code
     jvmArgs '-Didea.log.debug.categories=com.trace'
-}
-
-
-
-patchPluginXml {
-    sinceBuild = '241'
-    untilBuild = '241.*'
-    // Support for IntelliJ 2024.1+ and future 2025 versions
-    changeNotes = """
-      <ul>
-        <li>Initial release with comprehensive test failure analysis</li>
-        <li>Support for IntelliJ IDEA 2024.1+ and 2025.x</li>
-        <li>Enhanced Cucumber step definition extraction</li>
-        <li>Improved stack trace parsing strategies</li>
-      </ul>
-    """
+    
+    // Ensure proper Java version handling
+    jvmArgs '-Djava.version=17'
+    
+    // Lock runtime to JBR 17 to prevent Java version compatibility issues
+    // This ensures the sandbox IDE runs on a consistent Java 17 runtime
+    environment 'IDEA_JDK', '/Library/Java/JavaVirtualMachines/temurin-17.jdk/Contents/Home'
 }
 
 // ============================================================================
@@ -121,8 +134,8 @@ patchPluginXml {
 // ============================================================================
 
 java {
-    sourceCompatibility = JavaVersion.VERSION_17
-    targetCompatibility = JavaVersion.VERSION_17
+    sourceCompatibility = JavaVersion.VERSION_21
+    targetCompatibility = JavaVersion.VERSION_21
 }
 
 // ============================================================================

@@ -8,7 +8,7 @@
         Automatically extracts failure information and formats it for analysis.
     ]]></description>
 
-    <idea-version since-build="243.0" until-build="251.*"/>
+    <idea-version since-build="243" until-build="251.*"/>
 
     <depends>com.intellij.modules.platform</depends>
     <depends>com.intellij.modules.java</depends>

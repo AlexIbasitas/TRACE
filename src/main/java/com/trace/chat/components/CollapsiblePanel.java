@@ -1,5 +1,6 @@
 package com.trace.chat.components;
 
+import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.openapi.diagnostic.Logger;
 import com.trace.common.constants.TriagePanelConstants;
 import com.trace.common.utils.ThemeUtils;
@@ -251,7 +252,7 @@ public class CollapsiblePanel extends JPanel {
         try {
             // Ensure we're on the EDT
             if (!SwingUtilities.isEventDispatchThread()) {
-                SwingUtilities.invokeLater(this::performLayoutUpdate);
+                ApplicationManager.getApplication().invokeLater(this::performLayoutUpdate);
                 return;
             }
             
@@ -274,7 +275,7 @@ public class CollapsiblePanel extends JPanel {
     private void notifyParentContainers() {
         // Notify immediate parent (MessageComponent)
         if (parentMessageComponent != null && !isComponentDisposed(parentMessageComponent)) {
-            SwingUtilities.invokeLater(() -> {
+            ApplicationManager.getApplication().invokeLater(() -> {
                 try {
                     parentMessageComponent.revalidate();
                     parentMessageComponent.repaint();
@@ -288,7 +289,7 @@ public class CollapsiblePanel extends JPanel {
         Container parent = getParent();
         while (parent != null && !isComponentDisposed(parent)) {
             final Container currentParent = parent;
-            SwingUtilities.invokeLater(() -> {
+            ApplicationManager.getApplication().invokeLater(() -> {
                 try {
                     currentParent.revalidate();
                     currentParent.repaint();
