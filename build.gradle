@@ -104,14 +104,15 @@ intellijPlatform {
 
 patchPluginXml {
     sinceBuild = '243'  // 2024.3 (your local installation version)
-    untilBuild = '251.*'  // 2025.x series (forward compatibility)
+    untilBuild = '249.*'  // 2024.x series (conservative compatibility)
     changeNotes = """
       <ul>
         <li>Migrated to IntelliJ Platform Gradle Plugin 2.x</li>
-        <li>Enhanced compatibility with IntelliJ 2024.1+ and 2025.x</li>
+        <li>Enhanced compatibility with IntelliJ 2024.3+</li>
         <li>Improved build configuration and dependency management</li>
         <li>Enhanced Cucumber step definition extraction</li>
         <li>Improved stack trace parsing strategies</li>
+        <li>Dynamic font sizing and theme responsiveness</li>
       </ul>
     """
 }
