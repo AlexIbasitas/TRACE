@@ -11,7 +11,7 @@ import java.awt.*;
  *
  * <p>Centralizes access to IntelliJ Look and Feel colors and editor scheme
  * defaults so UI components can adapt to light and dark themes without
- * hardcoded values.</p>
+ * hardcoded values. Uses dynamic color resolution for automatic theme updates.</p>
  */
 public final class ThemeUtils {
 
@@ -19,6 +19,7 @@ public final class ThemeUtils {
 
     /**
      * Returns a UI color by key with a fallback if the key is missing.
+     * Uses dynamic resolution for automatic theme updates.
      */
     public static Color uiColor(String key, Color fallback) {
         try {
@@ -27,6 +28,14 @@ public final class ThemeUtils {
         } catch (Exception ignore) {
             return fallback;
         }
+    }
+    
+    /**
+     * Returns a dynamically resolved color that updates with theme changes.
+     * This is the preferred method for components that need theme-aware colors.
+     */
+    public static JBColor dynamicColor(String key, Color lightFallback, Color darkFallback) {
+        return JBColor.namedColor(key, new JBColor(lightFallback, darkFallback));
     }
 
     /**
@@ -51,43 +60,44 @@ public final class ThemeUtils {
     }
 
     /**
-     * Returns the current panel background from LaF.
+     * Returns the current panel background from LaF using dynamic resolution.
+     * Uses JBColor.lazy() for true dynamic color resolution that updates automatically.
      */
     public static Color panelBackground() {
-        // Try to get the current theme-aware panel background
-        Color panelBg = uiColor("Panel.background", null);
-        if (panelBg != null) {
-            return panelBg;
-        }
-        
-        // Fallback to JBColor which automatically adapts to light/dark theme
-        return new JBColor(new Color(245, 245, 245), new Color(43, 43, 43));
+        return JBColor.lazy(() -> {
+            Color uiColor = UIManager.getColor("Panel.background");
+            return uiColor != null ? uiColor : new JBColor(new Color(245, 245, 245), new Color(43, 43, 43));
+        });
     }
 
     /**
-     * Returns the current label/text foreground from LaF.
+     * Returns the current label/text foreground from LaF using dynamic resolution.
+     * Uses JBColor.lazy() for true dynamic color resolution that updates automatically.
      */
     public static Color textForeground() {
-        return uiColor("Label.foreground", new JBColor(new Color(0x1F1F1F), Color.WHITE));
+        return JBColor.lazy(() -> {
+            Color uiColor = UIManager.getColor("Label.foreground");
+            return uiColor != null ? uiColor : new JBColor(new Color(0x1F1F1F), new Color(255, 255, 255));
+        });
     }
 
     /**
-     * Returns a theme-aware background for text fields/areas.
+     * Returns a theme-aware background for text fields/areas using dynamic resolution.
+     * Uses JBColor.lazy() for true dynamic color resolution that updates automatically.
      */
     public static Color textFieldBackground() {
-        // Special handling for high contrast themes - ensure input box is lighter than surroundings
-        Color defaultColor = uiColor("TextField.background", new JBColor(Color.WHITE, new Color(50, 50, 50)));
-        
-        // Check if we're in a high contrast theme by looking at the panel background
-        Color panelBg = panelBackground();
-        if (panelBg != null) {
-            // If panel background is very dark (high contrast), make input box darker to match sidebar
-            if (isHighContrastTheme(panelBg)) {
-                return new JBColor(Color.WHITE, new Color(45, 45, 45)); // Much darker grey to match sidebar
-            }
-        }
-        
-        return defaultColor;
+        return JBColor.lazy(() -> {
+            Color uiColor = UIManager.getColor("TextField.background");
+            return uiColor != null ? uiColor : new JBColor(new Color(255, 255, 255), new Color(50, 50, 50));
+        });
+    }
+    
+    /**
+     * Returns theme-aware border color using dynamic resolution.
+     */
+    public static Color borderColor() {
+        return JBColor.namedColor("Component.borderColor", 
+            new JBColor(new Color(192, 192, 192), new Color(80, 80, 80)));
     }
     
     /**

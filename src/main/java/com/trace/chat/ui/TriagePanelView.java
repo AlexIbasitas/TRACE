@@ -24,9 +24,12 @@ import com.trace.common.utils.ThemeUtils;
 import com.trace.test.models.FailureInfo;
 
 import javax.swing.*;
+import javax.swing.border.Border;
 import javax.swing.border.CompoundBorder;
 import java.awt.*;
+import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import com.intellij.util.ui.UIUtil;
 import java.awt.event.HierarchyEvent;
 import java.awt.event.HierarchyListener;
 import java.awt.event.KeyAdapter;
@@ -135,7 +138,7 @@ public class TriagePanelView {
         
         initializeUI();
         setupEventHandlers();
-        // Note: LaF listener removed due to deprecation in newer IntelliJ versions
+        setupThemeChangeListener();
         LOG.info("TriagePanelView created successfully");
     }
 
@@ -265,10 +268,14 @@ public class TriagePanelView {
     private void refreshTheme() {
         try {
             LOG.info("=== THEME REFRESH STARTED ===");
+            LOG.info("Current theme: " + UIManager.getLookAndFeel().getName());
             LOG.info("Current theme colors:");
             LOG.info("  - Panel background: " + ThemeUtils.panelBackground());
             LOG.info("  - Text foreground: " + ThemeUtils.textForeground());
             LOG.info("  - Text field background: " + ThemeUtils.textFieldBackground());
+            LOG.info("  - UIManager Panel.background: " + UIManager.getColor("Panel.background"));
+            LOG.info("  - UIManager Label.foreground: " + UIManager.getColor("Label.foreground"));
+            LOG.info("  - UIManager TextField.background: " + UIManager.getColor("TextField.background"));
             
             // Update main panel background
             if (mainPanel != null) {
@@ -319,8 +326,11 @@ public class TriagePanelView {
                     if (child instanceof JPanel && "inputBoxContainer".equals(child.getName())) {
                         JPanel box = (JPanel) child;
                         box.setOpaque(true);
-                        box.setBackground(ThemeUtils.textFieldBackground());
-                        box.setBorder(javax.swing.BorderFactory.createEmptyBorder(8, 12, 8, 12));
+                        box.setBackground(TriagePanelConstants.getInputContainerBackground());
+                        box.setBorder(BorderFactory.createCompoundBorder(
+                            BorderFactory.createLineBorder(TriagePanelConstants.getInputContainerBorder(), 1, true),
+                            BorderFactory.createEmptyBorder(8, 12, 8, 0)
+                        ));
 
                         for (Component inner : box.getComponents()) {
                             if (inner instanceof JTextArea) {
@@ -609,17 +619,20 @@ public class TriagePanelView {
         // Create analysis mode button - SIMPLE LEFT ALIGNMENT
         JButton analysisModeButton = createAnalysisModeButton();
         
-        // Create input container with rounded border
+        // Create input container with enhanced border for better visibility
         JPanel inputBoxContainer = new JPanel(new BorderLayout());
         inputBoxContainer.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createLineBorder(ThemeUtils.uiColor("Component.borderColor", new Color(60, 60, 60)), 1, true),
+            BorderFactory.createLineBorder(TriagePanelConstants.getInputContainerBorder(), 1, true),
             BorderFactory.createEmptyBorder(8, 12, 8, 0)
         ));
-        inputBoxContainer.setBackground(ThemeUtils.textFieldBackground());
+        inputBoxContainer.setBackground(TriagePanelConstants.getInputContainerBackground());
         inputBoxContainer.setOpaque(true);
         inputBoxContainer.setName("inputBoxContainer");
         
-        // Configure text area for multi-line input
+        // SIMPLE FIX: Ensure container has minimum height for any button size
+        inputBoxContainer.setMinimumSize(new Dimension(300, 64)); // Minimum container height
+        
+        // Configure text area for multi-line input with dynamic sizing
         inputArea.setFont(new Font("Segoe UI", Font.PLAIN, 14));
         inputArea.setRows(3);
         inputArea.setLineWrap(true);
@@ -631,26 +644,15 @@ public class TriagePanelView {
         inputArea.setOpaque(true);
         inputArea.putClientProperty("JTextField.placeholderText", TriagePanelConstants.INPUT_PLACEHOLDER_TEXT);
         
+        // SIMPLE FIX: Make input area grow with button size to prevent cut-off
+        inputArea.setMinimumSize(new Dimension(200, 48)); // Minimum height to accommodate any button size
+        
         // Create modern send button with custom icon
         JButton sendIconButton = createModernSendButton();
         
-        // Create a fixed-size container for the send button with vertical centering
-        JPanel buttonContainer = new JPanel();
-        buttonContainer.setLayout(new BoxLayout(buttonContainer, BoxLayout.Y_AXIS));
-        buttonContainer.setOpaque(false);
-        buttonContainer.setPreferredSize(new Dimension(40, 40));
-        buttonContainer.setMaximumSize(new Dimension(40, 40));
-        buttonContainer.setMinimumSize(new Dimension(40, 40));
-        buttonContainer.setBorder(BorderFactory.createEmptyBorder(0, 0, 0, 0));
-        
-        // Add vertical glue to center the button
-        buttonContainer.add(Box.createVerticalGlue());
-        buttonContainer.add(sendIconButton);
-        buttonContainer.add(Box.createVerticalGlue());
-        
-        // Add components to input box container
+        // NATURAL LAYOUT: Simple BorderLayout placement, let IntelliJ handle sizing
         inputBoxContainer.add(inputArea, BorderLayout.CENTER);
-        inputBoxContainer.add(buttonContainer, BorderLayout.EAST);
+        inputBoxContainer.add(sendIconButton, BorderLayout.EAST);
         
         // Use BorderLayout with minimal gap for tight spacing
         inputPanel.setLayout(new BorderLayout(0, 2)); // 2px gap for tight spacing
@@ -712,6 +714,89 @@ public class TriagePanelView {
                 }
             }
         });
+    }
+    
+    /**
+     * Sets up theme change listener to automatically refresh all components when the IDE theme changes.
+     * This ensures that existing chat messages and UI elements update their colors to match the new theme.
+     * Uses a modern approach compatible with newer IntelliJ versions.
+     */
+    private com.intellij.ide.ui.LafManagerListener lafManagerListener;
+    
+    private void setupThemeChangeListener() {
+        try {
+            // Use IntelliJ's LafManager for proper theme change detection
+            lafManagerListener = new com.intellij.ide.ui.LafManagerListener() {
+                @Override
+                public void lookAndFeelChanged(com.intellij.ide.ui.LafManager source) {
+                    SwingUtilities.invokeLater(() -> {
+                        try {
+                            LOG.info("=== THEME CHANGE DETECTED (via LafManager) ===");
+                            LOG.info("Current theme: " + UIManager.getLookAndFeel().getName());
+                            LOG.info("Panel background: " + UIManager.getColor("Panel.background"));
+                            LOG.info("Label foreground: " + UIManager.getColor("Label.foreground"));
+                            LOG.info("Text field background: " + UIManager.getColor("TextField.background"));
+                            
+                            // Store current scroll position
+                            int currentScrollValue = 0;
+                            if (chatScrollPane != null && chatScrollPane.getVerticalScrollBar() != null) {
+                                currentScrollValue = chatScrollPane.getVerticalScrollBar().getValue();
+                            }
+                            
+                            // Refresh all theme colors
+                            refreshTheme();
+                            
+                            // Restore scroll position to maintain user's view
+                            if (chatScrollPane != null && chatScrollPane.getVerticalScrollBar() != null) {
+                                chatScrollPane.getVerticalScrollBar().setValue(currentScrollValue);
+                                LOG.info("Restored scroll position to: " + currentScrollValue);
+                            }
+                            
+                            LOG.info("=== THEME CHANGE COMPLETED ===");
+                        } catch (Exception ex) {
+                            LOG.warn("Error during theme change refresh: " + ex.getMessage(), ex);
+                        }
+                    });
+                }
+            };
+            
+            // Store reference for cleanup
+            com.intellij.ide.ui.LafManager.getInstance().addLafManagerListener(lafManagerListener);
+            
+            // Backup: Also add a property change listener for theme-related properties
+            mainPanel.addPropertyChangeListener("UI", evt -> {
+                SwingUtilities.invokeLater(() -> {
+                    try {
+                        LOG.info("=== THEME CHANGE DETECTED (via property change backup) ===");
+                        LOG.info("Property change: " + evt.getPropertyName() + " = " + evt.getNewValue());
+                        refreshTheme();
+                        LOG.info("=== THEME CHANGE COMPLETED ===");
+                    } catch (Exception ex) {
+                        LOG.warn("Error during theme change refresh: " + ex.getMessage(), ex);
+                    }
+                });
+            });
+            
+            // Add font change listener to respond to IDE font size changes
+            UIManager.addPropertyChangeListener(evt -> {
+                if ("defaultFont".equals(evt.getPropertyName())) {
+                    SwingUtilities.invokeLater(() -> {
+                        try {
+                            LOG.info("=== FONT CHANGE DETECTED ===");
+                            LOG.info("Font change: " + evt.getPropertyName() + " = " + evt.getNewValue());
+                            refreshTheme();
+                            LOG.info("=== FONT CHANGE COMPLETED ===");
+                        } catch (Exception ex) {
+                            LOG.warn("Error during font change refresh: " + ex.getMessage(), ex);
+                        }
+                    });
+                }
+            });
+            
+            LOG.info("Theme change listeners registered successfully (LafManager + backup)");
+        } catch (Exception e) {
+            LOG.warn("Failed to register theme change listeners: " + e.getMessage(), e);
+        }
     }
 
     /**
@@ -1796,6 +1881,36 @@ public class TriagePanelView {
         }
         LOG.info("TriagePanelView shutdown completed");
     }
+    
+    /**
+     * Manually triggers a theme refresh for all components.
+     * This can be called programmatically to test theme change behavior.
+     */
+    public void manualThemeRefresh() {
+        LOG.info("=== MANUAL THEME REFRESH TRIGGERED ===");
+        SwingUtilities.invokeLater(() -> {
+            try {
+                // Store current scroll position
+                int currentScrollValue = 0;
+                if (chatScrollPane != null && chatScrollPane.getVerticalScrollBar() != null) {
+                    currentScrollValue = chatScrollPane.getVerticalScrollBar().getValue();
+                }
+                
+                // Refresh all theme colors
+                refreshTheme();
+                
+                // Restore scroll position to maintain user's view
+                if (chatScrollPane != null && chatScrollPane.getVerticalScrollBar() != null) {
+                    chatScrollPane.getVerticalScrollBar().setValue(currentScrollValue);
+                    LOG.info("Restored scroll position to: " + currentScrollValue);
+                }
+                
+                LOG.info("=== MANUAL THEME REFRESH COMPLETED ===");
+            } catch (Exception e) {
+                LOG.warn("Error during manual theme refresh: " + e.getMessage(), e);
+            }
+        });
+    }
 
 
 
@@ -1815,7 +1930,7 @@ public class TriagePanelView {
         
         // Minimal header padding
         header.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createMatteBorder(0, 0, 1, 0, ThemeUtils.uiColor("Component.borderColor", new Color(68, 68, 68))),
+            BorderFactory.createMatteBorder(0, 0, 1, 0, ThemeUtils.uiColor("Component.borderColor", new JBColor(new Color(68, 68, 68), new Color(68, 68, 68)))),
             BorderFactory.createEmptyBorder(6, 8, 6, 8) // Increased from (2, 4, 2, 4) for better visual balance
         ));
         
@@ -2108,12 +2223,12 @@ public class TriagePanelView {
         
         if (aiEnabled) {
             // TRACE is enabled - green color
-            button.setForeground(new Color(76, 175, 80)); // Material Design Green
+            button.setForeground(new JBColor(new Color(76, 175, 80), new Color(76, 175, 80))); // Material Design Green
             button.setToolTipText("Disable TRACE");
             LOG.info("TRACE toggle button set to enabled state (green)");
         } else {
             // TRACE is disabled - gray color
-            button.setForeground(new Color(158, 158, 158)); // Material Design Gray
+            button.setForeground(new JBColor(new Color(158, 158, 158), new Color(158, 158, 158))); // Material Design Gray
             button.setToolTipText("Enable TRACE");
             LOG.info("TRACE toggle button set to disabled state (gray)");
         }
@@ -2145,66 +2260,46 @@ public class TriagePanelView {
     private JButton createModernSendButton() {
         JButton sendButton = new JButton();
         
-        // Load the send icon with proper exception handling
+        // NATURAL SCALING: Let IntelliJ handle icon scaling properly
         try {
             Icon sendIcon = IconLoader.getIcon("/icons/send_32.png", getClass());
-            if (sendIcon != null) {
             sendButton.setIcon(sendIcon);
-            } else {
-                // Fallback to text if icon not found
-                sendButton.setText("→");
-                sendButton.setFont(new Font("Segoe UI", Font.BOLD, 16));
-            }
         } catch (Exception e) {
-            // Fallback to text if icon loading fails
             sendButton.setText("→");
-            sendButton.setFont(new Font("Segoe UI", Font.BOLD, 16));
         }
         
-        // Modern styling - transparent background with just icon
-        sendButton.setPreferredSize(new Dimension(32, 32));
-        sendButton.setMaximumSize(new Dimension(32, 32));
-        sendButton.setMinimumSize(new Dimension(32, 32));
+        // NATURAL SIZE: Let button size itself based on icon and IntelliJ scaling
+        sendButton.setIconTextGap(0);
         
         // Transparent background
-        sendButton.setBackground(new Color(0, 0, 0, 0));
-        sendButton.setForeground(Color.WHITE);
+        sendButton.setBackground(new JBColor(new Color(0, 0, 0, 0), new Color(0, 0, 0, 0)));
+        sendButton.setForeground(ThemeUtils.textForeground());
         sendButton.setFocusPainted(false);
         sendButton.setBorderPainted(false);
         sendButton.setContentAreaFilled(false);
         sendButton.setOpaque(false);
         
-        // Minimal border for icon spacing
-        sendButton.setBorder(BorderFactory.createEmptyBorder(2, 2, 2, 2));
+        // Simple approach: just make it transparent and let the icon be round
+        sendButton.setOpaque(false);
+        sendButton.setContentAreaFilled(false);
+        sendButton.setBorderPainted(false);
+        sendButton.setFocusPainted(false);
+        sendButton.setBorder(BorderFactory.createEmptyBorder(0, 0, 0, 0));
         
         // Cursor and tooltip
         sendButton.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         sendButton.setToolTipText("Send message");
         
-        // Hover effects
+        // Simple hover effect - just a subtle background change
         sendButton.addMouseListener(new java.awt.event.MouseAdapter() {
-        @Override
+            @Override
             public void mouseEntered(java.awt.event.MouseEvent e) {
-                sendButton.setBackground(new Color(255, 255, 255, 30));
-                sendButton.repaint();
-        }
-        
-        @Override
-            public void mouseExited(java.awt.event.MouseEvent e) {
-                sendButton.setBackground(new Color(0, 0, 0, 0));
-                sendButton.repaint();
+                sendButton.setBackground(new Color(255, 255, 255, 20));
             }
             
             @Override
-            public void mousePressed(java.awt.event.MouseEvent e) {
-                sendButton.setBackground(new Color(0, 0, 0, 20));
-                sendButton.repaint();
-        }
-        
-        @Override
-            public void mouseReleased(java.awt.event.MouseEvent e) {
-                sendButton.setBackground(new Color(255, 255, 255, 30));
-                sendButton.repaint();
+            public void mouseExited(java.awt.event.MouseEvent e) {
+                sendButton.setBackground(new Color(0, 0, 0, 0));
             }
         });
         
@@ -2237,4 +2332,49 @@ public class TriagePanelView {
         mainPanel.revalidate();
         mainPanel.repaint();
     }
-} 
+    
+    /**
+     * Disposes of resources and cleans up listeners to prevent memory leaks.
+     * This method should be called when the component is no longer needed.
+     */
+    public void dispose() {
+        try {
+            LOG.info("Disposing TriagePanelView resources");
+            
+            // Remove theme change listener
+            if (lafManagerListener != null) {
+                try {
+                    com.intellij.ide.ui.LafManager.getInstance().removeLafManagerListener(lafManagerListener);
+                    lafManagerListener = null;
+                    LOG.info("Removed LafManagerListener");
+                } catch (Exception e) {
+                    LOG.warn("Error removing LafManagerListener: " + e.getMessage());
+                }
+            }
+            
+            // Stop any running timers
+            if (smoothScrollTimer != null && smoothScrollTimer.isRunning()) {
+                smoothScrollTimer.stop();
+            }
+            if (rescrollDebounceTimer != null && rescrollDebounceTimer.isRunning()) {
+                rescrollDebounceTimer.stop();
+            }
+            
+            // Clear chat history
+            if (chatHistory != null) {
+                chatHistory.clear();
+            }
+            
+            // Clear component references
+            currentFailureInfo = null;
+            latestUserMessageComponent = null;
+            typingIndicatorRow = null;
+            
+            LOG.info("TriagePanelView disposal completed");
+        } catch (Exception e) {
+            LOG.warn("Error during TriagePanelView disposal: " + e.getMessage(), e);
+        }
+    }
+}
+
+ 

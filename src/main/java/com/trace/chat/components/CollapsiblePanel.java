@@ -2,6 +2,7 @@ package com.trace.chat.components;
 
 import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.openapi.diagnostic.Logger;
+import com.intellij.ui.JBColor;
 import com.trace.common.constants.TriagePanelConstants;
 import com.trace.common.utils.ThemeUtils;
 
@@ -98,7 +99,7 @@ public class CollapsiblePanel extends JPanel {
      */
     private void createToggleLabel() {
         toggleLabel = new JLabel(TriagePanelConstants.EXPAND_ICON + TriagePanelConstants.TOGGLE_TEXT);
-        toggleLabel.setFont(TriagePanelConstants.COLLAPSIBLE_TOGGLE_FONT);
+        toggleLabel.setFont(TriagePanelConstants.getCollapsibleToggleFont());
         toggleLabel.setForeground(ThemeUtils.textForeground());
         toggleLabel.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         toggleLabel.setToolTipText(TriagePanelConstants.TOOLTIP_EXPAND);
@@ -131,7 +132,7 @@ public class CollapsiblePanel extends JPanel {
         contentTextArea.setLineWrap(true);
         contentTextArea.setWrapStyleWord(true);
         contentTextArea.setEditable(false);
-        contentTextArea.setFont(TriagePanelConstants.COLLAPSIBLE_CONTENT_FONT);
+        contentTextArea.setFont(TriagePanelConstants.getCollapsibleContentFont());
         contentTextArea.setForeground(ThemeUtils.textForeground());
         contentTextArea.setBackground(ThemeUtils.panelBackground());
         contentTextArea.setBorder(createThemeAwareBorder());
@@ -152,7 +153,7 @@ public class CollapsiblePanel extends JPanel {
      * @return A compound border with theme-aware colors
      */
     private Border createThemeAwareBorder() {
-        Color borderColor = ThemeUtils.uiColor("Component.borderColor", new Color(80, 80, 80));
+        Color borderColor = ThemeUtils.uiColor("Component.borderColor", new JBColor(new Color(80, 80, 80), new Color(80, 80, 80)));
         return BorderFactory.createCompoundBorder(
             BorderFactory.createLineBorder(borderColor, 1),
             BorderFactory.createEmptyBorder(8, 8, 8, 8)

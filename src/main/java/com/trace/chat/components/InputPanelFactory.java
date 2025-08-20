@@ -2,6 +2,7 @@ package com.trace.chat.components;
 
 import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.openapi.util.IconLoader;
+import com.intellij.ui.JBColor;
 import com.trace.common.constants.TriagePanelConstants;
 import com.trace.common.utils.ThemeUtils;
 
@@ -93,7 +94,7 @@ public final class InputPanelFactory {
     public static JTextArea createInputArea(ActionListener sendActionListener) {
         JTextArea inputArea = new JTextArea();
         inputArea.setRows(TriagePanelConstants.INPUT_AREA_ROWS);
-        inputArea.setFont(TriagePanelConstants.INPUT_FONT);
+        inputArea.setFont(TriagePanelConstants.getInputFont());
         inputArea.setBackground(ThemeUtils.textFieldBackground());
         inputArea.setForeground(ThemeUtils.textForeground());
         inputArea.setCaretColor(ThemeUtils.textForeground());
@@ -173,13 +174,17 @@ public final class InputPanelFactory {
      */
     public static JButton createModernSendButton(ActionListener sendActionListener) {
         JButton sendButton = new JButton();
-        sendButton.setPreferredSize(TriagePanelConstants.SEND_BUTTON_SIZE);
-        sendButton.setMaximumSize(TriagePanelConstants.SEND_BUTTON_SIZE);
-        sendButton.setMinimumSize(TriagePanelConstants.SEND_BUTTON_SIZE);
-        sendButton.setFont(TriagePanelConstants.SEND_BUTTON_FONT);
-        sendButton.setForeground(TriagePanelConstants.WHITE);
+        // Preserve icon aspect ratio while preventing excessive enlargement
+        sendButton.setIconTextGap(0);
+        // NATURAL SIZE: Let button size itself based on icon and IntelliJ scaling
+        sendButton.setFont(TriagePanelConstants.getSendButtonFont());
+        sendButton.setForeground(ThemeUtils.textForeground());
         sendButton.setBackground(TriagePanelConstants.TRANSPARENT);
-        sendButton.setBorder(TriagePanelConstants.SEND_BUTTON_BORDER);
+        // Rounded corner styling for modern appearance
+        sendButton.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(new JBColor(new Color(0, 0, 0, 0), new Color(0, 0, 0, 0)), 0, true),
+            BorderFactory.createEmptyBorder(0, 0, 0, 0)
+        ));
         sendButton.setBorderPainted(false);
         sendButton.setFocusPainted(false);
         sendButton.setContentAreaFilled(false);
@@ -189,18 +194,11 @@ public final class InputPanelFactory {
         sendButton.setAlignmentY(Component.CENTER_ALIGNMENT);
         sendButton.setName("sendButton");
         
-        // Try to load the send icon
+        // NATURAL SCALING: Let IntelliJ handle icon scaling properly
         try {
-            Icon sendIcon = IconLoader.getIcon(TriagePanelConstants.SEND_ICON_PATH, InputPanelFactory.class);
-            if (sendIcon != null) {
-                sendButton.setIcon(sendIcon);
-            } else {
-                // Fallback to text if icon not found
-                sendButton.setText(TriagePanelConstants.SEND_BUTTON_FALLBACK_TEXT);
-            }
+            Icon sendIcon = IconLoader.getIcon("/icons/send_32.png", InputPanelFactory.class);
+            sendButton.setIcon(sendIcon);
         } catch (Exception e) {
-            LOG.warn("InputPanelFactory: Failed to load send icon, using fallback text", e);
-            // Fallback to text if icon loading fails
             sendButton.setText(TriagePanelConstants.SEND_BUTTON_FALLBACK_TEXT);
         }
         
@@ -288,7 +286,7 @@ public final class InputPanelFactory {
         JPanel inputBoxContainer = new JPanel(new BorderLayout());
         inputBoxContainer.setOpaque(true);
         inputBoxContainer.setBackground(ThemeUtils.textFieldBackground());
-        inputBoxContainer.setBorder(BorderFactory.createEmptyBorder(8, 12, 8, 12));
+        inputBoxContainer.setBorder(BorderFactory.createEmptyBorder(8, 12, 8, 0)); // No right padding
         inputBoxContainer.setName("inputBoxContainer");
 
         // Create text area but make it non-opaque so it does not paint its own background
@@ -304,6 +302,7 @@ public final class InputPanelFactory {
         JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 0, 0));
         buttonPanel.setOpaque(false);
         buttonPanel.setName("buttonPanel");
+        buttonPanel.setBorder(BorderFactory.createEmptyBorder(0, 0, 0, 0)); // No padding
         buttonPanel.add(sendButton);
 
         // Assemble hierarchy: inputPanel (grey) -> inputBoxContainer (white) -> inputArea + buttonPanel

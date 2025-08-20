@@ -3,6 +3,7 @@ package com.trace.chat.components;
 import com.intellij.icons.AllIcons;
 import com.intellij.openapi.ide.CopyPasteManager;
 import com.intellij.openapi.util.IconLoader;
+import com.intellij.util.ui.UIUtil;
 import com.trace.common.constants.TriagePanelConstants;
 import com.trace.common.utils.ThemeUtils;
 
@@ -95,7 +96,7 @@ public class MessageComponent extends JPanel {
         addSenderIcon(leftPanel);
         
         JLabel senderLabel = new JLabel(message.isFromUser() ? TriagePanelConstants.USER_DISPLAY_NAME : TriagePanelConstants.AI_DISPLAY_NAME);
-        senderLabel.setFont(TriagePanelConstants.SENDER_FONT);
+        senderLabel.setFont(TriagePanelConstants.getSenderFont());
         senderLabel.setForeground(ThemeUtils.textForeground());
         leftPanel.add(senderLabel, BorderLayout.CENTER);
         
@@ -103,7 +104,7 @@ public class MessageComponent extends JPanel {
         
         // Right side: full timestamp
         JLabel timeLabel = new JLabel(formatFullTimestamp(message.getTimestamp()));
-        timeLabel.setFont(TriagePanelConstants.TIMESTAMP_FONT);
+        timeLabel.setFont(TriagePanelConstants.getTimestampFont());
         timeLabel.setForeground(ThemeUtils.textForeground());
         headerPanel.add(timeLabel, BorderLayout.EAST);
         
@@ -120,13 +121,17 @@ public class MessageComponent extends JPanel {
         Icon logoIcon = null;
         try {
             logoIcon = IconLoader.getIcon(iconPath, getClass());
-        } catch (Throwable ignore) {
+                } catch (Throwable ignore) {
             // In tests, IconLoader may not resolve; ignore
         }
-            if (logoIcon != null) {
-                JLabel logoLabel = new JLabel(logoIcon);
-                logoLabel.setBorder(TriagePanelConstants.MESSAGE_LOGO_BORDER);
-                leftPanel.add(logoLabel, BorderLayout.WEST);
+        if (logoIcon != null) {
+            JLabel logoLabel = new JLabel(logoIcon);
+            logoLabel.setBorder(TriagePanelConstants.MESSAGE_LOGO_BORDER);
+            // Preserve icon aspect ratio while preventing excessive enlargement
+            logoLabel.setIconTextGap(0);
+            // Set reasonable maximum size to prevent enlargement, but allow natural aspect ratio
+            logoLabel.setMaximumSize(new Dimension(32, 32));
+            leftPanel.add(logoLabel, BorderLayout.WEST);
         }
     }
     
@@ -229,23 +234,33 @@ public class MessageComponent extends JPanel {
         String safeScenario = escapeHtml(scenarioName != null ? scenarioName : TriagePanelConstants.UNKNOWN_SCENARIO);
         String safeFailedStep = failedStepText != null ? escapeHtml(failedStepText.trim()) : null;
 
-        // Build two-line HTML with colored prefixes and matching font styling
+        // Build two-line HTML with colored prefixes and dynamic font styling
         StringBuilder html = new StringBuilder();
+        int baseFontSize = UIUtil.getLabelFont().getSize();
+        int dynamicMargin = Math.max(2, baseFontSize / 8); // Dynamic margin that scales with font size
         html.append("<html><body style='margin:0;padding:0;'>");
         html.append("<div style=\"font-family:")
             .append(TriagePanelConstants.FONT_FAMILY)
-            .append(", sans-serif;font-size:11px;color:")
+            .append(", sans-serif;font-size:")
+            .append(baseFontSize)
+            .append("px;color:")
             .append(ThemeUtils.toHex(ThemeUtils.textForeground()))
-            .append(";\">")
+            .append(";margin-bottom:")
+            .append(dynamicMargin)
+            .append("px;\">")
             .append("<span style=\"color:#FFA500;font-weight:bold\">Scenario:</span> ")
             .append(safeScenario)
             .append("</div>");
         if (safeFailedStep != null && !safeFailedStep.isEmpty()) {
             html.append("<div style=\"font-family:")
                 .append(TriagePanelConstants.FONT_FAMILY)
-                .append(", sans-serif;font-size:11px;color:")
+                .append(", sans-serif;font-size:")
+                .append(baseFontSize)
+                .append("px;color:")
                 .append(ThemeUtils.toHex(ThemeUtils.textForeground()))
-                .append(";\">")
+                .append(";margin-bottom:")
+                .append(dynamicMargin)
+                .append("px;\">")
                 .append("<span style=\"color:#FF6B6B;font-weight:bold\">ⓧ Failed Step:</span> ")
                 .append(safeFailedStep)
                 .append("</div>");
@@ -254,8 +269,9 @@ public class MessageComponent extends JPanel {
 
         // Create a transparent JEditorPane configured like our markdown pane
         JEditorPane headerPane = createHeaderHtmlPane(html.toString());
-        // Add bottom inset to avoid clipping when wrapped lines end at the bottom
-        headerPane.setBorder(BorderFactory.createEmptyBorder(0, 0, 8, 0));
+        // Add dynamic bottom inset that scales with font size to avoid clipping at high zoom levels
+        int dynamicBottomPadding = Math.max(8, baseFontSize / 2); // Scale with font size, minimum 8px
+        headerPane.setBorder(BorderFactory.createEmptyBorder(0, 0, dynamicBottomPadding, 0));
         headerPane.setAlignmentX(Component.LEFT_ALIGNMENT);
         headerPane.setAlignmentY(Component.TOP_ALIGNMENT);
         headerPane.setName("failureHeaderHtml");
@@ -306,6 +322,9 @@ public class MessageComponent extends JPanel {
         pane.setOpaque(true);
         pane.setBackground(ThemeUtils.panelBackground());
         pane.putClientProperty("JEditorPane.honorDisplayProperties", Boolean.TRUE);
+        
+        // Use dynamic font sizing like other components
+        pane.setFont(TriagePanelConstants.getMessageFont());
 
         try {
             javax.swing.text.html.HTMLEditorKit kit = new WrappingHtmlEditorKit();
@@ -314,14 +333,17 @@ public class MessageComponent extends JPanel {
             javax.swing.text.html.StyleSheet ss = doc.getStyleSheet();
             String textFg = ThemeUtils.toHex(ThemeUtils.textForeground());
             String panelBg = ThemeUtils.toHex(ThemeUtils.panelBackground());
+            // Use dynamic padding that scales with font size for better zoom compatibility
+            int baseFontSize = UIUtil.getLabelFont().getSize();
+            int dynamicPadding = Math.max(4, baseFontSize / 4); // Scale with font size, minimum 4px
+            
             ss.addRule("body, p, li, ul, ol, h1, h2, h3, h4, h5, h6, span, div, td, th, a, b, i { color:" + textFg + "; font-family: '" + TriagePanelConstants.FONT_FAMILY + "', sans-serif; }");
             ss.addRule("body { background-color:" + panelBg + "; }");
-            ss.addRule("body, p, li { font-size:14px; }");
             ss.addRule("p { margin-top:2px; margin-bottom:2px; }");
             ss.addRule("ul, ol { margin-top:2px; margin-bottom:2px; }");
             ss.addRule("li { margin-top:0px; margin-bottom:2px; }");
             ss.addRule("pre { margin-top:3px; margin-bottom:3px; }");
-            ss.addRule("body { padding-bottom:4px; }");
+            ss.addRule("body { padding-bottom:" + dynamicPadding + "px; }");
             pane.setDocument(doc);
         } catch (Exception ignore) {
             // Fallback silently; default kit is acceptable
@@ -374,7 +396,7 @@ public class MessageComponent extends JPanel {
      * @param contentPanel The panel to add the AI message text to
      */
     private void addAiMessageText(JPanel contentPanel) {
-        // Use the fully configured markdown pane directly to preserve heading styles and wrapping
+        // Use JLabel with HTML content for better theme integration
         JEditorPane messageText = MarkdownRenderer.createMarkdownPane(message.getText());
         messageText.setName("aiMessageText");
 
@@ -397,34 +419,37 @@ public class MessageComponent extends JPanel {
      * @param contentPanel The panel to add the user message text to
      */
     private void addUserMessageText(JPanel contentPanel) {
-        JTextArea messageText = new JTextArea(message.getText());
-        messageText.setLineWrap(true);
-        messageText.setWrapStyleWord(true);
+        // Use JEditorPane with HTML content for uniform font sizing with AI messages
+        JEditorPane messageText = new MarkdownRenderer.ResponsiveHtmlPane();
+        messageText.setContentType("text/html");
         messageText.setEditable(false);
-        messageText.setFont(TriagePanelConstants.MESSAGE_FONT);
-        messageText.setBackground(ThemeUtils.panelBackground());
-        messageText.setForeground(ThemeUtils.textForeground());
-        // Match AI message bottom padding so the copy button spacing is consistent
-        messageText.setBorder(BorderFactory.createEmptyBorder(0, 0, 14, 0));
         messageText.setOpaque(true);
+        messageText.setBackground(ThemeUtils.panelBackground());
+        messageText.putClientProperty("JEditorPane.honorDisplayProperties", Boolean.TRUE);
+        
+        // Use the same dynamic font as AI messages for uniform sizing
+        Font dynamicFont = UIUtil.getLabelFont();
+        messageText.setFont(dynamicFont);
+        
+        // Create HTML content with the same styling approach as AI messages
+        String safeText = escapeHtml(message.getText());
+        int baseFontSize = UIUtil.getLabelFont().getSize();
+        String textColor = ThemeUtils.toHex(ThemeUtils.textForeground());
+        String html = "<html><body style=\"color:" + textColor + "; font-size:" + baseFontSize + "px; margin:0; padding:0;\">" + safeText + "</body></html>";
+        
+        messageText.setText(html);
+        
+        // Match AI message styling and sizing
         messageText.setAlignmentX(Component.LEFT_ALIGNMENT);
-        
-        // Ensure text area is visible and properly sized
-        messageText.setVisible(true);
-        
-        // Let the component calculate its own size based on content
-        // This allows for dynamic sizing proportional to text amount
-        messageText.setPreferredSize(null); // Let Swing calculate preferred size
+        messageText.setAlignmentY(Component.TOP_ALIGNMENT);
+        messageText.setBorder(BorderFactory.createEmptyBorder(0, 0, 14, 0));
         messageText.setMaximumSize(new Dimension(Integer.MAX_VALUE, Integer.MAX_VALUE));
         messageText.setMinimumSize(new Dimension(TriagePanelConstants.MIN_CHAT_WIDTH_BEFORE_SCROLL, 50));
-        messageText.setAlignmentY(Component.TOP_ALIGNMENT);
         
         // Add component name for testing identification
         messageText.setName("userMessageText");
         
         contentPanel.add(messageText);
-        
-        // Force layout update to ensure proper display
         contentPanel.revalidate();
     }
     
@@ -517,6 +542,13 @@ public class MessageComponent extends JPanel {
      */
     public void refreshTheme() {
         try {
+            System.out.println("=== MessageComponent.refreshTheme() called ===");
+            System.out.println("Message role: " + (message != null ? message.getRole() : "null"));
+            System.out.println("Current theme colors:");
+            System.out.println("  - Panel background: " + ThemeUtils.panelBackground());
+            System.out.println("  - Text foreground: " + ThemeUtils.textForeground());
+            System.out.println("  - Text field background: " + ThemeUtils.textFieldBackground());
+            
             // Update main component background
             setBackground(ThemeUtils.panelBackground());
             
@@ -530,9 +562,11 @@ public class MessageComponent extends JPanel {
             
             revalidate();
             repaint();
+            System.out.println("=== MessageComponent.refreshTheme() completed ===");
         } catch (Exception e) {
             // Log error but don't fail
             System.err.println("Error refreshing theme in MessageComponent: " + e.getMessage());
+            e.printStackTrace();
         }
     }
     
@@ -541,14 +575,19 @@ public class MessageComponent extends JPanel {
      */
     private void refreshThemeInContainer(Container container) {
         for (Component child : container.getComponents()) {
+            System.out.println("  - Updating component: " + child.getClass().getSimpleName() + 
+                " (name: " + child.getName() + ")");
+            
             // Update JEditorPanes (HTML content like scenario/failed step)
             if (child instanceof javax.swing.JEditorPane) {
+                System.out.println("    -> Updating JEditorPane");
                 com.trace.chat.components.MarkdownRenderer.reapplyThemeStyles((javax.swing.JEditorPane) child);
             }
             
             // Update JLabels
             if (child instanceof JLabel) {
                 JLabel label = (JLabel) child;
+                System.out.println("    -> Updating JLabel foreground to: " + ThemeUtils.textForeground());
                 label.setForeground(ThemeUtils.textForeground());
                 label.revalidate();
                 label.repaint();
@@ -557,6 +596,8 @@ public class MessageComponent extends JPanel {
             // Update JTextAreas
             if (child instanceof JTextArea) {
                 JTextArea textArea = (JTextArea) child;
+                System.out.println("    -> Updating JTextArea - background: " + ThemeUtils.panelBackground() + 
+                    ", foreground: " + ThemeUtils.textForeground());
                 textArea.setBackground(ThemeUtils.panelBackground());
                 textArea.setForeground(ThemeUtils.textForeground());
                 textArea.setCaretColor(ThemeUtils.textForeground());
@@ -568,6 +609,7 @@ public class MessageComponent extends JPanel {
             if (child instanceof JPanel) {
                 JPanel panel = (JPanel) child;
                 if (panel.isOpaque()) {
+                    System.out.println("    -> Updating JPanel background to: " + ThemeUtils.panelBackground());
                     panel.setBackground(ThemeUtils.panelBackground());
                     panel.revalidate();
                     panel.repaint();

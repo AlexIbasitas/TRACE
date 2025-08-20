@@ -2,6 +2,7 @@ package com.trace.ai.ui;
 
 import com.trace.ai.configuration.AISettings;
 import com.intellij.openapi.diagnostic.Logger;
+import com.intellij.ui.JBColor;
 import com.trace.common.constants.TriagePanelConstants;
 import com.trace.common.utils.ThemeUtils;
 
@@ -150,7 +151,7 @@ public class SettingsPanel extends JPanel {
         backToChatButton.setForeground(ThemeUtils.textForeground());
         backToChatButton.setBackground(ThemeUtils.panelBackground());
         backToChatButton.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createLineBorder(ThemeUtils.uiColor("Component.borderColor", new Color(80, 80, 80)), 1, true),
+            BorderFactory.createLineBorder(ThemeUtils.uiColor("Component.borderColor", new JBColor(new Color(80, 80, 80), new Color(80, 80, 80))), 1, true),
             BorderFactory.createEmptyBorder(8, 16, 8, 16)
         ));
         backToChatButton.setFocusPainted(false);

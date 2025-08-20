@@ -53,23 +53,23 @@ class TriagePanelConstantsUnitTest {
     void shouldHaveValidFontConstants() {
         // Assert all font constants are not null and valid
         assertNotNull(TriagePanelConstants.FONT_FAMILY);
-        assertNotNull(TriagePanelConstants.INPUT_FONT);
-        assertNotNull(TriagePanelConstants.HEADER_TITLE_FONT);
-        assertNotNull(TriagePanelConstants.HEADER_BUTTON_FONT);
-        assertNotNull(TriagePanelConstants.SETTINGS_PLACEHOLDER_FONT);
-        assertNotNull(TriagePanelConstants.SETTINGS_BUTTON_FONT);
-        assertNotNull(TriagePanelConstants.SEND_BUTTON_FONT);
-        assertNotNull(TriagePanelConstants.SENDER_FONT);
-        assertNotNull(TriagePanelConstants.TIMESTAMP_FONT);
-        assertNotNull(TriagePanelConstants.SCENARIO_FONT);
-        assertNotNull(TriagePanelConstants.MESSAGE_FONT);
-        assertNotNull(TriagePanelConstants.COLLAPSIBLE_TOGGLE_FONT);
-        assertNotNull(TriagePanelConstants.COLLAPSIBLE_CONTENT_FONT);
+        assertNotNull(TriagePanelConstants.getInputFont());
+        assertNotNull(TriagePanelConstants.getHeaderTitleFont());
+        assertNotNull(TriagePanelConstants.getHeaderButtonFont());
+        assertNotNull(TriagePanelConstants.getSettingsPlaceholderFont());
+        assertNotNull(TriagePanelConstants.getSettingsButtonFont());
+        assertNotNull(TriagePanelConstants.getSendButtonFont());
+        assertNotNull(TriagePanelConstants.getSenderFont());
+        assertNotNull(TriagePanelConstants.getTimestampFont());
+        assertNotNull(TriagePanelConstants.getScenarioFont());
+        assertNotNull(TriagePanelConstants.getMessageFont());
+        assertNotNull(TriagePanelConstants.getCollapsibleToggleFont());
+        assertNotNull(TriagePanelConstants.getCollapsibleContentFont());
         
         // Test that fonts are valid
-        assertTrue(TriagePanelConstants.INPUT_FONT.getSize() > 0);
-        assertTrue(TriagePanelConstants.HEADER_TITLE_FONT.getSize() > 0);
-        assertTrue(TriagePanelConstants.MESSAGE_FONT.getSize() > 0);
+        assertTrue(TriagePanelConstants.getInputFont().getSize() > 0);
+        assertTrue(TriagePanelConstants.getHeaderTitleFont().getSize() > 0);
+        assertTrue(TriagePanelConstants.getMessageFont().getSize() > 0);
     }
 
     @Test

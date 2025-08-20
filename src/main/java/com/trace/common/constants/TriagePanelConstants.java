@@ -1,5 +1,8 @@
 package com.trace.common.constants;
 
+import com.intellij.ui.JBColor;
+import com.intellij.util.ui.UIUtil;
+
 import javax.swing.*;
 import javax.swing.border.Border;
 import java.awt.*;
@@ -12,11 +15,11 @@ import java.awt.*;
  * and spacing values. This ensures consistency across all UI components and
  * makes it easier to maintain and modify the visual appearance.</p>
  * 
- * <p>All constants are organized into logical groups for better readability
- * and maintenance. Colors follow a dark theme suitable for IDE integration.</p>
+ * <p>All colors are now theme-aware using JBColor and UIUtil to ensure
+ * compatibility with IntelliJ 2024.2.3+ and future versions.</p>
  * 
  * @author Alex Ibasitas
- * @version 1.0
+ * @version 2.0
  * @since 1.0
  */
 public final class TriagePanelConstants {
@@ -27,59 +30,132 @@ public final class TriagePanelConstants {
     }
     
     // ============================================================================
-    // COLOR CONSTANTS
+    // THEME-AWARE COLOR CONSTANTS
     // ============================================================================
     
-    /** Default panel background color (legacy fallback; prefer ThemeUtils.panelBackground()) */
-    public static final Color PANEL_BACKGROUND = new Color(43, 43, 43);
+    /** Theme-aware panel background color using dynamic resolution */
+    public static JBColor getPanelBackground() {
+        return JBColor.lazy(() -> {
+            Color uiColor = UIManager.getColor("Panel.background");
+            return uiColor != null ? uiColor : new JBColor(new Color(245, 245, 245), new Color(43, 43, 43));
+        });
+    }
     
-    /** Input container background color */
-    public static final Color INPUT_CONTAINER_BACKGROUND = new Color(50, 50, 50);
+    /** Theme-aware input container background color using dynamic resolution */
+    public static JBColor getInputContainerBackground() {
+        return JBColor.lazy(() -> {
+            Color uiColor = UIManager.getColor("TextField.background");
+            if (uiColor != null) {
+                return uiColor;
+            }
+            // Enhanced fallback with better high contrast support
+            return new JBColor(
+                new Color(255, 255, 255),  // Light theme: white
+                new Color(80, 80, 80)      // Dark theme: lighter grey for better visibility
+            );
+        });
+    }
     
-    /** Input container border color */
-    public static final Color INPUT_CONTAINER_BORDER = new Color(60, 60, 60);
+    /** Theme-aware input container border color using dynamic resolution */
+    public static JBColor getInputContainerBorder() {
+        return JBColor.lazy(() -> {
+            Color uiColor = UIManager.getColor("Component.borderColor");
+            if (uiColor != null) {
+                return uiColor;
+            }
+            // Enhanced fallback with better visibility
+            return new JBColor(
+                new Color(180, 180, 180),  // Light theme: medium grey
+                new Color(100, 100, 100)   // Dark theme: lighter grey for better contrast
+            );
+        });
+    }
     
-    /** Header border color */
-    public static final Color HEADER_BORDER = new Color(68, 68, 68);
+    /** Theme-aware header border color using dynamic resolution */
+    public static JBColor getHeaderBorder() {
+        return JBColor.lazy(() -> {
+            Color uiColor = UIManager.getColor("Component.borderColor");
+            return uiColor != null ? uiColor : new JBColor(new Color(68, 68, 68), new Color(68, 68, 68));
+        });
+    }
     
-    /** Header text color */
-    public static final Color HEADER_TEXT = new Color(180, 180, 180);
+    /** Theme-aware header text color using dynamic resolution */
+    public static JBColor getHeaderText() {
+        return JBColor.namedColor("Label.foreground", 
+            new JBColor(new Color(31, 31, 31), new Color(255, 255, 255)));
+    }
     
-    /** White color for text (legacy constant; prefer ThemeUtils.textForeground()) */
-    public static final Color WHITE = Color.WHITE;
+    /** Theme-aware white color for text - use getTextForeground() instead */
+    public static JBColor getWhite() {
+        return JBColor.namedColor("Label.foreground", 
+            new JBColor(new Color(255, 255, 255), new Color(255, 255, 255)));
+    }
     
-    /** Timestamp text color */
-    public static final Color TIMESTAMP_COLOR = new Color(150, 150, 150);
+    /** Theme-aware timestamp text color using dynamic resolution */
+    public static JBColor getTimestampColor() {
+        return JBColor.namedColor("Label.infoForeground", 
+            new JBColor(new Color(150, 150, 150), new Color(150, 150, 150)));
+    }
     
-    /** Scenario label color (orange) */
-    public static final Color SCENARIO_COLOR = new Color(255, 152, 0);
+    /** Theme-aware scenario label color (orange) */
+    public static final JBColor SCENARIO_COLOR = new JBColor(
+        new Color(255, 152, 0),  // Material Design Orange
+        new Color(255, 152, 0)
+    );
     
-    /** Failure indicator color (red) */
-    public static final Color FAILURE_COLOR = new Color(255, 100, 100);
+    /** Theme-aware failure indicator color (red) */
+    public static final JBColor FAILURE_COLOR = new JBColor(
+        JBColor.RED,
+        JBColor.RED
+    );
     
-    /** Error foreground color for error states */
-    public static final Color ERROR_FOREGROUND = new Color(255, 100, 100);
+    /** Theme-aware error foreground color for error states */
+    public static final JBColor ERROR_FOREGROUND = new JBColor(
+        JBColor.RED,
+        JBColor.RED
+    );
     
-    /** Warning foreground color for warning states */
-    public static final Color WARNING_FOREGROUND = new Color(255, 193, 7);
+    /** Theme-aware warning foreground color for warning states */
+    public static final JBColor WARNING_FOREGROUND = new JBColor(
+        new Color(255, 193, 7),  // Material Design Amber
+        new Color(255, 193, 7)
+    );
     
-    /** Collapsible panel content text color */
-    public static final Color COLLAPSIBLE_TEXT_COLOR = new Color(200, 200, 200);
+    /** Theme-aware collapsible panel content text color */
+    public static final JBColor COLLAPSIBLE_TEXT_COLOR = new JBColor(
+        new Color(31, 31, 31),  // Light theme label foreground
+        new Color(255, 255, 255)  // Dark theme label foreground
+    );
     
-    /** Collapsible panel content background color */
-    public static final Color COLLAPSIBLE_BACKGROUND = new Color(50, 50, 50);
+    /** Theme-aware collapsible panel content background color */
+    public static final JBColor COLLAPSIBLE_BACKGROUND = new JBColor(
+        new Color(255, 255, 255),  // Light theme text field background
+        new Color(50, 50, 50)      // Dark theme text field background
+    );
     
-    /** Collapsible panel content border color */
-    public static final Color COLLAPSIBLE_BORDER = new Color(80, 80, 80);
+    /** Theme-aware collapsible panel content border color */
+    public static final JBColor COLLAPSIBLE_BORDER = new JBColor(
+        new Color(80, 80, 80),  // Light theme border
+        new Color(80, 80, 80)   // Dark theme border
+    );
     
-    /** Transparent color for buttons */
-    public static final Color TRANSPARENT = new Color(0, 0, 0, 0);
+    /** Theme-aware transparent color for buttons */
+    public static final JBColor TRANSPARENT = new JBColor(
+        new Color(0, 0, 0, 0),
+        new Color(0, 0, 0, 0)
+    );
     
-    /** Hover overlay color for buttons */
-    public static final Color HOVER_OVERLAY = new Color(255, 255, 255, 30);
+    /** Theme-aware hover overlay color for buttons */
+    public static final JBColor HOVER_OVERLAY = new JBColor(
+        new Color(0, 0, 0, 30),  // Dark overlay for light theme
+        new Color(255, 255, 255, 30)  // Light overlay for dark theme
+    );
     
-    /** Press overlay color for buttons */
-    public static final Color PRESS_OVERLAY = new Color(0, 0, 0, 20);
+    /** Theme-aware press overlay color for buttons */
+    public static final JBColor PRESS_OVERLAY = new JBColor(
+        new Color(0, 0, 0, 50),  // Darker overlay for light theme
+        new Color(0, 0, 0, 40)   // Dark overlay for dark theme
+    );
     
     // ============================================================================
     // FONT CONSTANTS
@@ -88,48 +164,78 @@ public final class TriagePanelConstants {
     /** Default font family */
     public static final String FONT_FAMILY = "Segoe UI";
     
-    /** Input area font */
-    public static final Font INPUT_FONT = new Font(FONT_FAMILY, Font.PLAIN, 14);
+    /** Input area font - uses IDE's default font size for consistency */
+    public static Font getInputFont() {
+        return UIUtil.getLabelFont();
+    }
     
-    /** Header title font */
-    public static final Font HEADER_TITLE_FONT = new Font(FONT_FAMILY, Font.PLAIN, 14);
+    /** Header title font - uses IDE's default font size for consistency */
+    public static Font getHeaderTitleFont() {
+        return UIUtil.getLabelFont();
+    }
     
-    /** Header button font */
-    public static final Font HEADER_BUTTON_FONT = new Font(FONT_FAMILY, Font.PLAIN, 14);
+    /** Header button font - uses IDE's default font size for consistency */
+    public static Font getHeaderButtonFont() {
+        return UIUtil.getLabelFont();
+    }
     
-    /** Settings placeholder font */
-    public static final Font SETTINGS_PLACEHOLDER_FONT = new Font(FONT_FAMILY, Font.PLAIN, 16);
+    /** Settings placeholder font - uses IDE's default font size for consistency */
+    public static Font getSettingsPlaceholderFont() {
+        return UIUtil.getLabelFont();
+    }
     
-    /** Settings button font */
-    public static final Font SETTINGS_BUTTON_FONT = new Font(FONT_FAMILY, Font.PLAIN, 13);
+    /** Settings button font - uses IDE's default font size for consistency */
+    public static Font getSettingsButtonFont() {
+        return UIUtil.getLabelFont();
+    }
     
-    /** Send button font */
-    public static final Font SEND_BUTTON_FONT = new Font(FONT_FAMILY, Font.BOLD, 16);
+    /** Send button font - uses IDE's default font size for consistency */
+    public static Font getSendButtonFont() {
+        Font baseFont = UIUtil.getLabelFont();
+        return baseFont.deriveFont(Font.BOLD);
+    }
     
-    /** Message sender font */
-    public static final Font SENDER_FONT = new Font(FONT_FAMILY, Font.BOLD, 14);
+    /** Message sender font - uses IDE's default font size for consistency */
+    public static Font getSenderFont() {
+        Font baseFont = UIUtil.getLabelFont();
+        return baseFont.deriveFont(Font.BOLD);
+    }
     
-    /** Message timestamp font */
-    public static final Font TIMESTAMP_FONT = new Font(FONT_FAMILY, Font.PLAIN, 12);
+    /** Message timestamp font - uses IDE's default font size for consistency */
+    public static Font getTimestampFont() {
+        Font baseFont = UIUtil.getLabelFont();
+        return baseFont.deriveFont(baseFont.getSize() - 1f); // Slightly smaller than base
+    }
     
-    /** Scenario label font */
-    public static final Font SCENARIO_FONT = new Font(FONT_FAMILY, Font.BOLD, 13);
+    /** Scenario label font - uses IDE's default font size for consistency */
+    public static Font getScenarioFont() {
+        Font baseFont = UIUtil.getLabelFont();
+        return baseFont.deriveFont(Font.BOLD);
+    }
     
-    /** Message text font */
-    public static final Font MESSAGE_FONT = new Font(FONT_FAMILY, Font.PLAIN, 14);
+    /** Message text font - uses IDE's default font size for consistency */
+    public static Font getMessageFont() {
+        return UIUtil.getLabelFont();
+    }
     
-    /** Collapsible toggle font */
-    public static final Font COLLAPSIBLE_TOGGLE_FONT = new Font(FONT_FAMILY, Font.BOLD, 12);
+    /** Collapsible toggle font - uses IDE's default font size for consistency */
+    public static Font getCollapsibleToggleFont() {
+        Font baseFont = UIUtil.getLabelFont();
+        return baseFont.deriveFont(Font.BOLD);
+    }
     
-    /** Collapsible content font */
-    public static final Font COLLAPSIBLE_CONTENT_FONT = new Font(FONT_FAMILY, Font.PLAIN, 12);
+    /** Collapsible content font - uses IDE's default font size for consistency */
+    public static Font getCollapsibleContentFont() {
+        Font baseFont = UIUtil.getLabelFont();
+        return baseFont.deriveFont(baseFont.getSize() - 1f); // Slightly smaller than base
+    }
     
     // ============================================================================
     // DIMENSION CONSTANTS
     // ============================================================================
     
-    /** Button container size */
-    public static final Dimension BUTTON_CONTAINER_SIZE = new Dimension(40, 40);
+    /** Button container size - accommodates button (40x40) plus border padding (2px each side) */
+    public static final Dimension BUTTON_CONTAINER_SIZE = new Dimension(44, 44);
     
     /** Send button size */
     public static final Dimension SEND_BUTTON_SIZE = new Dimension(32, 32);
@@ -160,7 +266,7 @@ public final class TriagePanelConstants {
     public static final String AI_ICON_PATH = "/icons/logo_24.png";
     
     /** Send button icon path */
-    public static final String SEND_ICON_PATH = "/icons/send_32.png";
+    public static final String SEND_ICON_PATH = "/icons/send_24.png";
     
     // ============================================================================
     // BORDER CONSTANTS
@@ -174,7 +280,7 @@ public final class TriagePanelConstants {
     
     /** Input container border - DEPRECATED: Use theme-aware borders instead */
     public static final Border INPUT_CONTAINER_BORDER_COMPOUND = BorderFactory.createCompoundBorder(
-        BorderFactory.createLineBorder(INPUT_CONTAINER_BORDER, 1, true),
+        BorderFactory.createLineBorder(getInputContainerBorder(), 1, true),
         BorderFactory.createEmptyBorder(8, 12, 8, 0)
     );
     
@@ -183,15 +289,15 @@ public final class TriagePanelConstants {
     
     /** Header border compound */
     public static final Border HEADER_BORDER_COMPOUND = BorderFactory.createCompoundBorder(
-        BorderFactory.createMatteBorder(0, 0, 1, 0, HEADER_BORDER),
+        BorderFactory.createMatteBorder(0, 0, 1, 0, getHeaderBorder()),
         BorderFactory.createEmptyBorder(8, 16, 8, 16)
     );
     
     /** Settings button border */
     public static final Border SETTINGS_BUTTON_BORDER = BorderFactory.createEmptyBorder(0, 8, 0, 0);
     
-    /** Send button border */
-    public static final Border SEND_BUTTON_BORDER = BorderFactory.createEmptyBorder(2, 2, 2, 2);
+    /** Send button border - no padding (container provides spacing) */
+    public static final Border SEND_BUTTON_BORDER = BorderFactory.createEmptyBorder(0, 0, 0, 0);
     
     /** Message component border */
     public static final Border MESSAGE_COMPONENT_BORDER = BorderFactory.createEmptyBorder(8, 0, 8, 0);
@@ -330,13 +436,13 @@ public final class TriagePanelConstants {
     // ============================================================================
     
     /**
-     * Gets the default panel background color, falling back to the constant if UIManager returns null.
+     * Gets the default panel background color using dynamic theme resolution.
      *
      * @return The panel background color
      */
-    public static Color getPanelBackground() {
+    public static Color getPanelBackgroundFallback() {
         Color panelBg = UIManager.getColor("Panel.background");
-        return panelBg != null ? panelBg : PANEL_BACKGROUND;
+        return panelBg != null ? panelBg : getPanelBackground();
     }
     
     /**

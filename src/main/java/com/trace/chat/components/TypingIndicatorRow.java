@@ -1,5 +1,6 @@
 package com.trace.chat.components;
 
+import com.intellij.ui.JBColor;
 import com.trace.common.constants.TriagePanelConstants;
 import com.trace.common.utils.ThemeUtils;
 import org.slf4j.Logger;
@@ -126,7 +127,7 @@ public class TypingIndicatorRow extends JPanel {
 
             // Colors from theme
             Color fg = UIManager.getColor("Label.foreground");
-            if (fg == null) fg = new Color(0xBBBBBB);
+            if (fg == null) fg = new JBColor(new Color(0xBBBBBB), new Color(0xBBBBBB));
             Color bg = UIManager.getColor("Panel.background");
             if (bg == null) bg = getBackground();
 

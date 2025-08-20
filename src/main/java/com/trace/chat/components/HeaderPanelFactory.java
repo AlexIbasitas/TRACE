@@ -77,7 +77,7 @@ public final class HeaderPanelFactory {
         leftPanel.setBackground(ThemeUtils.panelBackground());
         
         JLabel title = new JLabel(TriagePanelConstants.HEADER_TITLE_TEXT);
-        title.setFont(TriagePanelConstants.HEADER_TITLE_FONT);
+        title.setFont(TriagePanelConstants.getHeaderTitleFont());
         title.setForeground(ThemeUtils.textForeground());
         leftPanel.add(title);
         
@@ -120,7 +120,7 @@ public final class HeaderPanelFactory {
         }
         
         JButton settingsButton = new JButton(TriagePanelConstants.SETTINGS_BUTTON_TEXT);
-        settingsButton.setFont(TriagePanelConstants.HEADER_BUTTON_FONT);
+        settingsButton.setFont(TriagePanelConstants.getHeaderButtonFont());
         settingsButton.setForeground(ThemeUtils.textForeground());
         settingsButton.setBackground(ThemeUtils.panelBackground());
         settingsButton.setBorderPainted(false);
@@ -177,8 +177,8 @@ public final class HeaderPanelFactory {
      */
     private static JLabel createSettingsPlaceholder() {
         JLabel placeholder = new JLabel(TriagePanelConstants.SETTINGS_PLACEHOLDER_TEXT);
-        placeholder.setFont(TriagePanelConstants.SETTINGS_PLACEHOLDER_FONT);
-        placeholder.setForeground(TriagePanelConstants.WHITE);
+        placeholder.setFont(TriagePanelConstants.getSettingsPlaceholderFont());
+        placeholder.setForeground(ThemeUtils.textForeground());
         placeholder.setHorizontalAlignment(SwingConstants.CENTER);
         
         return placeholder;
@@ -195,7 +195,7 @@ public final class HeaderPanelFactory {
      */
     private static JButton createBackToChatButton(ActionListener actionListener) {
         JButton backToChat = new JButton(TriagePanelConstants.BACK_TO_CHAT_TEXT);
-        backToChat.setFont(TriagePanelConstants.SETTINGS_BUTTON_FONT);
+        backToChat.setFont(TriagePanelConstants.getSettingsButtonFont());
         backToChat.setFocusPainted(false);
         backToChat.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         backToChat.addActionListener(actionListener);
