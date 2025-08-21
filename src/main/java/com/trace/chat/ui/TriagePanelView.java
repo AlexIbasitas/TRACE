@@ -9,6 +9,9 @@ import com.intellij.ide.ui.LafManagerListener;
 import com.intellij.ui.components.JBLabel;
 
 import com.intellij.util.ui.JBUI;
+import com.intellij.openapi.application.ApplicationManager;
+import com.intellij.util.messages.MessageBusConnection;
+import com.intellij.openapi.Disposable;
 import com.trace.ai.configuration.AISettings;
 import com.trace.ai.models.AIAnalysisResult;
 import com.trace.ai.services.AIAnalysisOrchestrator;
@@ -721,17 +724,16 @@ public class TriagePanelView {
      * This ensures that existing chat messages and UI elements update their colors to match the new theme.
      * Uses a modern approach compatible with newer IntelliJ versions.
      */
-    private com.intellij.ide.ui.LafManagerListener lafManagerListener;
+    private MessageBusConnection messageBusConnection;
     
     private void setupThemeChangeListener() {
         try {
-            // Use IntelliJ's LafManager for proper theme change detection
-            lafManagerListener = new com.intellij.ide.ui.LafManagerListener() {
-                @Override
-                public void lookAndFeelChanged(com.intellij.ide.ui.LafManager source) {
-                    SwingUtilities.invokeLater(() -> {
+            // Use modern MessageBus approach for theme change detection (IntelliJ 2025.2+)
+            messageBusConnection = ApplicationManager.getApplication().getMessageBus().connect();
+            messageBusConnection.subscribe(LafManagerListener.TOPIC, source -> {
+                ApplicationManager.getApplication().invokeLater(() -> {
                         try {
-                            LOG.info("=== THEME CHANGE DETECTED (via LafManager) ===");
+                            LOG.info("=== THEME CHANGE DETECTED (via MessageBus) ===");
                             LOG.info("Current theme: " + UIManager.getLookAndFeel().getName());
                             LOG.info("Panel background: " + UIManager.getColor("Panel.background"));
                             LOG.info("Label foreground: " + UIManager.getColor("Label.foreground"));
@@ -757,15 +759,11 @@ public class TriagePanelView {
                             LOG.warn("Error during theme change refresh: " + ex.getMessage(), ex);
                         }
                     });
-                }
-            };
-            
-            // Store reference for cleanup
-            com.intellij.ide.ui.LafManager.getInstance().addLafManagerListener(lafManagerListener);
+            });
             
             // Backup: Also add a property change listener for theme-related properties
             mainPanel.addPropertyChangeListener("UI", evt -> {
-                SwingUtilities.invokeLater(() -> {
+                ApplicationManager.getApplication().invokeLater(() -> {
                     try {
                         LOG.info("=== THEME CHANGE DETECTED (via property change backup) ===");
                         LOG.info("Property change: " + evt.getPropertyName() + " = " + evt.getNewValue());
@@ -780,7 +778,7 @@ public class TriagePanelView {
             // Add font change listener to respond to IDE font size changes
             UIManager.addPropertyChangeListener(evt -> {
                 if ("defaultFont".equals(evt.getPropertyName())) {
-                    SwingUtilities.invokeLater(() -> {
+                    ApplicationManager.getApplication().invokeLater(() -> {
                         try {
                             LOG.info("=== FONT CHANGE DETECTED ===");
                             LOG.info("Font change: " + evt.getPropertyName() + " = " + evt.getNewValue());
@@ -793,7 +791,7 @@ public class TriagePanelView {
                 }
             });
             
-            LOG.info("Theme change listeners registered successfully (LafManager + backup)");
+            LOG.info("Theme change listeners registered successfully (MessageBus + backup)");
         } catch (Exception e) {
             LOG.warn("Failed to register theme change listeners: " + e.getMessage(), e);
         }
@@ -980,7 +978,7 @@ public class TriagePanelView {
      */
     private void addMessage(ChatMessage message) {
         if (!SwingUtilities.isEventDispatchThread()) {
-            SwingUtilities.invokeLater(() -> addMessage(message));
+            ApplicationManager.getApplication().invokeLater(() -> addMessage(message));
             return;
         }
         
@@ -1063,7 +1061,7 @@ public class TriagePanelView {
             // Refresh layout and recompute spacer to keep maxScroll tight
             messageContainer.revalidate();
             messageContainer.repaint();
-            SwingUtilities.invokeLater(() -> {
+            ApplicationManager.getApplication().invokeLater(() -> {
                 recomputeBottomSpacer();
                 restoreAnchorAfterAppend();
             });
@@ -1181,7 +1179,7 @@ public class TriagePanelView {
 
         // For user sends: align newest to top only if the viewport is already near the target
 	        if (message != null && message.isFromUser() && latestUserMessageComponent != null) {
-            SwingUtilities.invokeLater(() -> {
+            ApplicationManager.getApplication().invokeLater(() -> {
                 try {
                     javax.swing.Timer settleTimer = new javax.swing.Timer(LAYOUT_SETTLE_DELAY_MS, evt -> {
                         try {
@@ -1215,7 +1213,7 @@ public class TriagePanelView {
         } else {
             // For non-user (AI) messages, maintain alignment if it was near before append,
             // otherwise conditionally align-if-near after a brief settle.
-            SwingUtilities.invokeLater(() -> {
+            ApplicationManager.getApplication().invokeLater(() -> {
                 try {
                     javax.swing.Timer settleTimer = new javax.swing.Timer(LAYOUT_SETTLE_DELAY_MS, evt -> {
                         try {
@@ -1250,7 +1248,7 @@ public class TriagePanelView {
     // ===== Typing indicator helpers =====
     private void showTypingIndicator() {
         if (!SwingUtilities.isEventDispatchThread()) {
-            SwingUtilities.invokeLater(this::showTypingIndicator);
+            ApplicationManager.getApplication().invokeLater(this::showTypingIndicator);
             return;
         }
         try {
@@ -1288,7 +1286,7 @@ public class TriagePanelView {
                 }
                 messageContainer.revalidate();
                 messageContainer.repaint();
-                SwingUtilities.invokeLater(() -> requestAlignNewestIfNear(chatScrollPane));
+                ApplicationManager.getApplication().invokeLater(() -> requestAlignNewestIfNear(chatScrollPane));
             }
         } catch (Exception ignore) {
         }
@@ -1296,7 +1294,7 @@ public class TriagePanelView {
 
     private void hideTypingIndicator() {
         if (!SwingUtilities.isEventDispatchThread()) {
-            SwingUtilities.invokeLater(this::hideTypingIndicator);
+            ApplicationManager.getApplication().invokeLater(this::hideTypingIndicator);
             return;
         }
         try {
@@ -1537,11 +1535,8 @@ public class TriagePanelView {
         if (!SwingUtilities.isEventDispatchThread()) {
             final boolean[] result = {false};
             try {
-                SwingUtilities.invokeAndWait(() -> result[0] = updateFailure(failureInfo));
-            } catch (InterruptedException e) {
-                LOG.error("Interrupted while waiting for EDT execution", e);
-                Thread.currentThread().interrupt();
-            } catch (java.lang.reflect.InvocationTargetException e) {
+                ApplicationManager.getApplication().invokeAndWait(() -> result[0] = updateFailure(failureInfo));
+            } catch (Exception e) {
                 LOG.error("Error during EDT execution", e);
             }
             return result[0];
@@ -1647,7 +1642,7 @@ public class TriagePanelView {
                         for (ChatMessage message : chatHistory) {
                             addMessageToUI(message);
                         }
-                        SwingUtilities.invokeLater(() -> requestAlignNewestIfNear(chatScrollPane));
+                        ApplicationManager.getApplication().invokeLater(() -> requestAlignNewestIfNear(chatScrollPane));
                     }
                 } catch (Exception promptBuildError) {
                     LOG.warn("Failed to build base prompt prior to document retrieval: " + promptBuildError.getMessage());
@@ -1687,7 +1682,7 @@ public class TriagePanelView {
                             for (ChatMessage message : chatHistory) {
                                 addMessageToUI(message);
                             }
-                            SwingUtilities.invokeLater(() -> requestAlignNewestIfNear(chatScrollPane));
+                            ApplicationManager.getApplication().invokeLater(() -> requestAlignNewestIfNear(chatScrollPane));
                         }
                         
                         // Create a separate AI message with just the analysis result
@@ -1738,7 +1733,7 @@ public class TriagePanelView {
                     for (ChatMessage message : chatHistory) {
                         addMessageToUI(message);
                     }
-                    SwingUtilities.invokeLater(() -> requestAlignNewestIfNear(chatScrollPane));
+                    ApplicationManager.getApplication().invokeLater(() -> requestAlignNewestIfNear(chatScrollPane));
                 }
                 
                 // No AI analysis - just show the prompt
@@ -1780,7 +1775,7 @@ public class TriagePanelView {
         
         // Ensure we're on the EDT
         if (!SwingUtilities.isEventDispatchThread()) {
-            SwingUtilities.invokeLater(() -> displayAIAnalysisResult(result));
+            ApplicationManager.getApplication().invokeLater(() -> displayAIAnalysisResult(result));
             return;
         }
         
@@ -1822,7 +1817,7 @@ public class TriagePanelView {
         
         // Ensure we're on the EDT
         if (!SwingUtilities.isEventDispatchThread()) {
-            SwingUtilities.invokeLater(() -> displayAIAnalysisError(errorMessage));
+            ApplicationManager.getApplication().invokeLater(() -> displayAIAnalysisError(errorMessage));
             return;
         }
         
@@ -1888,7 +1883,7 @@ public class TriagePanelView {
      */
     public void manualThemeRefresh() {
         LOG.info("=== MANUAL THEME REFRESH TRIGGERED ===");
-        SwingUtilities.invokeLater(() -> {
+        ApplicationManager.getApplication().invokeLater(() -> {
             try {
                 // Store current scroll position
                 int currentScrollValue = 0;
@@ -2341,14 +2336,14 @@ public class TriagePanelView {
         try {
             LOG.info("Disposing TriagePanelView resources");
             
-            // Remove theme change listener
-            if (lafManagerListener != null) {
+            // Disconnect MessageBus connection
+            if (messageBusConnection != null) {
                 try {
-                    com.intellij.ide.ui.LafManager.getInstance().removeLafManagerListener(lafManagerListener);
-                    lafManagerListener = null;
-                    LOG.info("Removed LafManagerListener");
+                    messageBusConnection.disconnect();
+                    messageBusConnection = null;
+                    LOG.info("Disconnected MessageBus connection");
                 } catch (Exception e) {
-                    LOG.warn("Error removing LafManagerListener: " + e.getMessage());
+                    LOG.warn("Error disconnecting MessageBus connection: " + e.getMessage());
                 }
             }
             

@@ -1,6 +1,7 @@
 package com.trace.chat.components;
 
 import com.intellij.openapi.diagnostic.Logger;
+import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.util.ui.UIUtil;
 import com.vladsch.flexmark.html.HtmlRenderer;
 import com.vladsch.flexmark.parser.Parser;
@@ -140,7 +141,7 @@ public final class MarkdownRenderer {
             
             editorPane.setText(styledHtml);
             // Trigger reflow after text is set
-            SwingUtilities.invokeLater(() -> {
+            ApplicationManager.getApplication().invokeLater(() -> {
                 if (editorPane instanceof ResponsiveHtmlPane) {
                     ((ResponsiveHtmlPane) editorPane).applyWidthFromParent();
                 }
@@ -543,7 +544,7 @@ public final class MarkdownRenderer {
                     if ((e.getChangeFlags() & HierarchyEvent.SHOWING_CHANGED) != 0
                         || (e.getChangeFlags() & HierarchyEvent.DISPLAYABILITY_CHANGED) != 0
                         || (e.getChangeFlags() & HierarchyEvent.PARENT_CHANGED) != 0) {
-                        SwingUtilities.invokeLater(ResponsiveHtmlPane.this::applyWidthFromParent);
+                        ApplicationManager.getApplication().invokeLater(ResponsiveHtmlPane.this::applyWidthFromParent);
                     }
                 }
             });
@@ -588,7 +589,7 @@ public final class MarkdownRenderer {
         @Override
         public void setText(String t) {
             super.setText(t);
-            SwingUtilities.invokeLater(this::applyWidthFromParent);
+            ApplicationManager.getApplication().invokeLater(this::applyWidthFromParent);
         }
 
         void applyWidthFromParent() {

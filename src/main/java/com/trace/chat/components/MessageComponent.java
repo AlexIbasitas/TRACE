@@ -8,6 +8,9 @@ import com.trace.common.constants.TriagePanelConstants;
 import com.trace.common.utils.ThemeUtils;
 
 import javax.swing.*;
+import javax.swing.text.html.HTMLEditorKit;
+import javax.swing.text.html.HTMLDocument;
+import javax.swing.text.html.StyleSheet;
 import java.awt.*;
 import java.awt.datatransfer.StringSelection;
 import java.text.SimpleDateFormat;
@@ -231,45 +234,74 @@ public class MessageComponent extends JPanel {
         String scenarioName = message.getFailureInfo().getScenarioName();
         String failedStepText = message.getFailureInfo().getFailedStepText();
 
-        String safeScenario = escapeHtml(scenarioName != null ? scenarioName : TriagePanelConstants.UNKNOWN_SCENARIO);
-        String safeFailedStep = failedStepText != null ? escapeHtml(failedStepText.trim()) : null;
-
-        // Build two-line HTML with colored prefixes and dynamic font styling
+        // Build HTML content with proper styling for scenario and failed step
         StringBuilder html = new StringBuilder();
-        int baseFontSize = UIUtil.getLabelFont().getSize();
-        int dynamicMargin = Math.max(2, baseFontSize / 8); // Dynamic margin that scales with font size
         html.append("<html><body style='margin:0;padding:0;'>");
+        
+        // Scenario with orange color
+        String safeScenario = escapeHtml(scenarioName != null ? scenarioName : TriagePanelConstants.UNKNOWN_SCENARIO);
         html.append("<div style=\"font-family:")
             .append(TriagePanelConstants.FONT_FAMILY)
             .append(", sans-serif;font-size:")
-            .append(baseFontSize)
+            .append(UIUtil.getLabelFont().getSize())
             .append("px;color:")
             .append(ThemeUtils.toHex(ThemeUtils.textForeground()))
-            .append(";margin-bottom:")
-            .append(dynamicMargin)
-            .append("px;\">")
+            .append(";margin-bottom:4px;\">")
             .append("<span style=\"color:#FFA500;font-weight:bold\">Scenario:</span> ")
             .append(safeScenario)
             .append("</div>");
-        if (safeFailedStep != null && !safeFailedStep.isEmpty()) {
+        
+        // Failed step with red color and X icon
+        if (failedStepText != null && !failedStepText.trim().isEmpty()) {
+            String safeFailedStep = escapeHtml(failedStepText.trim());
             html.append("<div style=\"font-family:")
                 .append(TriagePanelConstants.FONT_FAMILY)
                 .append(", sans-serif;font-size:")
-                .append(baseFontSize)
+                .append(UIUtil.getLabelFont().getSize())
                 .append("px;color:")
                 .append(ThemeUtils.toHex(ThemeUtils.textForeground()))
-                .append(";margin-bottom:")
-                .append(dynamicMargin)
-                .append("px;\">")
+                .append(";margin-bottom:4px;\">")
                 .append("<span style=\"color:#FF6B6B;font-weight:bold\">ⓧ Failed Step:</span> ")
                 .append(safeFailedStep)
                 .append("</div>");
         }
+        
         html.append("</body></html>");
 
-        // Create a transparent JEditorPane configured like our markdown pane
-        JEditorPane headerPane = createHeaderHtmlPane(html.toString());
+        // Create JEditorPane with HTML content for consistent styling
+        JEditorPane headerPane = new MarkdownRenderer.ResponsiveHtmlPane();
+        headerPane.setContentType("text/html");
+        headerPane.setEditable(false);
+        headerPane.setOpaque(false);
+        headerPane.setBackground(ThemeUtils.panelBackground());
+        headerPane.putClientProperty("JEditorPane.honorDisplayProperties", Boolean.TRUE);
+        
+        // Use the same dynamic font as AI messages for uniform sizing
+        Font dynamicFont = UIUtil.getLabelFont();
+        headerPane.setFont(dynamicFont);
+        headerPane.setForeground(ThemeUtils.textForeground());
+        
+        // Apply the same HTMLEditorKit configuration as AI messages for consistent styling
+        try {
+            HTMLEditorKit kit = new WrappingHtmlEditorKit();
+            headerPane.setEditorKit(kit);
+            // Create a fresh HTMLDocument and apply rules at the document level for max precedence
+            HTMLDocument doc = (HTMLDocument) kit.createDefaultDocument();
+            StyleSheet docSheet = doc.getStyleSheet();
+            // Set base body text size to use IDE's default font size
+            int baseFontSize = UIUtil.getLabelFont().getSize();
+            docSheet.addRule("body, p, li, ul, ol, h1, h2, h3, h4, h5, h6, span, div, td, th, a, b, i { font-size:" + baseFontSize + "px; }");
+            // Add slightly larger bottom padding to avoid last-line clipping during dynamic wrap
+            docSheet.addRule("body { padding-bottom:12px; }");
+            headerPane.setDocument(doc);
+        } catch (Exception ex) {
+            // Fallback to simple configuration if custom kit fails
+        }
+        
+        headerPane.setText(html.toString());
+        
         // Add dynamic bottom inset that scales with font size to avoid clipping at high zoom levels
+        int baseFontSize = UIUtil.getLabelFont().getSize();
         int dynamicBottomPadding = Math.max(8, baseFontSize / 2); // Scale with font size, minimum 8px
         headerPane.setBorder(BorderFactory.createEmptyBorder(0, 0, dynamicBottomPadding, 0));
         headerPane.setAlignmentX(Component.LEFT_ALIGNMENT);
@@ -293,7 +325,7 @@ public class MessageComponent extends JPanel {
         scenarioNameMarker.setMinimumSize(new Dimension(0, 0));
         contentPanel.add(scenarioNameMarker);
 
-        if (safeFailedStep != null && !safeFailedStep.isEmpty()) {
+        if (failedStepText != null && !failedStepText.trim().isEmpty()) {
             JLabel failedStepMarker = new JLabel(TriagePanelConstants.FAILED_STEP_PREFIX);
             failedStepMarker.setVisible(false);
             failedStepMarker.setPreferredSize(new Dimension(0, 0));
@@ -310,51 +342,7 @@ public class MessageComponent extends JPanel {
         }
     }
 
-    /**
-     * Creates a transparent HTML JEditorPane configured like the markdown pane,
-     * using WrappingHtmlEditorKit and a white-text stylesheet.
-     */
-    private JEditorPane createHeaderHtmlPane(String html) {
-        // Reuse the responsive behavior to track parent width
-        JEditorPane pane = new MarkdownRenderer.ResponsiveHtmlPane();
-        pane.setContentType("text/html");
-        pane.setEditable(false);
-        pane.setOpaque(true);
-        pane.setBackground(ThemeUtils.panelBackground());
-        pane.putClientProperty("JEditorPane.honorDisplayProperties", Boolean.TRUE);
-        
-        // Use dynamic font sizing like other components
-        pane.setFont(TriagePanelConstants.getMessageFont());
 
-        try {
-            javax.swing.text.html.HTMLEditorKit kit = new WrappingHtmlEditorKit();
-            pane.setEditorKit(kit);
-            javax.swing.text.html.HTMLDocument doc = (javax.swing.text.html.HTMLDocument) kit.createDefaultDocument();
-            javax.swing.text.html.StyleSheet ss = doc.getStyleSheet();
-            String textFg = ThemeUtils.toHex(ThemeUtils.textForeground());
-            String panelBg = ThemeUtils.toHex(ThemeUtils.panelBackground());
-            // Use dynamic padding that scales with font size for better zoom compatibility
-            int baseFontSize = UIUtil.getLabelFont().getSize();
-            int dynamicPadding = Math.max(4, baseFontSize / 4); // Scale with font size, minimum 4px
-            
-            ss.addRule("body, p, li, ul, ol, h1, h2, h3, h4, h5, h6, span, div, td, th, a, b, i { color:" + textFg + "; font-family: '" + TriagePanelConstants.FONT_FAMILY + "', sans-serif; }");
-            ss.addRule("body { background-color:" + panelBg + "; }");
-            ss.addRule("p { margin-top:2px; margin-bottom:2px; }");
-            ss.addRule("ul, ol { margin-top:2px; margin-bottom:2px; }");
-            ss.addRule("li { margin-top:0px; margin-bottom:2px; }");
-            ss.addRule("pre { margin-top:3px; margin-bottom:3px; }");
-            ss.addRule("body { padding-bottom:" + dynamicPadding + "px; }");
-            pane.setDocument(doc);
-        } catch (Exception ignore) {
-            // Fallback silently; default kit is acceptable
-        }
-
-        pane.setText(html);
-        // Allow it to grow fully wide and compute height naturally
-        pane.setMaximumSize(new Dimension(Integer.MAX_VALUE, Integer.MAX_VALUE));
-        pane.setMinimumSize(new Dimension(TriagePanelConstants.MIN_CHAT_WIDTH_BEFORE_SCROLL, 20));
-        return pane;
-    }
 
     /** Simple HTML escape for text content. */
     private static String escapeHtml(String s) {
@@ -423,19 +411,38 @@ public class MessageComponent extends JPanel {
         JEditorPane messageText = new MarkdownRenderer.ResponsiveHtmlPane();
         messageText.setContentType("text/html");
         messageText.setEditable(false);
-        messageText.setOpaque(true);
+        messageText.setOpaque(false);
         messageText.setBackground(ThemeUtils.panelBackground());
         messageText.putClientProperty("JEditorPane.honorDisplayProperties", Boolean.TRUE);
         
         // Use the same dynamic font as AI messages for uniform sizing
         Font dynamicFont = UIUtil.getLabelFont();
         messageText.setFont(dynamicFont);
+        messageText.setForeground(ThemeUtils.textForeground());
+        
+        // Apply the same HTMLEditorKit configuration as AI messages for consistent styling
+        try {
+            HTMLEditorKit kit = new WrappingHtmlEditorKit();
+            messageText.setEditorKit(kit);
+            // Create a fresh HTMLDocument and apply rules at the document level for max precedence
+            HTMLDocument doc = (HTMLDocument) kit.createDefaultDocument();
+            StyleSheet docSheet = doc.getStyleSheet();
+            // Set base body text size to use IDE's default font size
+            int baseFontSize = UIUtil.getLabelFont().getSize();
+            docSheet.addRule("body, p, li, ul, ol, h1, h2, h3, h4, h5, h6, span, div, td, th, a, b, i { font-size:" + baseFontSize + "px; }");
+            // Add slightly larger bottom padding to avoid last-line clipping during dynamic wrap
+            docSheet.addRule("body { padding-bottom:12px; }");
+            messageText.setDocument(doc);
+        } catch (Exception ex) {
+            // Fallback to simple configuration if custom kit fails
+        }
         
         // Create HTML content with the same styling approach as AI messages
         String safeText = escapeHtml(message.getText());
         int baseFontSize = UIUtil.getLabelFont().getSize();
         String textColor = ThemeUtils.toHex(ThemeUtils.textForeground());
-        String html = "<html><body style=\"color:" + textColor + "; font-size:" + baseFontSize + "px; margin:0; padding:0;\">" + safeText + "</body></html>";
+        // Use the same HTML structure as AI messages for consistent styling
+        String html = "<html><head></head><body style=\"color:" + textColor + "; font-size:" + baseFontSize + "px;\">" + safeText + "</body></html>";
         
         messageText.setText(html);
         

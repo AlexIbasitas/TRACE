@@ -4,7 +4,7 @@ import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.openapi.components.PersistentStateComponent;
 import com.intellij.openapi.components.State;
 import com.intellij.openapi.components.Storage;
-import com.intellij.openapi.components.ServiceManager;
+import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.openapi.project.Project;
 import com.trace.ai.models.AIModel;
 import com.trace.ai.configuration.AIServiceType;
@@ -651,8 +651,8 @@ public class AIModelService implements PersistentStateComponent<AIModelService.S
      */
     private void notifyStateChanged() {
         try {
-            // Get the service manager and notify that our state has changed
-            ServiceManager.getService(AIModelService.class);
+            // Get the service and notify that our state has changed
+            ApplicationManager.getApplication().getService(AIModelService.class);
         } catch (Exception e) {
             LOG.error("Failed to notify state change", e);
         }

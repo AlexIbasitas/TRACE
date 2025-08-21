@@ -5,6 +5,7 @@ plugins {
 
 
 
+
 group = 'com.trace'
 version = '1.0-SNAPSHOT'
 
@@ -26,25 +27,49 @@ repositories {
 dependencies {
     // IntelliJ Platform dependencies
     intellijPlatform {
-        local('/Applications/IntelliJ IDEA.app')  // Use local IntelliJ IDEA Ultimate installation
-        bundledPlugin('com.intellij.java')  // Use correct plugin ID for Java support
+        intellijIdeaCommunity('2025.2')
+        bundledPlugin('com.intellij.java')
+        
+        // Test Framework Dependencies will be added separately
+        // testFramework('Platform')
     }
     
     // JSON serialization for backend communication
     implementation 'com.google.code.gson:gson:2.10.1'
     
     // Professional markdown rendering with Flexmark Java
-implementation 'com.vladsch.flexmark:flexmark-all:0.64.8'
+    implementation 'com.vladsch.flexmark:flexmark-all:0.64.8'
 
-// SQLite JDBC driver for frozen vector store
-implementation 'org.xerial:sqlite-jdbc:3.44.1.0'
+    // SQLite JDBC driver for frozen vector store
+    implementation 'org.xerial:sqlite-jdbc:3.44.1.0'
 
-// For Gradle task execution
-implementation 'org.jetbrains:annotations:24.0.1'
+    // For Gradle task execution
+    implementation 'org.jetbrains:annotations:24.0.1'
 
-// SLF4J for logging (industry standard)
-implementation 'org.slf4j:slf4j-api:2.0.9'
-runtimeOnly 'org.slf4j:slf4j-simple:2.0.9'
+    // SLF4J for logging (industry standard)
+    implementation 'org.slf4j:slf4j-api:2.0.9'
+    runtimeOnly 'org.slf4j:slf4j-simple:2.0.9'
+    
+    // Test Framework Dependencies (JetBrains recommended)
+    testImplementation 'org.junit.jupiter:junit-jupiter-api:5.10.2'
+    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.10.2'
+    testImplementation 'org.mockito:mockito-core:5.3.1'
+    testImplementation 'org.mockito:mockito-junit-jupiter:5.3.1'
+    
+    // JUnit4 dependencies (required for IntelliJ Platform compatibility)
+    testImplementation 'junit:junit:4.13.2'
+    
+    // Assertions
+    testImplementation 'org.assertj:assertj-core:3.25.3'
+    
+    // Cucumber dependencies for integration tests
+    testImplementation 'io.cucumber:cucumber-java:7.15.0'
+    testImplementation 'io.cucumber:cucumber-junit:7.15.0'
+}
+
+// ============================================================================
+// CUSTOM TASKS
+// ============================================================================
 
 // Simple task to run the document store refresher
 task refreshDocumentStore(type: JavaExec) {
@@ -73,42 +98,26 @@ task refreshDocumentStore(type: JavaExec) {
         println "✓ Refreshing document store with ${taskArgs.size()} API key(s)"
     }
 }
-    
-    // Test Framework Dependencies (JetBrains recommended)
-    testImplementation 'org.junit.jupiter:junit-jupiter-api:5.10.2'
-    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.10.2'
-    testImplementation 'org.mockito:mockito-core:5.3.1'
-    testImplementation 'org.mockito:mockito-junit-jupiter:5.3.1'
-    
-    // JUnit4 dependencies (required for IntelliJ Platform compatibility)
-    testImplementation 'junit:junit:4.13.2'
-    
-    // Assertions
-    testImplementation 'org.assertj:assertj-core:3.25.3'
-    
-    // Cucumber dependencies for integration tests
-    testImplementation 'io.cucumber:cucumber-java:7.15.0'
-    testImplementation 'io.cucumber:cucumber-junit:7.15.0'
-}
 
 // ============================================================================
 // INTELLIJ PLATFORM CONFIGURATION
 // ============================================================================
 
+// IntelliJ Platform configuration - simplified for compilation
 intellijPlatform {
     pluginConfiguration {
         name = 'TRACE'
     }
-    instrumentCode = true // Required for proper IntelliJ Platform testing
+    instrumentCode = true
 }
 
 patchPluginXml {
-    sinceBuild = '243'  // 2024.3 (your local installation version)
-    untilBuild = '249.*'  // 2024.x series (conservative compatibility)
+    sinceBuild = '252'  // 2025.2 (your local installation version)
+    untilBuild = '259.*'  // 2025.x series (conservative compatibility)
     changeNotes = """
       <ul>
         <li>Migrated to IntelliJ Platform Gradle Plugin 2.x</li>
-        <li>Enhanced compatibility with IntelliJ 2024.3+</li>
+        <li>Enhanced compatibility with IntelliJ 2025.2+</li>
         <li>Improved build configuration and dependency management</li>
         <li>Enhanced Cucumber step definition extraction</li>
         <li>Improved stack trace parsing strategies</li>
