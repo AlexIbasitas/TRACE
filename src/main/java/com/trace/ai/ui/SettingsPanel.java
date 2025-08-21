@@ -3,6 +3,7 @@ package com.trace.ai.ui;
 import com.trace.ai.configuration.AISettings;
 import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.ui.JBColor;
+import com.intellij.util.ui.UIUtil;
 import com.trace.common.constants.TriagePanelConstants;
 import com.trace.common.utils.ThemeUtils;
 
@@ -57,7 +58,16 @@ public class SettingsPanel extends JPanel {
     private void initializePanel() {
         setLayout(new BorderLayout());
         setBackground(ThemeUtils.panelBackground());
-        setBorder(BorderFactory.createEmptyBorder(16, 16, 16, 16));
+        
+        // Use flexible sizing that adapts to parent container
+        setMinimumSize(new Dimension(0, 0)); // Allow shrinking
+        setPreferredSize(null); // Let Swing calculate natural size
+        setMaximumSize(new Dimension(Integer.MAX_VALUE, Integer.MAX_VALUE));
+        
+        // Use proper padding that doesn't compress content
+        int baseFontSize = UIUtil.getLabelFont().getSize();
+        int dynamicPadding = Math.max(12, baseFontSize);
+        setBorder(BorderFactory.createEmptyBorder(dynamicPadding, dynamicPadding, dynamicPadding, dynamicPadding));
     }
     
     /**
@@ -90,8 +100,10 @@ public class SettingsPanel extends JPanel {
         container.setBackground(ThemeUtils.panelBackground());
         container.setOpaque(true);
         
-        // Set minimum width to enable soft wrapping before horizontal scrollbar appears
-        container.setMinimumSize(new Dimension(TriagePanelConstants.MIN_SETTINGS_WIDTH_BEFORE_SCROLL, 0));
+        // Use flexible sizing that allows horizontal shrinking
+        container.setMinimumSize(new Dimension(0, 0)); // Allow shrinking
+        container.setPreferredSize(null); // Let Swing calculate natural size
+        container.setMaximumSize(new Dimension(Integer.MAX_VALUE, Integer.MAX_VALUE));
         
         return container;
     }
@@ -105,17 +117,24 @@ public class SettingsPanel extends JPanel {
     private JScrollPane createScrollPane(JComponent view) {
         JScrollPane scrollPane = new JScrollPane(view);
         scrollPane.setBorder(BorderFactory.createEmptyBorder());
-        scrollPane.getVerticalScrollBar().setUnitIncrement(16);
+        
+        // Ensure proper scroll increment for smooth scrolling
+        int baseFontSize = UIUtil.getLabelFont().getSize();
+        int scrollIncrement = Math.max(16, baseFontSize);
+        scrollPane.getVerticalScrollBar().setUnitIncrement(scrollIncrement);
+        
         Color bg = ThemeUtils.panelBackground();
         scrollPane.setBackground(bg);
         scrollPane.getViewport().setBackground(bg);
         
-        // Configure for better horizontal responsiveness with soft wrapping
-        scrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
+        // Configure for better responsiveness - no horizontal scrollbar, let content wrap
+        scrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
         scrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
         
-        // Set minimum width to enable soft wrapping before horizontal scrollbar appears
-        scrollPane.setMinimumSize(new Dimension(TriagePanelConstants.MIN_SETTINGS_WIDTH_BEFORE_SCROLL, 200));
+        // Use flexible sizing that allows horizontal shrinking
+        scrollPane.setMinimumSize(new Dimension(0, 0)); // Allow shrinking
+        scrollPane.setPreferredSize(null); // Let Swing calculate natural size
+        scrollPane.setMaximumSize(new Dimension(Integer.MAX_VALUE, Integer.MAX_VALUE));
         
         return scrollPane;
     }
@@ -131,15 +150,28 @@ public class SettingsPanel extends JPanel {
         servicePanel = new AIServiceConfigPanel(aiSettings);
         customRulePanel = new CustomRulePanel(aiSettings);
         
+        // CRITICAL: Ensure sections can shrink for proper scrolling
+        privacyPanel.setMaximumSize(new Dimension(Integer.MAX_VALUE, Integer.MAX_VALUE));
+        servicePanel.setMaximumSize(new Dimension(Integer.MAX_VALUE, Integer.MAX_VALUE));
+        customRulePanel.setMaximumSize(new Dimension(Integer.MAX_VALUE, Integer.MAX_VALUE));
+        
+        // Use proper spacing between sections that doesn't compress content
+        int baseFontSize = UIUtil.getLabelFont().getSize();
+        int dynamicSpacing = Math.max(16, baseFontSize);
+        
         // Add sections with proper spacing
         sectionsContainer.add(privacyPanel);
-        sectionsContainer.add(Box.createVerticalStrut(20));
+        sectionsContainer.add(Box.createVerticalStrut(dynamicSpacing));
         sectionsContainer.add(servicePanel);
-        sectionsContainer.add(Box.createVerticalStrut(20));
+        sectionsContainer.add(Box.createVerticalStrut(dynamicSpacing));
         sectionsContainer.add(customRulePanel);
         
         // Add extensibility space for future sections
-        sectionsContainer.add(Box.createVerticalStrut(10));
+        sectionsContainer.add(Box.createVerticalStrut(dynamicSpacing / 2));
+        
+        // CRITICAL: Force layout update to ensure proper scrolling
+        sectionsContainer.revalidate();
+        sectionsContainer.repaint();
     }
     
     /**

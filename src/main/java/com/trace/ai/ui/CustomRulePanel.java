@@ -69,37 +69,47 @@ public class CustomRulePanel extends JBPanel<CustomRulePanel> {
             JBUI.Borders.empty(10)
         ));
         
-        // Set responsive sizing
-        setMinimumSize(new Dimension(300, 180));
-        setPreferredSize(new Dimension(650, 220));
+        // Allow sections to expand to fit their content naturally
+        int panelBaseFontSize = UIUtil.getLabelFont().getSize();
+        
+        // Let Swing calculate natural size instead of forcing fixed dimensions
+        setMinimumSize(new Dimension(0, 0)); // Allow shrinking
+        setPreferredSize(null); // Let Swing calculate natural size
         setMaximumSize(new Dimension(Integer.MAX_VALUE, Integer.MAX_VALUE));
         
-        // Header
+        // Header with smaller font for aggressive shrinking
         JBLabel headerLabel = new JBLabel("Custom Rule");
-        headerLabel.setFont(headerLabel.getFont().deriveFont(Font.BOLD, 14f));
-        headerLabel.setBorder(JBUI.Borders.emptyBottom(10));
+        int baseFontSize = UIUtil.getLabelFont().getSize();
+        headerLabel.setFont(UIUtil.getLabelFont().deriveFont(Font.BOLD, baseFontSize + 1)); // Smaller font
+        headerLabel.setBorder(JBUI.Borders.emptyBottom(5)); // Smaller border
         
-        // Subheading
+        // Subheading with smaller font for aggressive shrinking
         JBLabel subheadingLabel = new JBLabel("Add a custom rule for your preferences");
-        subheadingLabel.setFont(subheadingLabel.getFont().deriveFont(Font.PLAIN, 11f));
+        subheadingLabel.setFont(UIUtil.getLabelFont().deriveFont(Font.PLAIN, baseFontSize - 2)); // Smaller font
         subheadingLabel.setForeground(UIUtil.getLabelDisabledForeground());
-        subheadingLabel.setBorder(JBUI.Borders.emptyBottom(10));
+        subheadingLabel.setBorder(JBUI.Borders.emptyBottom(5)); // Smaller border
         
         // Content panel
         JPanel contentPanel = new JBPanel<>(new BorderLayout());
         
-        // Text area with scroll pane
+        // Text area with scroll pane and responsive sizing
         customRuleTextArea.setLineWrap(true);
         customRuleTextArea.setWrapStyleWord(true);
-        customRuleTextArea.setRows(4);
+        customRuleTextArea.setFont(UIUtil.getLabelFont());
         customRuleTextArea.setBorder(JBUI.Borders.compound(
             JBUI.Borders.customLine(UIUtil.getTextFieldBackground().darker(), 1),
             JBUI.Borders.empty(5)
         ));
         
+        // Let Swing calculate natural size instead of forcing fixed dimensions
+        customRuleTextArea.setPreferredSize(new Dimension(0, 0)); // Let Swing calculate
+        customRuleTextArea.setMinimumSize(new Dimension(0, baseFontSize * 3)); // Minimum height only
+        customRuleTextArea.setMaximumSize(new Dimension(Integer.MAX_VALUE, Integer.MAX_VALUE));
+        
         JBScrollPane scrollPane = new JBScrollPane(customRuleTextArea);
-        scrollPane.setPreferredSize(new Dimension(0, 100));
-        scrollPane.setMinimumSize(new Dimension(0, 100));
+        scrollPane.setPreferredSize(new Dimension(0, 0)); // Let Swing calculate
+        scrollPane.setMinimumSize(new Dimension(0, 0));
+        scrollPane.setMaximumSize(new Dimension(Integer.MAX_VALUE, Integer.MAX_VALUE));
         
         // Character counter and buttons panel
         JPanel bottomPanel = new JBPanel<>(new BorderLayout());

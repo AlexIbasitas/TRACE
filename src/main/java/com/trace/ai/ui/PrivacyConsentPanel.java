@@ -100,15 +100,19 @@ public class PrivacyConsentPanel extends JBPanel<PrivacyConsentPanel> {
             JBUI.Borders.empty(10)
         ));
         
-        // Make the panel itself responsive using proper Swing sizing
-        setMinimumSize(new Dimension(300, 0));
-        setPreferredSize(new Dimension(400, 160));
+        // Allow sections to expand to fit their content naturally
+        int panelBaseFontSize = UIUtil.getLabelFont().getSize();
+        
+        // Let Swing calculate natural size instead of forcing fixed dimensions
+        setMinimumSize(new Dimension(0, 0)); // Allow shrinking
+        setPreferredSize(null); // Let Swing calculate natural size
         setMaximumSize(new Dimension(Integer.MAX_VALUE, Integer.MAX_VALUE));
         
-        // Create header
+        // Create header with smaller font for aggressive shrinking
         JBLabel headerLabel = new JBLabel("Privacy & Consent");
-        headerLabel.setFont(headerLabel.getFont().deriveFont(Font.BOLD, 14f));
-        headerLabel.setBorder(JBUI.Borders.emptyBottom(5));
+        int baseFontSize = UIUtil.getLabelFont().getSize();
+        headerLabel.setFont(UIUtil.getLabelFont().deriveFont(Font.BOLD, baseFontSize + 1)); // Smaller font
+        headerLabel.setBorder(JBUI.Borders.emptyBottom(3)); // Smaller border
         
         // Create main content panel with responsive layout
         JPanel contentPanel = new JBPanel<>(new BorderLayout());
@@ -128,11 +132,16 @@ public class PrivacyConsentPanel extends JBPanel<PrivacyConsentPanel> {
         explanationPane.setForeground(UIUtil.getLabelForeground());
         explanationPane.setContentType("text/html");
         
-        // Set proper sizing according to JetBrains guidelines
-        // Pane: min 270px width, min 45px height (2-3 lines)
-        explanationPane.setMinimumSize(new Dimension(270, 45));
-        explanationPane.setPreferredSize(new Dimension(300, 60));
-        explanationPane.setMaximumSize(new Dimension(600, 80));
+        // CRITICAL: Enable proper text wrapping for HTML content
+        explanationPane.putClientProperty(JEditorPane.HONOR_DISPLAY_PROPERTIES, Boolean.TRUE);
+        
+        // Let text areas calculate their own size naturally
+        int textBaseFontSize = UIUtil.getLabelFont().getSize();
+        
+        // Let Swing calculate natural size instead of forcing fixed dimensions
+        explanationPane.setPreferredSize(new Dimension(0, 0)); // Let Swing calculate
+        explanationPane.setMinimumSize(new Dimension(0, textBaseFontSize * 3)); // Minimum height only
+        explanationPane.setMaximumSize(new Dimension(Integer.MAX_VALUE, Integer.MAX_VALUE));
         
         checkboxPanel.add(explanationPane, BorderLayout.CENTER);
         checkboxPanel.setBorder(JBUI.Borders.emptyTop(5));

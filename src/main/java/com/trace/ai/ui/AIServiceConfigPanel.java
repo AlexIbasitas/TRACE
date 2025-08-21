@@ -144,15 +144,19 @@ public class AIServiceConfigPanel extends JBPanel<AIServiceConfigPanel> {
             JBUI.Borders.empty(10)
         ));
         
-        // Set responsive sizing
-        setMinimumSize(new Dimension(500, 0));
-        setPreferredSize(new Dimension(650, 600));
+        // Allow sections to expand to fit their content naturally
+        int panelBaseFontSize = UIUtil.getLabelFont().getSize();
+        
+        // Let Swing calculate natural size instead of forcing fixed dimensions
+        setMinimumSize(new Dimension(0, 0)); // Allow shrinking
+        setPreferredSize(null); // Let Swing calculate natural size
         setMaximumSize(new Dimension(Integer.MAX_VALUE, Integer.MAX_VALUE));
         
-        // Create header
+        // Create header with smaller font for aggressive shrinking
         JBLabel headerLabel = new JBLabel("AI Model Configuration");
-        headerLabel.setFont(headerLabel.getFont().deriveFont(Font.BOLD, 14f));
-        headerLabel.setBorder(JBUI.Borders.emptyBottom(5));
+        int baseFontSize = UIUtil.getLabelFont().getSize();
+        headerLabel.setFont(UIUtil.getLabelFont().deriveFont(Font.BOLD, baseFontSize + 1)); // Smaller font
+        headerLabel.setBorder(JBUI.Borders.emptyBottom(3)); // Smaller border
         
         // Create main content panel
         JPanel contentPanel = new JBPanel<>(new BorderLayout());
@@ -184,20 +188,45 @@ public class AIServiceConfigPanel extends JBPanel<AIServiceConfigPanel> {
             JBUI.Borders.empty(10)
         ));
         
-        // Header
+        // Header with smaller font for aggressive shrinking
         JBLabel headerLabel = new JBLabel("API Key Configuration");
-        headerLabel.setFont(headerLabel.getFont().deriveFont(Font.BOLD, 14f));
-        headerLabel.setBorder(JBUI.Borders.emptyBottom(10));
+        int headerBaseFontSize = UIUtil.getLabelFont().getSize();
+        headerLabel.setFont(UIUtil.getLabelFont().deriveFont(Font.BOLD, headerBaseFontSize + 1)); // Smaller font
+        headerLabel.setBorder(JBUI.Borders.emptyBottom(5)); // Smaller border
         
         // Create a structured layout for consistent sizing
         JPanel keysPanel = new JBPanel<>(new GridBagLayout());
         GridBagConstraints gbc = new GridBagConstraints();
         
-        // Set consistent text field height but allow width to be responsive
-        openaiApiKeyField.setPreferredSize(new Dimension(0, 25));
-        openaiApiKeyField.setMinimumSize(new Dimension(200, 25));
-        geminiApiKeyField.setPreferredSize(new Dimension(0, 25));
-        geminiApiKeyField.setMinimumSize(new Dimension(200, 25));
+        // Let input fields expand to fit content naturally
+        int fieldBaseFontSize = UIUtil.getLabelFont().getSize();
+        
+        // Let Swing calculate natural size instead of forcing fixed dimensions
+        openaiApiKeyField.setPreferredSize(new Dimension(0, 0)); // Let Swing calculate
+        openaiApiKeyField.setMinimumSize(new Dimension(0, fieldBaseFontSize * 2)); // Minimum height only
+        openaiApiKeyField.setMaximumSize(new Dimension(Integer.MAX_VALUE, fieldBaseFontSize * 2));
+        openaiApiKeyField.setFont(UIUtil.getLabelFont());
+        openaiApiKeyField.setMargin(new Insets(4, 8, 4, 8)); // Proper margins
+        
+        geminiApiKeyField.setPreferredSize(new Dimension(0, 0)); // Let Swing calculate
+        geminiApiKeyField.setMinimumSize(new Dimension(0, fieldBaseFontSize * 2)); // Minimum height only
+        geminiApiKeyField.setMaximumSize(new Dimension(Integer.MAX_VALUE, fieldBaseFontSize * 2));
+        geminiApiKeyField.setFont(UIUtil.getLabelFont());
+        geminiApiKeyField.setMargin(new Insets(4, 8, 4, 8)); // Proper margins
+        
+        // Configure Apply buttons with compact sizing
+        int applyButtonWidth = Math.max(60, fieldBaseFontSize * 4); // Smaller width
+        int applyButtonHeight = Math.max(24, (int)(fieldBaseFontSize * 1.8)); // Smaller height
+        
+        testOpenAIButton.setFont(UIUtil.getLabelFont());
+        testOpenAIButton.setMargin(new Insets(2, 4, 2, 4)); // Much smaller margins
+        testOpenAIButton.setPreferredSize(new Dimension(applyButtonWidth, applyButtonHeight));
+        testOpenAIButton.setMinimumSize(new Dimension(applyButtonWidth, applyButtonHeight));
+        
+        testGeminiButton.setFont(UIUtil.getLabelFont());
+        testGeminiButton.setMargin(new Insets(2, 4, 2, 4)); // Much smaller margins
+        testGeminiButton.setPreferredSize(new Dimension(applyButtonWidth, applyButtonHeight));
+        testGeminiButton.setMinimumSize(new Dimension(applyButtonWidth, applyButtonHeight));
         
         // OpenAI Configuration Row
         gbc.gridx = 0; gbc.gridy = 0;
@@ -320,10 +349,11 @@ public class AIServiceConfigPanel extends JBPanel<AIServiceConfigPanel> {
             JBUI.Borders.empty(10)
         ));
         
-        // Header
+        // Header with smaller font for aggressive shrinking
         JBLabel headerLabel = new JBLabel("Available Models");
-        headerLabel.setFont(headerLabel.getFont().deriveFont(Font.BOLD, 14f));
-        headerLabel.setBorder(JBUI.Borders.emptyBottom(10));
+        int headerBaseFontSize = UIUtil.getLabelFont().getSize();
+        headerLabel.setFont(UIUtil.getLabelFont().deriveFont(Font.BOLD, headerBaseFontSize + 1)); // Smaller font
+        headerLabel.setBorder(JBUI.Borders.emptyBottom(5)); // Smaller border
         
         // Main content panel using BorderLayout for proper alignment
         JPanel contentPanel = new JBPanel<>(new BorderLayout());
@@ -348,14 +378,47 @@ public class AIServiceConfigPanel extends JBPanel<AIServiceConfigPanel> {
         modelList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
         modelList.addListSelectionListener(e -> updateButtonStates());
         JBScrollPane scrollPane = new JBScrollPane(modelList);
-        scrollPane.setPreferredSize(new Dimension(500, 250));
         
-        // Action buttons panel - aligned with left edge of list content
-        JPanel actionButtonPanel = new JBPanel<>(new FlowLayout(FlowLayout.LEFT, 0, 0));
-        actionButtonPanel.setBorder(JBUI.Borders.empty(8, 0, 0, 0)); // top margin only
+        // Let scroll panes expand to fit content naturally
+        int scrollBaseFontSize = UIUtil.getLabelFont().getSize();
         
-        setDefaultButton.setMargin(new Insets(0, 0, 0, 0));
-        refreshModelsButton.setMargin(new Insets(0, 0, 0, 0));
+        // Let Swing calculate natural size instead of forcing fixed dimensions
+        scrollPane.setPreferredSize(new Dimension(0, 0)); // Let Swing calculate
+        scrollPane.setMinimumSize(new Dimension(0, scrollBaseFontSize * 8)); // Minimum height
+        scrollPane.setMaximumSize(new Dimension(Integer.MAX_VALUE, Integer.MAX_VALUE));
+        
+        // Configure scroll policies for better content visibility
+        scrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
+        scrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
+        
+        // Ensure list cells are properly sized
+        modelList.setFixedCellHeight(Math.max(28, scrollBaseFontSize + 12));
+        modelList.setFixedCellWidth(-1); // Let width be determined by container
+        
+        // Action buttons panel - use proper layout for professional appearance
+        JPanel actionButtonPanel = new JBPanel<>(new FlowLayout(FlowLayout.LEFT, 8, 4)); // Proper spacing
+        actionButtonPanel.setBorder(JBUI.Borders.empty(8, 0, 0, 0)); // Proper top margin
+        
+        // Calculate button sizes based on text content to prevent truncation
+        int buttonBaseFontSize = UIUtil.getLabelFont().getSize();
+        FontMetrics fm = setDefaultButton.getFontMetrics(UIUtil.getLabelFont());
+        
+        // Calculate proper button sizing for professional appearance
+        int setDefaultTextWidth = fm.stringWidth("Set as Default");
+        int refreshTextWidth = fm.stringWidth("Refresh Models");
+        int buttonWidth = Math.max(Math.max(setDefaultTextWidth, refreshTextWidth) + 24, buttonBaseFontSize * 8);
+        int buttonHeight = Math.max((int)(buttonBaseFontSize * 2.5), 32);
+        
+        // Configure buttons with proper sizing
+        setDefaultButton.setFont(UIUtil.getLabelFont());
+        setDefaultButton.setMargin(new Insets(6, 12, 6, 12)); // Proper margins
+        setDefaultButton.setMinimumSize(new Dimension(buttonWidth, buttonHeight));
+        setDefaultButton.setPreferredSize(new Dimension(buttonWidth, buttonHeight));
+        
+        refreshModelsButton.setFont(UIUtil.getLabelFont());
+        refreshModelsButton.setMargin(new Insets(6, 12, 6, 12)); // Proper margins
+        refreshModelsButton.setMinimumSize(new Dimension(buttonWidth, buttonHeight));
+        refreshModelsButton.setPreferredSize(new Dimension(buttonWidth, buttonHeight));
         
         actionButtonPanel.add(setDefaultButton);
         actionButtonPanel.add(refreshModelsButton);
