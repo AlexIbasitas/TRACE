@@ -64,10 +64,12 @@ public class SettingsPanel extends JPanel {
         setPreferredSize(null); // Let Swing calculate natural size
         setMaximumSize(new Dimension(Integer.MAX_VALUE, Integer.MAX_VALUE));
         
-        // Use proper padding that doesn't compress content
+        // Use minimal padding to bring scrollbar closer to panel edge
         int baseFontSize = UIUtil.getLabelFont().getSize();
-        int dynamicPadding = Math.max(12, baseFontSize);
-        setBorder(BorderFactory.createEmptyBorder(dynamicPadding, dynamicPadding, dynamicPadding, dynamicPadding));
+        int topBottomPadding = Math.max(8, baseFontSize / 2);
+        int leftPadding = Math.max(8, baseFontSize / 2);
+        int rightPadding = 2; // Minimal right padding to bring scrollbar closer to edge
+        setBorder(BorderFactory.createEmptyBorder(topBottomPadding, leftPadding, topBottomPadding, rightPadding));
     }
     
     /**

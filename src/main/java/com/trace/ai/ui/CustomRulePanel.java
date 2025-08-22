@@ -52,6 +52,7 @@ public class CustomRulePanel extends JBPanel<CustomRulePanel> {
         // Initialize the panel
         initializePanel();
         setupEventHandlers();
+        setupThemeChangeListener();
         
         // Load current settings
         loadCurrentSettings();
@@ -77,39 +78,22 @@ public class CustomRulePanel extends JBPanel<CustomRulePanel> {
         setPreferredSize(null); // Let Swing calculate natural size
         setMaximumSize(new Dimension(Integer.MAX_VALUE, Integer.MAX_VALUE));
         
-        // Header with smaller font for aggressive shrinking
-        JBLabel headerLabel = new JBLabel("Custom Rule");
-        int baseFontSize = UIUtil.getLabelFont().getSize();
-        headerLabel.setFont(UIUtil.getLabelFont().deriveFont(Font.BOLD, baseFontSize + 1)); // Smaller font
+        // Header with zoom responsiveness
+        JBLabel headerLabel = createZoomResponsiveHeader("Custom Rule");
         headerLabel.setBorder(JBUI.Borders.emptyBottom(5)); // Smaller border
         
-        // Subheading with smaller font for aggressive shrinking
-        JBLabel subheadingLabel = new JBLabel("Add a custom rule for your preferences");
-        subheadingLabel.setFont(UIUtil.getLabelFont().deriveFont(Font.PLAIN, baseFontSize - 2)); // Smaller font
-        subheadingLabel.setForeground(UIUtil.getLabelDisabledForeground());
+        // Subheading with zoom responsiveness
+        JBLabel subheadingLabel = createZoomResponsiveSubheading("Add a custom rule for your preferences");
         subheadingLabel.setBorder(JBUI.Borders.emptyBottom(5)); // Smaller border
         
         // Content panel
         JPanel contentPanel = new JBPanel<>(new BorderLayout());
         
-        // Text area with scroll pane and responsive sizing
-        customRuleTextArea.setLineWrap(true);
-        customRuleTextArea.setWrapStyleWord(true);
-        customRuleTextArea.setFont(UIUtil.getLabelFont());
-        customRuleTextArea.setBorder(JBUI.Borders.compound(
-            JBUI.Borders.customLine(UIUtil.getTextFieldBackground().darker(), 1),
-            JBUI.Borders.empty(5)
-        ));
+        // Configure text area with zoom-responsive sizing
+        configureResponsiveTextArea();
         
-        // Let Swing calculate natural size instead of forcing fixed dimensions
-        customRuleTextArea.setPreferredSize(new Dimension(0, 0)); // Let Swing calculate
-        customRuleTextArea.setMinimumSize(new Dimension(0, baseFontSize * 3)); // Minimum height only
-        customRuleTextArea.setMaximumSize(new Dimension(Integer.MAX_VALUE, Integer.MAX_VALUE));
-        
-        JBScrollPane scrollPane = new JBScrollPane(customRuleTextArea);
-        scrollPane.setPreferredSize(new Dimension(0, 0)); // Let Swing calculate
-        scrollPane.setMinimumSize(new Dimension(0, 0));
-        scrollPane.setMaximumSize(new Dimension(Integer.MAX_VALUE, Integer.MAX_VALUE));
+        // Create scroll pane with responsive sizing
+        JBScrollPane scrollPane = createResponsiveScrollPane();
         
         // Character counter and buttons panel
         JPanel bottomPanel = new JBPanel<>(new BorderLayout());
@@ -142,6 +126,217 @@ public class CustomRulePanel extends JBPanel<CustomRulePanel> {
     }
     
     /**
+     * Creates a zoom-responsive header label that updates with font changes.
+     * 
+     * @param text the header text to display
+     * @return a JBLabel that responds to zoom changes
+     */
+    private JBLabel createZoomResponsiveHeader(String text) {
+        return new JBLabel(text) {
+            @Override
+            public Font getFont() {
+                // Always return the current UI font to respond to zoom changes
+                Font baseFont = UIUtil.getLabelFont();
+                return baseFont.deriveFont(Font.BOLD, baseFont.getSize() + 1);
+            }
+            
+            @Override
+            public void setFont(Font font) {
+                // Override to always use UI font for zoom responsiveness
+                Font baseFont = UIUtil.getLabelFont();
+                super.setFont(baseFont.deriveFont(Font.BOLD, baseFont.getSize() + 1));
+            }
+            
+            @Override
+            public void paint(Graphics g) {
+                // Ensure font is always current before painting
+                Font baseFont = UIUtil.getLabelFont();
+                setFont(baseFont.deriveFont(Font.BOLD, baseFont.getSize() + 1));
+                super.paint(g);
+            }
+        };
+    }
+    
+    /**
+     * Creates a zoom-responsive subheading label that updates with font changes.
+     * 
+     * @param text the subheading text to display
+     * @return a JBLabel that responds to zoom changes
+     */
+    private JBLabel createZoomResponsiveSubheading(String text) {
+        return new JBLabel(text) {
+            @Override
+            public Font getFont() {
+                // Always return the current UI font to respond to zoom changes
+                Font baseFont = UIUtil.getLabelFont();
+                return baseFont.deriveFont(Font.PLAIN, baseFont.getSize() - 2);
+            }
+            
+            @Override
+            public void setFont(Font font) {
+                // Override to always use UI font for zoom responsiveness
+                Font baseFont = UIUtil.getLabelFont();
+                super.setFont(baseFont.deriveFont(Font.PLAIN, baseFont.getSize() - 2));
+            }
+            
+            @Override
+            public void paint(Graphics g) {
+                // Ensure font is always current before painting
+                Font baseFont = UIUtil.getLabelFont();
+                setFont(baseFont.deriveFont(Font.PLAIN, baseFont.getSize() - 2));
+                super.paint(g);
+            }
+            
+            @Override
+            public Color getForeground() {
+                // Always return the disabled foreground color
+                return UIUtil.getLabelDisabledForeground();
+            }
+            
+            @Override
+            public void setForeground(Color color) {
+                // Override to always use disabled foreground color
+                super.setForeground(UIUtil.getLabelDisabledForeground());
+            }
+        };
+    }
+    
+    /**
+     * Configures the text area with dynamic sizing that grows with content.
+     */
+    private void configureResponsiveTextArea() {
+        customRuleTextArea.setLineWrap(true);
+        customRuleTextArea.setWrapStyleWord(true);
+        customRuleTextArea.setFont(UIUtil.getLabelFont());
+        customRuleTextArea.setBorder(JBUI.Borders.compound(
+            JBUI.Borders.customLine(UIUtil.getTextFieldBackground().darker(), 1),
+            JBUI.Borders.empty(5)
+        ));
+        
+        // Set responsive minimum and maximum sizes
+        int fontSize = UIUtil.getLabelFont().getSize();
+        int minHeight = Math.max(fontSize * 4, 60);
+        
+        customRuleTextArea.setMinimumSize(new Dimension(100, minHeight));
+        customRuleTextArea.setMaximumSize(new Dimension(Integer.MAX_VALUE, Integer.MAX_VALUE));
+    }
+    
+    /**
+     * Creates a scroll pane that dynamically adapts to text area content.
+     */
+    private JBScrollPane createResponsiveScrollPane() {
+        JBScrollPane scrollPane = new JBScrollPane(customRuleTextArea);
+        
+        // Calculate responsive minimum sizing
+        int fontSize = UIUtil.getLabelFont().getSize();
+        int minHeight = Math.max(fontSize * 4, 60);
+        int maxHeight = Math.max(fontSize * 12, 200); // Maximum height to prevent excessive growth
+        
+        // Set responsive dimensions that allow horizontal shrinking but maintain vertical visibility
+        scrollPane.setMinimumSize(new Dimension(100, minHeight));
+        scrollPane.setPreferredSize(new Dimension(250, Math.max(fontSize * 6, 80)));
+        scrollPane.setMaximumSize(new Dimension(Integer.MAX_VALUE, maxHeight));
+        
+        // Configure scroll policies
+        scrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
+        scrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
+        
+        return scrollPane;
+    }
+    
+    /**
+     * Updates the scroll pane size when text content changes.
+     */
+    private void updateScrollPaneSize() {
+        Container parent = customRuleTextArea.getParent();
+        if (parent instanceof JViewport) {
+            JScrollPane scrollPane = (JScrollPane) parent.getParent();
+            
+            // Calculate dynamic height based on content
+            int fontSize = UIUtil.getLabelFont().getSize();
+            int minHeight = Math.max(fontSize * 4, 60);
+            int maxHeight = Math.max(fontSize * 12, 200);
+            
+            // Calculate content height
+            int contentHeight = calculateTextAreaContentHeight();
+            int height = Math.max(minHeight, Math.min(contentHeight, maxHeight));
+            
+            // Update scroll pane size
+            Dimension currentSize = scrollPane.getPreferredSize();
+            scrollPane.setPreferredSize(new Dimension(currentSize.width, height));
+            
+            scrollPane.revalidate();
+            scrollPane.repaint();
+        }
+    }
+    
+    /**
+     * Calculates the height needed to display all text content.
+     */
+    private int calculateTextAreaContentHeight() {
+        String text = customRuleTextArea.getText();
+        if (text == null || text.isEmpty()) {
+            return UIUtil.getLabelFont().getSize() * 4;
+        }
+        
+        FontMetrics fm = customRuleTextArea.getFontMetrics(customRuleTextArea.getFont());
+        int lineHeight = fm.getHeight();
+        
+        // Calculate wrapped lines based on current width
+        int width = customRuleTextArea.getWidth();
+        if (width <= 0) width = 200; // Default width if not yet laid out
+        
+        int totalLines = 0;
+        String[] paragraphs = text.split("\n");
+        
+        for (String paragraph : paragraphs) {
+            if (paragraph.isEmpty()) {
+                totalLines++;
+            } else {
+                int lineWidth = fm.stringWidth(paragraph);
+                int effectiveWidth = Math.max(width - 40, 100); // Account for padding and borders
+                int linesForParagraph = Math.max(1, (lineWidth / effectiveWidth) + 1);
+                totalLines += linesForParagraph;
+            }
+        }
+        
+        // Add some padding and ensure minimum height
+        return (totalLines * lineHeight) + 30; // 30px padding for borders and spacing
+    }
+    
+    /**
+     * Updates the text area and scroll pane sizing based on current font size.
+     */
+    private void updateResponsiveSizing() {
+        // Update font to current UI font for zoom responsiveness
+        customRuleTextArea.setFont(UIUtil.getLabelFont());
+        
+        // Trigger recalculation of dynamic sizes
+        customRuleTextArea.revalidate();
+        updateScrollPaneSize();
+        
+        // Force the entire panel to recalculate its layout
+        revalidate();
+        repaint();
+    }
+    
+    /**
+     * Sets up theme change listener to handle zoom and font changes.
+     */
+    private void setupThemeChangeListener() {
+        // Only listen for component visibility changes (when panel is shown)
+        // This prevents constant revalidation that causes auto-scroll issues
+        addComponentListener(new java.awt.event.ComponentAdapter() {
+            @Override
+            public void componentShown(java.awt.event.ComponentEvent event) {
+                SwingUtilities.invokeLater(() -> {
+                    updateResponsiveSizing();
+                });
+            }
+        });
+    }
+    
+    /**
      * Sets up event handlers for all components.
      */
     private void setupEventHandlers() {
@@ -150,11 +345,29 @@ public class CustomRulePanel extends JBPanel<CustomRulePanel> {
         clearCustomRuleButton.addActionListener(e -> clearCustomRule());
         customRuleTextArea.getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
             @Override
-            public void insertUpdate(javax.swing.event.DocumentEvent e) { updateCharacterCounter(); }
+            public void insertUpdate(javax.swing.event.DocumentEvent e) { 
+                updateCharacterCounter();
+                SwingUtilities.invokeLater(() -> {
+                    customRuleTextArea.revalidate();
+                    updateScrollPaneSize();
+                });
+            }
             @Override
-            public void removeUpdate(javax.swing.event.DocumentEvent e) { updateCharacterCounter(); }
+            public void removeUpdate(javax.swing.event.DocumentEvent e) { 
+                updateCharacterCounter();
+                SwingUtilities.invokeLater(() -> {
+                    customRuleTextArea.revalidate();
+                    updateScrollPaneSize();
+                });
+            }
             @Override
-            public void changedUpdate(javax.swing.event.DocumentEvent e) { updateCharacterCounter(); }
+            public void changedUpdate(javax.swing.event.DocumentEvent e) { 
+                updateCharacterCounter();
+                SwingUtilities.invokeLater(() -> {
+                    customRuleTextArea.revalidate();
+                    updateScrollPaneSize();
+                });
+            }
         });
     }
     

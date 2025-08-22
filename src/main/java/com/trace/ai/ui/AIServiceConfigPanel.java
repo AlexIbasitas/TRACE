@@ -94,6 +94,9 @@ public class AIServiceConfigPanel extends JBPanel<AIServiceConfigPanel> {
     private String openaiStatus = "Not configured";
     private String geminiStatus = "Not configured";
     
+    // Font size tracking for responsive updates
+    private int lastKnownFontSize = -1;
+    
     /**
      * Creates a new AI service configuration panel.
      * 
@@ -104,10 +107,10 @@ public class AIServiceConfigPanel extends JBPanel<AIServiceConfigPanel> {
         this.modelService = AIModelService.getInstance();
         
         // Initialize UI components
-        this.openaiApiKeyField = new JBPasswordField();
-        this.geminiApiKeyField = new JBPasswordField();
-        this.testOpenAIButton = new JButton("Apply");
-        this.testGeminiButton = new JButton("Apply");
+        this.openaiApiKeyField = createResponsivePasswordField();
+        this.geminiApiKeyField = createResponsivePasswordField();
+        this.testOpenAIButton = createResponsiveButton("Apply");
+        this.testGeminiButton = createResponsiveButton("Apply");
         this.openaiStatusLabel = new JBLabel("Not configured");
         this.geminiStatusLabel = new JBLabel("Not configured");
         
@@ -115,12 +118,16 @@ public class AIServiceConfigPanel extends JBPanel<AIServiceConfigPanel> {
         this.listModel = new DefaultListModel<>();
         this.modelList = new JBList<>(listModel);
         this.defaultModelLabel = new JBLabel("No default model selected");
-        this.setDefaultButton = new JButton("Set as Default");
-        this.refreshModelsButton = new JButton("Refresh Models");
+        this.setDefaultButton = createResponsiveButton("Set as Default");
+        this.refreshModelsButton = createResponsiveButton("Refresh Models");
+        
+        // Initialize font size tracking
+        this.lastKnownFontSize = UIUtil.getLabelFont().getSize();
         
         // Initialize the panel
         initializePanel();
         setupEventHandlers();
+        setupThemeChangeListener();
         
         // Load settings in background to avoid EDT violations
         ApplicationManager.getApplication().executeOnPooledThread(() -> {
@@ -152,10 +159,8 @@ public class AIServiceConfigPanel extends JBPanel<AIServiceConfigPanel> {
         setPreferredSize(null); // Let Swing calculate natural size
         setMaximumSize(new Dimension(Integer.MAX_VALUE, Integer.MAX_VALUE));
         
-        // Create header with smaller font for aggressive shrinking
-        JBLabel headerLabel = new JBLabel("AI Model Configuration");
-        int baseFontSize = UIUtil.getLabelFont().getSize();
-        headerLabel.setFont(UIUtil.getLabelFont().deriveFont(Font.BOLD, baseFontSize + 1)); // Smaller font
+        // Create header with zoom responsiveness
+        JBLabel headerLabel = createZoomResponsiveHeader("AI Model Configuration");
         headerLabel.setBorder(JBUI.Borders.emptyBottom(3)); // Smaller border
         
         // Create main content panel
@@ -178,6 +183,38 @@ public class AIServiceConfigPanel extends JBPanel<AIServiceConfigPanel> {
     }
     
     /**
+     * Creates a zoom-responsive header label that updates with font changes.
+     * 
+     * @param text the header text to display
+     * @return a JBLabel that responds to zoom changes
+     */
+    private JBLabel createZoomResponsiveHeader(String text) {
+        return new JBLabel(text) {
+            @Override
+            public Font getFont() {
+                // Always return the current UI font to respond to zoom changes
+                Font baseFont = UIUtil.getLabelFont();
+                return baseFont.deriveFont(Font.BOLD, baseFont.getSize() + 1);
+            }
+            
+            @Override
+            public void setFont(Font font) {
+                // Override to always use UI font for zoom responsiveness
+                Font baseFont = UIUtil.getLabelFont();
+                super.setFont(baseFont.deriveFont(Font.BOLD, baseFont.getSize() + 1));
+            }
+            
+            @Override
+            public void paint(Graphics g) {
+                // Ensure font is always current before painting
+                Font baseFont = UIUtil.getLabelFont();
+                setFont(baseFont.deriveFont(Font.BOLD, baseFont.getSize() + 1));
+                super.paint(g);
+            }
+        };
+    }
+    
+    /**
      * Creates the API key configuration panel.
      */
     @NotNull
@@ -188,45 +225,25 @@ public class AIServiceConfigPanel extends JBPanel<AIServiceConfigPanel> {
             JBUI.Borders.empty(10)
         ));
         
-        // Header with smaller font for aggressive shrinking
-        JBLabel headerLabel = new JBLabel("API Key Configuration");
-        int headerBaseFontSize = UIUtil.getLabelFont().getSize();
-        headerLabel.setFont(UIUtil.getLabelFont().deriveFont(Font.BOLD, headerBaseFontSize + 1)); // Smaller font
+        // Header with zoom responsiveness
+        JBLabel headerLabel = createZoomResponsiveHeader("API Key Configuration");
         headerLabel.setBorder(JBUI.Borders.emptyBottom(5)); // Smaller border
         
         // Create a structured layout for consistent sizing
         JPanel keysPanel = new JBPanel<>(new GridBagLayout());
         GridBagConstraints gbc = new GridBagConstraints();
         
-        // Let input fields expand to fit content naturally
+        // Let input fields expand to fit content naturally (height tied to font metrics)
         int fieldBaseFontSize = UIUtil.getLabelFont().getSize();
+        int fieldHeight = Math.max((int) Math.round(fieldBaseFontSize * 2.2), 28);
+        Insets fieldInsets = new Insets(6, 10, 6, 10);
         
-        // Let Swing calculate natural size instead of forcing fixed dimensions
-        openaiApiKeyField.setPreferredSize(new Dimension(0, 0)); // Let Swing calculate
-        openaiApiKeyField.setMinimumSize(new Dimension(0, fieldBaseFontSize * 2)); // Minimum height only
-        openaiApiKeyField.setMaximumSize(new Dimension(Integer.MAX_VALUE, fieldBaseFontSize * 2));
-        openaiApiKeyField.setFont(UIUtil.getLabelFont());
-        openaiApiKeyField.setMargin(new Insets(4, 8, 4, 8)); // Proper margins
+        configurePasswordField(openaiApiKeyField, fieldHeight, fieldInsets);
+        configurePasswordField(geminiApiKeyField, fieldHeight, fieldInsets);
         
-        geminiApiKeyField.setPreferredSize(new Dimension(0, 0)); // Let Swing calculate
-        geminiApiKeyField.setMinimumSize(new Dimension(0, fieldBaseFontSize * 2)); // Minimum height only
-        geminiApiKeyField.setMaximumSize(new Dimension(Integer.MAX_VALUE, fieldBaseFontSize * 2));
-        geminiApiKeyField.setFont(UIUtil.getLabelFont());
-        geminiApiKeyField.setMargin(new Insets(4, 8, 4, 8)); // Proper margins
-        
-        // Configure Apply buttons with compact sizing
-        int applyButtonWidth = Math.max(60, fieldBaseFontSize * 4); // Smaller width
-        int applyButtonHeight = Math.max(24, (int)(fieldBaseFontSize * 1.8)); // Smaller height
-        
-        testOpenAIButton.setFont(UIUtil.getLabelFont());
-        testOpenAIButton.setMargin(new Insets(2, 4, 2, 4)); // Much smaller margins
-        testOpenAIButton.setPreferredSize(new Dimension(applyButtonWidth, applyButtonHeight));
-        testOpenAIButton.setMinimumSize(new Dimension(applyButtonWidth, applyButtonHeight));
-        
-        testGeminiButton.setFont(UIUtil.getLabelFont());
-        testGeminiButton.setMargin(new Insets(2, 4, 2, 4)); // Much smaller margins
-        testGeminiButton.setPreferredSize(new Dimension(applyButtonWidth, applyButtonHeight));
-        testGeminiButton.setMinimumSize(new Dimension(applyButtonWidth, applyButtonHeight));
+        // Configure Apply buttons responsively (avoid truncation at high zoom)
+        configureButtonForText(testOpenAIButton);
+        configureButtonForText(testGeminiButton);
         
         // OpenAI Configuration Row
         gbc.gridx = 0; gbc.gridy = 0;
@@ -349,10 +366,8 @@ public class AIServiceConfigPanel extends JBPanel<AIServiceConfigPanel> {
             JBUI.Borders.empty(10)
         ));
         
-        // Header with smaller font for aggressive shrinking
-        JBLabel headerLabel = new JBLabel("Available Models");
-        int headerBaseFontSize = UIUtil.getLabelFont().getSize();
-        headerLabel.setFont(UIUtil.getLabelFont().deriveFont(Font.BOLD, headerBaseFontSize + 1)); // Smaller font
+        // Header with zoom responsiveness
+        JBLabel headerLabel = createZoomResponsiveHeader("Available Models");
         headerLabel.setBorder(JBUI.Borders.emptyBottom(5)); // Smaller border
         
         // Main content panel using BorderLayout for proper alignment
@@ -373,52 +388,21 @@ public class AIServiceConfigPanel extends JBPanel<AIServiceConfigPanel> {
         defaultSection.add(defaultLabel);
         defaultSection.add(defaultModelLabel);
         
-        // Model list (main control)
+        // Model list (main control) - non-scrollable with zoom-responsive cells
         modelList.setCellRenderer(new AIModelListCellRenderer());
         modelList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
         modelList.addListSelectionListener(e -> updateButtonStates());
-        JBScrollPane scrollPane = new JBScrollPane(modelList);
         
-        // Let scroll panes expand to fit content naturally
-        int scrollBaseFontSize = UIUtil.getLabelFont().getSize();
-        
-        // Let Swing calculate natural size instead of forcing fixed dimensions
-        scrollPane.setPreferredSize(new Dimension(0, 0)); // Let Swing calculate
-        scrollPane.setMinimumSize(new Dimension(0, scrollBaseFontSize * 8)); // Minimum height
-        scrollPane.setMaximumSize(new Dimension(Integer.MAX_VALUE, Integer.MAX_VALUE));
-        
-        // Configure scroll policies for better content visibility
-        scrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
-        scrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
-        
-        // Ensure list cells are properly sized
-        modelList.setFixedCellHeight(Math.max(28, scrollBaseFontSize + 12));
-        modelList.setFixedCellWidth(-1); // Let width be determined by container
+        // Configure list to be non-scrollable and scale with zoom
+        configureResponsiveModelList();
         
         // Action buttons panel - use proper layout for professional appearance
         JPanel actionButtonPanel = new JBPanel<>(new FlowLayout(FlowLayout.LEFT, 8, 4)); // Proper spacing
         actionButtonPanel.setBorder(JBUI.Borders.empty(8, 0, 0, 0)); // Proper top margin
         
-        // Calculate button sizes based on text content to prevent truncation
-        int buttonBaseFontSize = UIUtil.getLabelFont().getSize();
-        FontMetrics fm = setDefaultButton.getFontMetrics(UIUtil.getLabelFont());
-        
-        // Calculate proper button sizing for professional appearance
-        int setDefaultTextWidth = fm.stringWidth("Set as Default");
-        int refreshTextWidth = fm.stringWidth("Refresh Models");
-        int buttonWidth = Math.max(Math.max(setDefaultTextWidth, refreshTextWidth) + 24, buttonBaseFontSize * 8);
-        int buttonHeight = Math.max((int)(buttonBaseFontSize * 2.5), 32);
-        
-        // Configure buttons with proper sizing
-        setDefaultButton.setFont(UIUtil.getLabelFont());
-        setDefaultButton.setMargin(new Insets(6, 12, 6, 12)); // Proper margins
-        setDefaultButton.setMinimumSize(new Dimension(buttonWidth, buttonHeight));
-        setDefaultButton.setPreferredSize(new Dimension(buttonWidth, buttonHeight));
-        
-        refreshModelsButton.setFont(UIUtil.getLabelFont());
-        refreshModelsButton.setMargin(new Insets(6, 12, 6, 12)); // Proper margins
-        refreshModelsButton.setMinimumSize(new Dimension(buttonWidth, buttonHeight));
-        refreshModelsButton.setPreferredSize(new Dimension(buttonWidth, buttonHeight));
+        // Configure buttons responsively to prevent truncation at any zoom
+        configureButtonForText(setDefaultButton);
+        configureButtonForText(refreshModelsButton);
         
         actionButtonPanel.add(setDefaultButton);
         actionButtonPanel.add(refreshModelsButton);
@@ -426,7 +410,7 @@ public class AIServiceConfigPanel extends JBPanel<AIServiceConfigPanel> {
         // Simple layout following JetBrains best practices
         // Default model info at top, main control in center, action buttons at bottom
         contentPanel.add(defaultSection, BorderLayout.NORTH);
-        contentPanel.add(scrollPane, BorderLayout.CENTER);
+        contentPanel.add(modelList, BorderLayout.CENTER);
         contentPanel.add(actionButtonPanel, BorderLayout.SOUTH);
         
         // Add sections to main panel
@@ -1239,6 +1223,150 @@ public class AIServiceConfigPanel extends JBPanel<AIServiceConfigPanel> {
         }
     }
 
+    /**
+     * Creates a password field that scales its height with the current UI font.
+     */
+    private JBPasswordField createResponsivePasswordField() {
+        JBPasswordField field = new JBPasswordField() {
+            @Override
+            public Dimension getPreferredSize() {
+                Dimension d = super.getPreferredSize();
+                int fontSize = UIUtil.getLabelFont().getSize();
+                int height = Math.max((int) Math.round(fontSize * 2.2), 28);
+                return new Dimension(d.width, height);
+            }
+        };
+        field.setFont(UIUtil.getLabelFont());
+        field.setMargin(new Insets(6, 10, 6, 10));
+        return field;
+    }
+
+    /**
+     * Applies consistent sizing rules to a password field instance.
+     */
+    private void configurePasswordField(JBPasswordField field, int height, Insets insets) {
+        field.setPreferredSize(new Dimension(0, height));
+        field.setMinimumSize(new Dimension(0, height));
+        field.setMaximumSize(new Dimension(Integer.MAX_VALUE, height));
+        field.setFont(UIUtil.getLabelFont());
+        field.setMargin(insets);
+    }
+
+    /**
+     * Creates a JButton that sizes itself based on its text (avoids truncation on zoom).
+     */
+    private JButton createResponsiveButton(String text) {
+        JButton button = new JButton(text) {
+            @Override
+            public Dimension getPreferredSize() {
+                Font font = UIUtil.getLabelFont();
+                FontMetrics fm = getFontMetrics(font);
+                int textWidth = fm.stringWidth(getText());
+                int fontSize = font.getSize();
+                
+                // More generous sizing to prevent text cutoff at smaller zoom levels
+                int width = textWidth + Math.max(32, fontSize * 3); // Increased padding
+                int height = Math.max((int) Math.round(fontSize * 2.5), 32); // Increased height
+                
+                return new Dimension(width, height);
+            }
+        };
+        button.setFont(UIUtil.getLabelFont());
+        button.setMargin(new Insets(8, 16, 8, 16)); // Increased margins
+        return button;
+    }
+
+    /**
+     * Ensures a button is large enough for its text at current zoom.
+     */
+    private void configureButtonForText(JButton button) {
+        Font font = UIUtil.getLabelFont();
+        FontMetrics fm = button.getFontMetrics(font);
+        int textWidth = fm.stringWidth(button.getText());
+        int fontSize = font.getSize();
+        
+        // More generous sizing to prevent text cutoff at smaller zoom levels
+        int width = textWidth + Math.max(32, fontSize * 3); // Increased padding
+        int height = Math.max((int) Math.round(fontSize * 2.5), 32); // Increased height
+        
+        button.setFont(font);
+        button.setMinimumSize(new Dimension(width, height));
+        button.setPreferredSize(new Dimension(width, height));
+        button.setMargin(new Insets(8, 16, 8, 16)); // Increased margins
+    }
+    
+    /**
+     * Configures the model list to be non-scrollable with zoom-responsive cell sizing.
+     */
+    private void configureResponsiveModelList() {
+        // Set font to current UI font for zoom responsiveness
+        modelList.setFont(UIUtil.getLabelFont());
+        
+        // Calculate cell height based on current font size
+        int fontSize = UIUtil.getLabelFont().getSize();
+        int cellHeight = Math.max((int) Math.round(fontSize * 2.5), 32);
+        
+        // Set fixed cell height that scales with zoom
+        modelList.setFixedCellHeight(cellHeight);
+        modelList.setFixedCellWidth(-1); // Let width be determined by container
+        
+        // Remove scroll pane behavior - let the list size naturally
+        modelList.setPreferredSize(null); // Let Swing calculate based on content
+        modelList.setMinimumSize(new Dimension(0, 0)); // Allow shrinking
+        modelList.setMaximumSize(new Dimension(Integer.MAX_VALUE, Integer.MAX_VALUE));
+        
+        // Add a listener to recalculate cell height when font changes
+        modelList.addComponentListener(new java.awt.event.ComponentAdapter() {
+            @Override
+            public void componentShown(java.awt.event.ComponentEvent e) {
+                updateModelListCellHeight();
+            }
+        });
+    }
+    
+    /**
+     * Updates the model list cell height based on current font size.
+     */
+    private void updateModelListCellHeight() {
+        int fontSize = UIUtil.getLabelFont().getSize();
+        int cellHeight = Math.max((int) Math.round(fontSize * 2.5), 32);
+        modelList.setFixedCellHeight(cellHeight);
+        modelList.revalidate();
+        modelList.repaint();
+    }
+    
+    /**
+     * Sets up theme change listener to handle zoom and font changes.
+     */
+    private void setupThemeChangeListener() {
+        // Only listen for component visibility changes (when panel is shown)
+        // This prevents constant revalidation that causes auto-scroll issues
+        addComponentListener(new java.awt.event.ComponentAdapter() {
+            @Override
+            public void componentShown(java.awt.event.ComponentEvent event) {
+                SwingUtilities.invokeLater(() -> {
+                    updateModelListCellHeight();
+                    // Only update buttons if font size has changed significantly
+                    updateButtonSizesIfNeeded();
+                });
+            }
+        });
+    }
+    
+    /**
+     * Updates button sizes only if font size has changed significantly.
+     */
+    private void updateButtonSizesIfNeeded() {
+        // Check if font size has changed significantly since last update
+        int currentFontSize = UIUtil.getLabelFont().getSize();
+        if (Math.abs(currentFontSize - lastKnownFontSize) >= 2) { // Only update if font changed by 2+ points
+            lastKnownFontSize = currentFontSize;
+            configureButtonForText(testOpenAIButton);
+            configureButtonForText(testGeminiButton);
+            configureButtonForText(setDefaultButton);
+            configureButtonForText(refreshModelsButton);
+        }
+    }
     /**
      * Gets the OpenAI API key field for testing purposes.
      * 

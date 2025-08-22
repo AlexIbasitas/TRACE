@@ -6,14 +6,17 @@ import com.intellij.ide.BrowserUtil;
 import com.intellij.ui.components.JBLabel;
 import com.intellij.ui.components.JBPanel;
 import com.intellij.ui.components.JBCheckBox;
+
 import com.intellij.util.ui.JBUI;
 import com.intellij.util.ui.UIUtil;
+import com.intellij.openapi.Disposable;
 import com.trace.ai.configuration.AISettings;
 import org.jetbrains.annotations.Nullable;
 
 import javax.swing.*;
 import javax.swing.event.HyperlinkEvent;
 import javax.swing.event.HyperlinkListener;
+import javax.swing.text.JTextComponent;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -40,11 +43,11 @@ import java.awt.event.ActionListener;
  * @author Alex Ibasitas
  * @since 1.0.0
  */
-public class PrivacyConsentPanel extends JBPanel<PrivacyConsentPanel> {
+public class PrivacyConsentPanel extends JBPanel<PrivacyConsentPanel> implements Disposable {
     
     // UI Components
     private final JBCheckBox aiEnabledCheckBox;
-    private final JEditorPane explanationPane;
+    private final JTextPane explanationTextPane;
     
     // Settings service
     private final AISettings aiSettings;
@@ -55,6 +58,10 @@ public class PrivacyConsentPanel extends JBPanel<PrivacyConsentPanel> {
     // State tracking for modification detection
     private boolean originalAIEnabled;
     private boolean originalUserConsent;
+    
+    // Font change tracking for zoom responsiveness
+    private int lastFontSize = -1;
+    private int lastKnownFontSize = -1;
     
     /**
      * Constructor for PrivacyConsentPanel.
@@ -82,81 +89,188 @@ public class PrivacyConsentPanel extends JBPanel<PrivacyConsentPanel> {
         // Create UI components
         this.aiEnabledCheckBox = new JBCheckBox("Enable AI analysis features");
         this.aiEnabledCheckBox.setFont(UIUtil.getLabelFont());
-        this.explanationPane = new JEditorPane();
+        this.explanationTextPane = createExplanationTextPane();
         
         // Initialize the panel
         initializePanel();
         setupEventHandlers();
         loadCurrentSettings();
+        
+        // Listen for theme/zoom changes
+        setupThemeChangeListener();
+        
+        // Initialize font size tracking
+        this.lastKnownFontSize = UIUtil.getLabelFont().getSize();
     }
     
     /**
      * Initializes the panel layout and styling.
      */
     private void initializePanel() {
+        // Use BorderLayout for proper resizing behavior
         setLayout(new BorderLayout());
         setBorder(JBUI.Borders.compound(
             JBUI.Borders.customLine(UIUtil.getPanelBackground().darker(), 1),
             JBUI.Borders.empty(10)
         ));
         
-        // Allow sections to expand to fit their content naturally
-        int panelBaseFontSize = UIUtil.getLabelFont().getSize();
+        // Create main content panel with vertical layout
+        JPanel contentPanel = new JBPanel<>();
+        contentPanel.setLayout(new BoxLayout(contentPanel, BoxLayout.Y_AXIS));
         
-        // Let Swing calculate natural size instead of forcing fixed dimensions
-        setMinimumSize(new Dimension(0, 0)); // Allow shrinking
-        setPreferredSize(null); // Let Swing calculate natural size
-        setMaximumSize(new Dimension(Integer.MAX_VALUE, Integer.MAX_VALUE));
+        // Create header with zoom responsiveness
+        JBLabel headerLabel = createZoomResponsiveHeader();
+        headerLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        headerLabel.setBorder(JBUI.Borders.emptyBottom(8));
         
-        // Create header with smaller font for aggressive shrinking
-        JBLabel headerLabel = new JBLabel("Privacy & Consent");
-        int baseFontSize = UIUtil.getLabelFont().getSize();
-        headerLabel.setFont(UIUtil.getLabelFont().deriveFont(Font.BOLD, baseFontSize + 1)); // Smaller font
-        headerLabel.setBorder(JBUI.Borders.emptyBottom(3)); // Smaller border
+        // Create checkbox
+        aiEnabledCheckBox.setAlignmentX(Component.LEFT_ALIGNMENT);
+        aiEnabledCheckBox.setBorder(JBUI.Borders.emptyBottom(8));
         
-        // Create main content panel with responsive layout
-        JPanel contentPanel = new JBPanel<>(new BorderLayout());
-        contentPanel.setBorder(JBUI.Borders.empty(2));
+        // Add fixed components to content panel
+        contentPanel.add(headerLabel);
+        contentPanel.add(aiEnabledCheckBox);
         
-        // Add checkbox and explanation with proper wrapping
-        JPanel checkboxPanel = new JBPanel<>(new BorderLayout());
-        checkboxPanel.setBorder(JBUI.Borders.empty(2));
-        checkboxPanel.add(aiEnabledCheckBox, BorderLayout.NORTH);
+        // Add the text pane which will handle its own sizing and wrapping
+        contentPanel.add(explanationTextPane);
         
-        // Configure explanation pane for proper text wrapping and clickable links
-        explanationPane.setBorder(JBUI.Borders.emptyTop(5));
-        explanationPane.setEditable(false);
-        explanationPane.setOpaque(false);
-        explanationPane.setBackground(UIUtil.getPanelBackground());
-        explanationPane.setFont(UIUtil.getLabelFont());
-        explanationPane.setForeground(UIUtil.getLabelForeground());
-        explanationPane.setContentType("text/html");
-        
-        // CRITICAL: Enable proper text wrapping for HTML content
-        explanationPane.putClientProperty(JEditorPane.HONOR_DISPLAY_PROPERTIES, Boolean.TRUE);
-        
-        // Let text areas calculate their own size naturally
-        int textBaseFontSize = UIUtil.getLabelFont().getSize();
-        
-        // Let Swing calculate natural size instead of forcing fixed dimensions
-        explanationPane.setPreferredSize(new Dimension(0, 0)); // Let Swing calculate
-        explanationPane.setMinimumSize(new Dimension(0, textBaseFontSize * 3)); // Minimum height only
-        explanationPane.setMaximumSize(new Dimension(Integer.MAX_VALUE, Integer.MAX_VALUE));
-        
-        checkboxPanel.add(explanationPane, BorderLayout.CENTER);
-        checkboxPanel.setBorder(JBUI.Borders.emptyTop(5));
-        
-        // Assemble the panel
-        add(headerLabel, BorderLayout.NORTH);
-        contentPanel.add(checkboxPanel, BorderLayout.CENTER);
+        // Add content panel to center so it fills available space
         add(contentPanel, BorderLayout.CENTER);
         
-        // Set explanation text
+        // Set initial text based on current settings
         updateExplanationText();
-        
-        // Ensure components are visible
-        aiEnabledCheckBox.setVisible(true);
-        explanationPane.setVisible(true);
+    }
+    
+    /**
+     * Creates a zoom-responsive header label that updates with font changes.
+     */
+    private JBLabel createZoomResponsiveHeader() {
+        return new JBLabel("Privacy & Consent") {
+            @Override
+            public Font getFont() {
+                // Always return the current UI font to respond to zoom changes
+                Font baseFont = UIUtil.getLabelFont();
+                return baseFont.deriveFont(Font.BOLD, baseFont.getSize() + 1);
+            }
+            
+            @Override
+            public void setFont(Font font) {
+                // Override to always use UI font for zoom responsiveness
+                Font baseFont = UIUtil.getLabelFont();
+                super.setFont(baseFont.deriveFont(Font.BOLD, baseFont.getSize() + 1));
+            }
+            
+            @Override
+            public void paint(Graphics g) {
+                // Ensure font is always current before painting
+                Font baseFont = UIUtil.getLabelFont();
+                setFont(baseFont.deriveFont(Font.BOLD, baseFont.getSize() + 1));
+                super.paint(g);
+            }
+        };
+    }
+    
+    /**
+     * Creates and configures the explanation text pane with proper wrapping and resizing.
+     */
+    private JTextPane createExplanationTextPane() {
+        // Override getPreferredSize to ensure proper wrapping behavior
+        return new JTextPane() {
+            {
+                setContentType("text/html");
+                setEditable(false);
+                setOpaque(false);
+                setFont(UIUtil.getLabelFont());
+                setForeground(UIUtil.getLabelForeground());
+                setAlignmentX(Component.LEFT_ALIGNMENT);
+                setBorder(JBUI.Borders.empty(2));
+                
+                // Enable text wrapping and font scaling
+                putClientProperty(JEditorPane.HONOR_DISPLAY_PROPERTIES, Boolean.TRUE);
+                
+                addHyperlinkListener(e -> {
+                    if (e.getEventType() == HyperlinkEvent.EventType.ACTIVATED) {
+                        BrowserUtil.browse("https://alexibasitas.github.io/TRACE/PRIVACY.html");
+                    }
+                });
+            }
+            
+            @Override
+            public Font getFont() {
+                // Always return the current UI font to respond to zoom changes
+                return UIUtil.getLabelFont();
+            }
+            
+            @Override
+            public void setFont(Font font) {
+                // Override to always use UI font for zoom responsiveness
+                super.setFont(UIUtil.getLabelFont());
+            }
+            
+            @Override
+            public Dimension getPreferredSize() {
+                // Get the parent's width to calculate proper text wrapping
+                Container parent = getParent();
+                if (parent != null) {
+                    int width = parent.getWidth();
+                    if (width > 0) {
+                        // Account for borders and padding
+                        width = width - 20; // Leave some margin
+                        setSize(width, Short.MAX_VALUE);
+                        Dimension d = super.getPreferredSize();
+                        return new Dimension(width, d.height);
+                    }
+                }
+                return super.getPreferredSize();
+            }
+            
+            @Override
+            public boolean getScrollableTracksViewportWidth() {
+                return true;
+            }
+            
+            @Override
+            public void paint(Graphics g) {
+                // Ensure font is always current before painting
+                setFont(UIUtil.getLabelFont());
+                super.paint(g);
+            }
+            
+            @Override
+            public void setText(String t) {
+                // Always update font before setting text to ensure proper sizing
+                setFont(UIUtil.getLabelFont());
+                super.setText(t);
+            }
+        };
+    }
+    
+    /**
+     * Sets up theme change listener to handle zoom and font changes.
+     */
+    private void setupThemeChangeListener() {
+        // Only listen for component visibility changes (when panel is shown)
+        // This prevents constant revalidation that causes auto-scroll issues
+        addComponentListener(new java.awt.event.ComponentAdapter() {
+            @Override
+            public void componentShown(java.awt.event.ComponentEvent event) {
+                SwingUtilities.invokeLater(() -> {
+                    updateExplanationTextIfNeeded();
+                });
+            }
+        });
+    }
+    
+    /**
+     * Updates explanation text only if font size has changed significantly.
+     */
+    private void updateExplanationTextIfNeeded() {
+        // Check if font size has changed significantly since last update
+        int currentFontSize = UIUtil.getLabelFont().getSize();
+        if (Math.abs(currentFontSize - lastKnownFontSize) >= 2) { // Only update if font changed by 2+ points
+            lastKnownFontSize = currentFontSize;
+            updateExplanationText();
+        }
     }
     
     /**
@@ -171,15 +285,7 @@ public class PrivacyConsentPanel extends JBPanel<PrivacyConsentPanel> {
             }
         });
         
-        // Privacy Policy link handler
-        explanationPane.addHyperlinkListener(new HyperlinkListener() {
-            @Override
-            public void hyperlinkUpdate(HyperlinkEvent e) {
-                if (e.getEventType() == HyperlinkEvent.EventType.ACTIVATED) {
-                    BrowserUtil.browse("https://alexibasitas.github.io/TRACE/PRIVACY.html");
-                }
-            }
-        });
+        // Hyperlink handling is already set up in createExplanationTextPane()
     }
     
     /**
@@ -280,16 +386,33 @@ public class PrivacyConsentPanel extends JBPanel<PrivacyConsentPanel> {
      * Updates the explanation text based on current settings.
      */
     private void updateExplanationText() {
-        String baseText = "The plugin examines your project to understand test context and provide better debugging suggestions. See our <a href=\"#\">Privacy Policy</a> for details.";
+        String baseText = "The plugin examines your project to understand test context and provide better debugging suggestions. See our <a href='privacy'>Privacy Policy</a> for details.";
         
+        // Get current font to ensure zoom responsiveness - use the same font as the checkbox
+        Font currentFont = UIUtil.getLabelFont();
+        int currentFontSize = currentFont.getSize();
+        
+        // Only update if font size changed or if this is the first time
+        boolean shouldUpdate = lastFontSize != currentFontSize;
+        lastFontSize = currentFontSize;
+        
+        // Do NOT force font size/family in HTML; let the component font apply so it matches the checkbox exactly
+        String htmlContent;
         if (aiSettings.isAIAnalysisEnabled() && aiSettings.hasUserConsent()) {
-            explanationPane.setText(
-                "AI analysis is enabled and provides debugging suggestions for test failures. " + baseText
-            );
+            htmlContent = "<html><body style='line-height: 1.2; margin: 0; padding: 0;'>" +
+                "AI analysis is enabled and provides debugging suggestions for test failures. " + baseText +
+                "</body></html>";
         } else {
-            explanationPane.setText(
-                "Enable AI analysis to get debugging suggestions for test failures. " + baseText
-            );
+            htmlContent = "<html><body style='line-height: 1.2; margin: 0; padding: 0;'>" +
+                "Enable AI analysis to get debugging suggestions for test failures. " + baseText +
+                "</body></html>";
+        }
+        
+        explanationTextPane.setText(htmlContent);
+        
+        if (shouldUpdate) {
+            explanationTextPane.revalidate();
+            explanationTextPane.repaint();
         }
     }
     
@@ -324,7 +447,13 @@ public class PrivacyConsentPanel extends JBPanel<PrivacyConsentPanel> {
      * Disposes of UI resources.
      */
     public void disposeUIResources() {
-        // No specific cleanup needed for this panel
+        dispose();
+    }
+    
+    @Override
+    public void dispose() {
+        // Clean up any resources if needed
+        // The message bus connection will be automatically cleaned up
     }
     
     /**
