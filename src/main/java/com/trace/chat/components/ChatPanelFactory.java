@@ -218,6 +218,18 @@ public final class ChatPanelFactory {
      * @param isLastMessage Whether this is the last message (no spacing after)
      */
     public static void addMessageToContainer(JPanel messageContainer, Component messageComponent, boolean isLastMessage) {
+        LOG.debug("ChatPanelFactory.addMessageToContainer() - STARTING MESSAGE ADDITION");
+        LOG.debug("  - messageContainer: " + messageContainer);
+        LOG.debug("  - messageComponent: " + messageComponent);
+        LOG.debug("  - isLastMessage: " + isLastMessage);
+        LOG.debug("  - messageContainer component count before: " + messageContainer.getComponentCount());
+        LOG.debug("  - messageContainer size before: " + messageContainer.getSize());
+        LOG.debug("  - messageContainer preferred size before: " + messageContainer.getPreferredSize());
+        LOG.debug("  - messageComponent size: " + messageComponent.getSize());
+        LOG.debug("  - messageComponent preferred size: " + messageComponent.getPreferredSize());
+        LOG.debug("  - messageComponent maximum size: " + messageComponent.getMaximumSize());
+        LOG.debug("  - messageComponent minimum size: " + messageComponent.getMinimumSize());
+        
         // Defensive programming: handle null parameters gracefully
         if (messageContainer == null) {
             LOG.warn("ChatPanelFactory: addMessageToContainer called with null messageContainer - skipping add operation");
@@ -231,19 +243,34 @@ public final class ChatPanelFactory {
         // Configure component alignment
         configureComponentAlignment(messageComponent);
         
+        LOG.debug("ChatPanelFactory.addMessageToContainer() - COMPONENT ALIGNMENT CONFIGURED");
+        
         // Add the message component
         messageContainer.add(messageComponent, messageContainer.getComponentCount() - 1); // Add before vertical glue
+        
+        LOG.debug("ChatPanelFactory.addMessageToContainer() - MESSAGE COMPONENT ADDED");
+        LOG.debug("  - messageContainer component count after add: " + messageContainer.getComponentCount());
+        LOG.debug("  - messageContainer preferred size after add: " + messageContainer.getPreferredSize());
         
         // Add spacing if not the last message
         if (!isLastMessage) {
             Component spacing = createDefaultMessageSpacing();
             configureComponentAlignment(spacing);
             messageContainer.add(spacing, messageContainer.getComponentCount() - 1);
+            
+            LOG.debug("ChatPanelFactory.addMessageToContainer() - SPACING ADDED");
+            LOG.debug("  - messageContainer component count after spacing: " + messageContainer.getComponentCount());
+            LOG.debug("  - messageContainer preferred size after spacing: " + messageContainer.getPreferredSize());
         }
         
         // Trigger layout update
         messageContainer.revalidate();
         messageContainer.repaint();
+        
+        LOG.debug("ChatPanelFactory.addMessageToContainer() - LAYOUT UPDATED");
+        LOG.debug("  - messageContainer component count final: " + messageContainer.getComponentCount());
+        LOG.debug("  - messageContainer preferred size final: " + messageContainer.getPreferredSize());
+        LOG.debug("  - messageComponent preferred size final: " + messageComponent.getPreferredSize());
     }
     
     /**

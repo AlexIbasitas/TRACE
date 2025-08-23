@@ -68,6 +68,35 @@ public final class MarkdownRenderer {
     }
 
     /**
+     * Creates a component for markdown content, with scrollable code blocks for wide Java code.
+     * 
+     * <p>This method detects wide Java code blocks and creates a mixed component layout:
+     * - Wide code blocks become horizontally scrollable JScrollPane components
+     * - All other content uses the standard JEditorPane with HTML rendering</p>
+     * 
+     * @param markdown The markdown text to render
+     * @return A JComponent containing the markdown content with appropriate scrolling
+     */
+    public static JComponent createMarkdownComponent(String markdown) {
+        if (markdown == null || markdown.trim().isEmpty()) {
+            return createEmptyEditorPane();
+        }
+
+        try {
+            // Check if the markdown contains wide Java code blocks
+            if (containsWideJavaCodeBlocks(markdown)) {
+                return createMixedMarkdownComponent(markdown);
+            } else {
+                // Use standard markdown pane for normal content
+                return createMarkdownPane(markdown);
+            }
+        } catch (Exception e) {
+            LOG.warn("Error creating markdown component, falling back to plain text: " + e.getMessage());
+            return createFallbackEditorPane(markdown);
+        }
+    }
+
+    /**
      * Creates a JEditorPane with professionally rendered markdown content.
      *
      * <p>This method uses Flexmark Java to parse markdown and convert it to HTML
@@ -112,6 +141,16 @@ public final class MarkdownRenderer {
                 StyleSheet docSheet = doc.getStyleSheet();
                 docSheet.addRule("body, p, li, ul, ol, h1, h2, h3, h4, h5, h6, span, div, td, th, a, b, i { color:#ffffff; }");
                 docSheet.addRule("code, pre { color:#e6e6e6; }");
+                
+                // Add background color for code blocks using theme-aware colors
+                String codeBackgroundColor = ThemeUtils.toHex(ThemeUtils.codeBackground());
+                docSheet.addRule("pre { background-color:" + codeBackgroundColor + "; padding:8px; border-radius:4px; }");
+                LOG.info("Applied pre background color rule: " + codeBackgroundColor);
+                
+                // Add background color for inline code blocks
+                String inlineCodeBackgroundColor = ThemeUtils.toHex(ThemeUtils.inlineCodeBackground());
+                docSheet.addRule("code { background-color:" + inlineCodeBackgroundColor + "; padding:2px 4px; border-radius:2px; }");
+                LOG.info("Applied code background color rule: " + inlineCodeBackgroundColor);
                 // Set base body text size to use IDE's default font size
                 int baseFontSize = UIUtil.getLabelFont().getSize();
                 docSheet.addRule("body, p, li, ul, ol, span, div, td, th, a, b, i { font-size:" + baseFontSize + "px; }");
@@ -571,14 +610,29 @@ public final class MarkdownRenderer {
                 if (targetWidth > 0) {
                     super.setSize(new Dimension(targetWidth, Integer.MAX_VALUE));
                     Dimension pref = super.getPreferredSize();
-                    // Add an extra safety buffer to height to prevent last-line clipping during wraps
-                    return new Dimension(targetWidth, pref.height + 16);
+                    
+                    // Calculate dynamic buffer based on current font size
+                    int baseFontSize = UIUtil.getLabelFont().getSize();
+                    int dynamicBuffer = Math.max(16, baseFontSize);
+                    
+                    // Basic logging for debugging text rendering issues (avoiding recursive calls)
+                    LOG.debug("ResponsiveHtmlPane.getPreferredSize() - targetWidth: " + targetWidth + 
+                             ", baseFontSize: " + baseFontSize + ", dynamicBuffer: " + dynamicBuffer + 
+                             ", final height: " + (pref.height + dynamicBuffer));
+                    
+                    // Add dynamic buffer to prevent last-line clipping during text wrapping
+                    return new Dimension(targetWidth, pref.height + dynamicBuffer);
+                } else {
+                    LOG.debug("ResponsiveHtmlPane.getPreferredSize() - targetWidth <= 0: " + targetWidth);
                 }
-            } catch (Exception ignore) {
+            } catch (Exception ex) {
+                LOG.warn("ResponsiveHtmlPane.getPreferredSize() - Exception: " + ex.getMessage(), ex);
                 // fall back to default behavior
             }
             return super.getPreferredSize();
         }
+        
+
 
         @Override
         public Dimension getMaximumSize() {
@@ -595,20 +649,31 @@ public final class MarkdownRenderer {
         void applyWidthFromParent() {
             try {
                 int targetWidth = computeTargetWidth();
+                
                 if (targetWidth <= 0) {
                     return;
                 }
+                
                 if (targetWidth != lastAppliedWidth) {
+                    LOG.debug("ResponsiveHtmlPane.applyWidthFromParent() - width change: " + lastAppliedWidth + " -> " + targetWidth);
+                    
                     // First set an arbitrarily large height to allow proper preferred size computation
                     super.setSize(new Dimension(targetWidth, Integer.MAX_VALUE));
                     Dimension pref = getPreferredSize();
-                    // Apply an extra height buffer to account for reflow after wraps
-                    super.setSize(new Dimension(targetWidth, pref.height + 16));
+                    
+                    // Calculate dynamic buffer based on current font size for consistent sizing
+                    int baseFontSize = UIUtil.getLabelFont().getSize();
+                    int dynamicBuffer = Math.max(16, baseFontSize);
+                    
+                    // Apply dynamic height buffer to account for reflow after wraps
+                    Dimension finalSize = new Dimension(targetWidth, pref.height + dynamicBuffer);
+                    super.setSize(finalSize);
+                    
                     revalidate();
                     lastAppliedWidth = targetWidth;
                 }
             } catch (Exception ex) {
-                LOG.warn("applyWidthFromParent failed: " + ex.getMessage());
+                LOG.warn("ResponsiveHtmlPane.applyWidthFromParent() - Exception: " + ex.getMessage(), ex);
             }
         }
 
@@ -753,5 +818,195 @@ public final class MarkdownRenderer {
             LOG.warn("Error extracting body content: " + e.getMessage());
         }
         return null;
+    }
+
+    /**
+     * Checks if the markdown contains wide Java code blocks that would benefit from scrolling.
+     * 
+     * @param markdown The markdown text to check
+     * @return true if wide Java code blocks are found
+     */
+    private static boolean containsWideJavaCodeBlocks(String markdown) {
+        if (markdown == null || markdown.trim().isEmpty()) {
+            return false;
+        }
+
+        // Look for Java code blocks with ```java
+        Pattern javaCodePattern = Pattern.compile("```java\\s*\\n(.*?)```", Pattern.DOTALL);
+        Matcher matcher = javaCodePattern.matcher(markdown);
+        
+        while (matcher.find()) {
+            String codeContent = matcher.group(1);
+            if (isCodeBlockWide(codeContent)) {
+                LOG.info("Found wide Java code block - will use scrollable component");
+                return true;
+            }
+        }
+        
+        return false;
+    }
+
+    /**
+     * Creates a mixed component layout with scrollable code blocks for wide content.
+     * 
+     * @param markdown The markdown text containing wide code blocks
+     * @return A JPanel with mixed content layout
+     */
+    private static JComponent createMixedMarkdownComponent(String markdown) {
+        LOG.info("Creating mixed markdown component with scrollable code blocks");
+        
+        JPanel container = new JPanel();
+        container.setLayout(new BoxLayout(container, BoxLayout.Y_AXIS));
+        container.setOpaque(false);
+        container.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+        // Split the markdown by Java code blocks and process each part
+        Pattern javaCodePattern = Pattern.compile("(```java\\s*\\n.*?```)", Pattern.DOTALL);
+        String[] parts = javaCodePattern.split(markdown);
+        
+        // Find all Java code blocks
+        Matcher matcher = javaCodePattern.matcher(markdown);
+        java.util.List<String> codeBlocks = new java.util.ArrayList<>();
+        while (matcher.find()) {
+            codeBlocks.add(matcher.group(1));
+        }
+
+        // Process each part alternating between text and code
+        int codeBlockIndex = 0;
+        for (int i = 0; i < parts.length; i++) {
+            String part = parts[i];
+            
+            // Add text part if not empty
+            if (!part.trim().isEmpty()) {
+                JEditorPane textPane = createMarkdownPane(part);
+                textPane.setAlignmentX(Component.LEFT_ALIGNMENT);
+                container.add(textPane);
+                
+                // Add some spacing
+                container.add(Box.createVerticalStrut(5));
+            }
+            
+            // Add code block if available
+            if (codeBlockIndex < codeBlocks.size()) {
+                String codeBlock = codeBlocks.get(codeBlockIndex);
+                
+                // Extract just the code content (remove ```java and ```)
+                String codeContent = codeBlock.replaceFirst("```java\\s*\\n", "").replaceFirst("```$", "");
+                
+                if (isCodeBlockWide(codeContent)) {
+                    // Create scrollable component for wide code
+                    JScrollPane scrollableCode = createScrollableCodeComponent(codeContent);
+                    scrollableCode.setAlignmentX(Component.LEFT_ALIGNMENT);
+                    container.add(scrollableCode);
+                } else {
+                    // Use regular markdown pane for narrow code
+                    JEditorPane codePane = createMarkdownPane(codeBlock);
+                    codePane.setAlignmentX(Component.LEFT_ALIGNMENT);
+                    container.add(codePane);
+                }
+                
+                codeBlockIndex++;
+                
+                // Add some spacing after code block
+                container.add(Box.createVerticalStrut(5));
+            }
+        }
+
+        LOG.info("Created mixed component with " + parts.length + " text parts and " + codeBlocks.size() + " code blocks");
+        return container;
+    }
+
+    /**
+     * Detects if a code block contains content that would be too wide for normal display.
+     * Checks for long lines that would benefit from horizontal scrolling.
+     * 
+     * @param codeContent The content of the code block
+     * @return true if the code block contains wide content
+     */
+    private static boolean isCodeBlockWide(String codeContent) {
+        if (codeContent == null || codeContent.trim().isEmpty()) {
+            return false;
+        }
+        
+        // Split into lines and check each line length
+        String[] lines = codeContent.split("\n");
+        for (String line : lines) {
+            // Consider a line "wide" if it's longer than 80 characters
+            // This is a reasonable threshold for code readability
+            if (line.length() > 80) {
+                LOG.info("Detected wide code line (" + line.length() + " chars): " + 
+                        (line.length() > 50 ? line.substring(0, 50) + "..." : line));
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Creates a horizontally scrollable component for wide code blocks.
+     * Uses JScrollPane with JTextArea to provide native horizontal scrolling.
+     * 
+     * @param codeContent The code content to display
+     * @return A JScrollPane containing the code with horizontal scrollbar
+     */
+    private static JScrollPane createScrollableCodeComponent(String codeContent) {
+        LOG.info("Creating scrollable code component for content length: " + codeContent.length());
+        
+        // Create JTextArea for code content
+        JTextArea codeArea = new JTextArea(codeContent);
+        codeArea.setEditable(false);
+        codeArea.setLineWrap(false); // Critical: no line wrapping for code
+        codeArea.setWrapStyleWord(false);
+        
+        // Use monospace font for code
+        Font codeFont = new Font(Font.MONOSPACED, Font.PLAIN, UIUtil.getLabelFont().getSize());
+        codeArea.setFont(codeFont);
+        
+        // Apply theme-aware colors
+        codeArea.setForeground(ThemeUtils.codeForeground()); // Light gray text for code
+        codeArea.setBackground(ThemeUtils.codeBackground());
+        codeArea.setBorder(BorderFactory.createEmptyBorder(8, 8, 8, 8));
+        
+        // Calculate preferred size based on content
+        FontMetrics fm = codeArea.getFontMetrics(codeFont);
+        String[] lines = codeContent.split("\n");
+        int maxLineWidth = 0;
+        
+        for (String line : lines) {
+            int lineWidth = fm.stringWidth(line);
+            maxLineWidth = Math.max(maxLineWidth, lineWidth);
+        }
+        
+        // Add padding to width and height
+        int contentWidth = maxLineWidth + 40; // Extra padding for scrollbar
+        int contentHeight = lines.length * fm.getHeight() + 20;
+        
+        codeArea.setPreferredSize(new Dimension(contentWidth, contentHeight));
+        
+        // Create scroll pane with ONLY horizontal scrolling
+        JScrollPane scrollPane = new JScrollPane(codeArea);
+        scrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
+        scrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_NEVER); // NO vertical scrollbar
+        
+        // Dynamic width sizing - resize with container, height matches content
+        int actualContentHeight = contentHeight + 10; // Small buffer for border
+        
+        scrollPane.setPreferredSize(new Dimension(0, actualContentHeight)); // Width 0 = use available space
+        scrollPane.setMaximumSize(new Dimension(Integer.MAX_VALUE, actualContentHeight)); // Dynamic width, fixed height
+        scrollPane.setMinimumSize(new Dimension(200, actualContentHeight)); // Reasonable minimum width
+        
+        // Enable proper alignment for container layout
+        scrollPane.setAlignmentX(Component.LEFT_ALIGNMENT);
+        
+        // Style the scroll pane border
+        scrollPane.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(ThemeUtils.borderColor(), 1),
+            BorderFactory.createEmptyBorder(2, 2, 2, 2)
+        ));
+        
+        LOG.info("Created scrollable code component with dynamic width x " + actualContentHeight + 
+                ", content: " + contentWidth + "x" + contentHeight + ", lines: " + lines.length);
+        
+        return scrollPane;
     }
 } 

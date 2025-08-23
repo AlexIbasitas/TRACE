@@ -481,6 +481,8 @@ public class TriagePanelView {
      * Creates the message container and scroll pane for displaying chat messages.
      */
     private void setupChatPanel() {
+        LOG.debug("TriagePanelView.setupChatPanel() - STARTING CHAT PANEL SETUP");
+        
         // Create message container with proper layout and viewport-width tracking
         messageContainer = new com.trace.chat.components.ViewportWidthTrackingPanel();
         messageContainer.setLayout(new BoxLayout(messageContainer, BoxLayout.Y_AXIS));
@@ -488,6 +490,14 @@ public class TriagePanelView {
         Color panelBg = ThemeUtils.panelBackground();
         messageContainer.setBackground(panelBg);
         messageContainer.setBorder(BorderFactory.createEmptyBorder(8, 16, 8, 16));
+        
+        LOG.debug("TriagePanelView.setupChatPanel() - MESSAGE CONTAINER CREATED");
+        LOG.debug("  - messageContainer: " + messageContainer);
+        LOG.debug("  - messageContainer size: " + messageContainer.getSize());
+        LOG.debug("  - messageContainer preferred size: " + messageContainer.getPreferredSize());
+        LOG.debug("  - messageContainer maximum size: " + messageContainer.getMaximumSize());
+        LOG.debug("  - messageContainer minimum size: " + messageContainer.getMinimumSize());
+        LOG.debug("  - messageContainer layout: " + messageContainer.getLayout().getClass().getSimpleName());
         
         // Create scroll pane with proper configuration
         chatScrollPane = new JScrollPane(messageContainer);
@@ -499,6 +509,16 @@ public class TriagePanelView {
          chatScrollPane.getViewport().setScrollMode(JViewport.BLIT_SCROLL_MODE);
         // Allow horizontal scrolling when the content's minimum width exceeds the viewport
         chatScrollPane.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_AS_NEEDED);
+        
+        LOG.debug("TriagePanelView.setupChatPanel() - SCROLL PANE CREATED");
+        LOG.debug("  - chatScrollPane: " + chatScrollPane);
+        LOG.debug("  - chatScrollPane size: " + chatScrollPane.getSize());
+        LOG.debug("  - chatScrollPane preferred size: " + chatScrollPane.getPreferredSize());
+        LOG.debug("  - chatScrollPane maximum size: " + chatScrollPane.getMaximumSize());
+        LOG.debug("  - chatScrollPane minimum size: " + chatScrollPane.getMinimumSize());
+        LOG.debug("  - viewport size: " + chatScrollPane.getViewport().getSize());
+        LOG.debug("  - viewport preferred size: " + chatScrollPane.getViewport().getPreferredSize());
+        LOG.debug("  - viewport extent size: " + chatScrollPane.getViewport().getExtentSize());
 
         // Recompute spacer and possibly re-align on viewport size changes (e.g., window resize)
         chatScrollPane.getViewport().addComponentListener(new java.awt.event.ComponentAdapter() {
@@ -1104,19 +1124,46 @@ public class TriagePanelView {
      * @param message The message to add to the UI
      */
     private void addMessageToUI(ChatMessage message) {
+        LOG.debug("TriagePanelView.addMessageToUI() - STARTING MESSAGE UI ADDITION");
+        LOG.debug("  - message role: " + message.getRole());
+        LOG.debug("  - message text length: " + (message.getText() != null ? message.getText().length() : 0));
+        LOG.debug("  - chatHistory size: " + chatHistory.size());
+        LOG.debug("  - messageContainer component count before: " + messageContainer.getComponentCount());
+        LOG.debug("  - messageContainer size before: " + messageContainer.getSize());
+        LOG.debug("  - messageContainer preferred size before: " + messageContainer.getPreferredSize());
+        
         // Remove the vertical glue temporarily
         messageContainer.removeAll();
+        
+        LOG.debug("TriagePanelView.addMessageToUI() - CONTAINER CLEARED");
+        LOG.debug("  - messageContainer component count after clear: " + messageContainer.getComponentCount());
         
         // Add all existing messages with proper spacing
         for (int i = 0; i < chatHistory.size(); i++) {
             ChatMessage existingMessage = chatHistory.get(i);
+            LOG.debug("TriagePanelView.addMessageToUI() - CREATING MESSAGE COMPONENT " + i);
+            LOG.debug("  - existing message role: " + existingMessage.getRole());
+            LOG.debug("  - existing message text length: " + (existingMessage.getText() != null ? existingMessage.getText().length() : 0));
+            
             MessageComponent existingComponent = new MessageComponent(existingMessage);
             existingComponent.setAlignmentY(Component.TOP_ALIGNMENT);
+            
+            LOG.debug("TriagePanelView.addMessageToUI() - MESSAGE COMPONENT CREATED");
+            LOG.debug("  - component size: " + existingComponent.getSize());
+            LOG.debug("  - component preferred size: " + existingComponent.getPreferredSize());
+            LOG.debug("  - component maximum size: " + existingComponent.getMaximumSize());
+            LOG.debug("  - component minimum size: " + existingComponent.getMinimumSize());
+            
             messageContainer.add(existingComponent);
+            
+            LOG.debug("TriagePanelView.addMessageToUI() - COMPONENT ADDED TO CONTAINER");
+            LOG.debug("  - messageContainer component count: " + messageContainer.getComponentCount());
+            LOG.debug("  - messageContainer preferred size: " + messageContainer.getPreferredSize());
             
             // Add spacing between messages, but not after the last one
             if (i < chatHistory.size() - 1) {
                 messageContainer.add(Box.createVerticalStrut(16));
+                LOG.debug("TriagePanelView.addMessageToUI() - SPACING ADDED");
             }
         }
 
@@ -1152,9 +1199,22 @@ public class TriagePanelView {
         messageContainer.add(bottomSpacer);
         recomputeBottomSpacer();
         
+        LOG.debug("TriagePanelView.addMessageToUI() - FINAL CONTAINER STATE");
+        LOG.debug("  - messageContainer component count: " + messageContainer.getComponentCount());
+        LOG.debug("  - messageContainer size: " + messageContainer.getSize());
+        LOG.debug("  - messageContainer preferred size: " + messageContainer.getPreferredSize());
+        LOG.debug("  - messageContainer maximum size: " + messageContainer.getMaximumSize());
+        LOG.debug("  - messageContainer minimum size: " + messageContainer.getMinimumSize());
+        LOG.debug("  - chatScrollPane viewport extent size: " + chatScrollPane.getViewport().getExtentSize());
+        LOG.debug("  - chatScrollPane viewport view size: " + chatScrollPane.getViewport().getViewSize());
+        LOG.debug("  - chatScrollPane vertical scrollbar value: " + chatScrollPane.getVerticalScrollBar().getValue());
+        LOG.debug("  - chatScrollPane vertical scrollbar maximum: " + chatScrollPane.getVerticalScrollBar().getMaximum());
+        
         // Revalidate and repaint
         messageContainer.revalidate();
         messageContainer.repaint();
+        
+        LOG.debug("TriagePanelView.addMessageToUI() - LAYOUT VALIDATION COMPLETED");
 
         // Track latest user message component and align newest to top if near
         if (!chatHistory.isEmpty()) {

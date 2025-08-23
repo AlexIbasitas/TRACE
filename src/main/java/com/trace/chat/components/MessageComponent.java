@@ -1,6 +1,7 @@
 package com.trace.chat.components;
 
 import com.intellij.icons.AllIcons;
+import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.openapi.ide.CopyPasteManager;
 import com.intellij.openapi.util.IconLoader;
 import com.intellij.util.ui.UIUtil;
@@ -32,7 +33,7 @@ import java.util.Date;
  */
 public class MessageComponent extends JPanel {
     
-
+    private static final Logger LOG = Logger.getInstance(MessageComponent.class);
     
     private final ChatMessage message;
     private CollapsiblePanel collapsiblePanel;
@@ -384,9 +385,20 @@ public class MessageComponent extends JPanel {
      * @param contentPanel The panel to add the AI message text to
      */
     private void addAiMessageText(JPanel contentPanel) {
-        // Use JLabel with HTML content for better theme integration
-        JEditorPane messageText = MarkdownRenderer.createMarkdownPane(message.getText());
+        LOG.debug("MessageComponent.addAiMessageText() - STARTING AI MESSAGE TEXT CREATION");
+        LOG.debug("  - message text length: " + (message.getText() != null ? message.getText().length() : 0));
+        LOG.debug("  - contentPanel size: " + contentPanel.getSize());
+        LOG.debug("  - contentPanel preferred size: " + contentPanel.getPreferredSize());
+        
+        // Use the new markdown component that supports scrollable code blocks
+        JComponent messageText = MarkdownRenderer.createMarkdownComponent(message.getText());
         messageText.setName("aiMessageText");
+
+        LOG.debug("MessageComponent.addAiMessageText() - MARKDOWN PANE CREATED");
+        LOG.debug("  - messageText size: " + messageText.getSize());
+        LOG.debug("  - messageText preferred size: " + messageText.getPreferredSize());
+        LOG.debug("  - messageText maximum size: " + messageText.getMaximumSize());
+        LOG.debug("  - messageText minimum size: " + messageText.getMinimumSize());
 
         // Maintain sizing compatibility with the rest of the chat UI
         messageText.setAlignmentX(Component.LEFT_ALIGNMENT);
@@ -395,8 +407,23 @@ public class MessageComponent extends JPanel {
         messageText.setMaximumSize(new Dimension(Integer.MAX_VALUE, Integer.MAX_VALUE));
         messageText.setMinimumSize(new Dimension(TriagePanelConstants.MIN_CHAT_WIDTH_BEFORE_SCROLL, 50));
 
+        LOG.debug("MessageComponent.addAiMessageText() - BEFORE ADDING TO CONTENT PANEL");
+        LOG.debug("  - contentPanel component count: " + contentPanel.getComponentCount());
+        LOG.debug("  - contentPanel layout: " + contentPanel.getLayout().getClass().getSimpleName());
+
         contentPanel.add(messageText);
+        
+        // Remove height constraints only from content panels, not scroll containers
+        ContainerHeightConstraintRemover.removeHeightConstraintsFromContentPanels(messageText);
+        
+        LOG.debug("MessageComponent.addAiMessageText() - AFTER ADDING TO CONTENT PANEL");
+        LOG.debug("  - contentPanel component count: " + contentPanel.getComponentCount());
+        LOG.debug("  - contentPanel preferred size: " + contentPanel.getPreferredSize());
+        LOG.debug("  - messageText preferred size after add: " + messageText.getPreferredSize());
+        
         contentPanel.revalidate();
+        
+        LOG.debug("MessageComponent.addAiMessageText() - COMPLETED");
     }
     
 
@@ -407,6 +434,11 @@ public class MessageComponent extends JPanel {
      * @param contentPanel The panel to add the user message text to
      */
     private void addUserMessageText(JPanel contentPanel) {
+        LOG.debug("MessageComponent.addUserMessageText() - STARTING USER MESSAGE TEXT CREATION");
+        LOG.debug("  - message text length: " + (message.getText() != null ? message.getText().length() : 0));
+        LOG.debug("  - contentPanel size: " + contentPanel.getSize());
+        LOG.debug("  - contentPanel preferred size: " + contentPanel.getPreferredSize());
+        
         // Use JEditorPane with HTML content for uniform font sizing with AI messages
         JEditorPane messageText = new MarkdownRenderer.ResponsiveHtmlPane();
         messageText.setContentType("text/html");
@@ -415,10 +447,18 @@ public class MessageComponent extends JPanel {
         messageText.setBackground(ThemeUtils.panelBackground());
         messageText.putClientProperty("JEditorPane.honorDisplayProperties", Boolean.TRUE);
         
+        LOG.debug("MessageComponent.addUserMessageText() - RESPONSIVE HTML PANE CREATED");
+        LOG.debug("  - messageText size: " + messageText.getSize());
+        LOG.debug("  - messageText preferred size: " + messageText.getPreferredSize());
+        
         // Use the same dynamic font as AI messages for uniform sizing
         Font dynamicFont = UIUtil.getLabelFont();
         messageText.setFont(dynamicFont);
         messageText.setForeground(ThemeUtils.textForeground());
+        
+        LOG.debug("MessageComponent.addUserMessageText() - FONT CONFIGURED");
+        LOG.debug("  - dynamic font: " + dynamicFont);
+        LOG.debug("  - font size: " + dynamicFont.getSize());
         
         // Apply the same HTMLEditorKit configuration as AI messages for consistent styling
         try {
@@ -433,9 +473,16 @@ public class MessageComponent extends JPanel {
             // Add slightly larger bottom padding to avoid last-line clipping during dynamic wrap
             docSheet.addRule("body { padding-bottom:12px; }");
             messageText.setDocument(doc);
+            
+            LOG.debug("MessageComponent.addUserMessageText() - HTMLEditorKit CONFIGURED");
+            LOG.debug("  - baseFontSize: " + baseFontSize);
         } catch (Exception ex) {
+            LOG.warn("MessageComponent.addUserMessageText() - HTMLEditorKit configuration failed: " + ex.getMessage());
             // Fallback to simple configuration if custom kit fails
         }
+        
+        // Remove height constraints only from content panels, not scroll containers
+        ContainerHeightConstraintRemover.removeHeightConstraintsFromContentPanels(messageText);
         
         // Create HTML content with the same styling approach as AI messages
         String safeText = escapeHtml(message.getText());
@@ -445,6 +492,11 @@ public class MessageComponent extends JPanel {
         String html = "<html><head></head><body style=\"color:" + textColor + "; font-size:" + baseFontSize + "px;\">" + safeText + "</body></html>";
         
         messageText.setText(html);
+        
+        LOG.debug("MessageComponent.addUserMessageText() - HTML CONTENT SET");
+        LOG.debug("  - safeText length: " + safeText.length());
+        LOG.debug("  - html length: " + html.length());
+        LOG.debug("  - messageText preferred size after setText: " + messageText.getPreferredSize());
         
         // Match AI message styling and sizing
         messageText.setAlignmentX(Component.LEFT_ALIGNMENT);
@@ -456,8 +508,22 @@ public class MessageComponent extends JPanel {
         // Add component name for testing identification
         messageText.setName("userMessageText");
         
+        LOG.debug("MessageComponent.addUserMessageText() - BEFORE ADDING TO CONTENT PANEL");
+        LOG.debug("  - contentPanel component count: " + contentPanel.getComponentCount());
+        LOG.debug("  - messageText preferred size: " + messageText.getPreferredSize());
+        LOG.debug("  - messageText maximum size: " + messageText.getMaximumSize());
+        LOG.debug("  - messageText minimum size: " + messageText.getMinimumSize());
+        
         contentPanel.add(messageText);
+        
+        LOG.debug("MessageComponent.addUserMessageText() - AFTER ADDING TO CONTENT PANEL");
+        LOG.debug("  - contentPanel component count: " + contentPanel.getComponentCount());
+        LOG.debug("  - contentPanel preferred size: " + contentPanel.getPreferredSize());
+        LOG.debug("  - messageText preferred size after add: " + messageText.getPreferredSize());
+        
         contentPanel.revalidate();
+        
+        LOG.debug("MessageComponent.addUserMessageText() - COMPLETED");
     }
     
     /**
