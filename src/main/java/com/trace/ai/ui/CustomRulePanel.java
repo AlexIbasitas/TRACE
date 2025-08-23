@@ -45,7 +45,7 @@ public class CustomRulePanel extends JBPanel<CustomRulePanel> {
         
         // Initialize custom rule components
         this.customRuleTextArea = new JTextArea();
-        this.characterCounterLabel = new JBLabel("0/500");
+        this.characterCounterLabel = createZoomResponsiveCharacterCounter();
         this.saveCustomRuleButton = new JButton("Save");
         this.clearCustomRuleButton = new JButton("Clear");
         
@@ -99,9 +99,8 @@ public class CustomRulePanel extends JBPanel<CustomRulePanel> {
         JPanel bottomPanel = new JBPanel<>(new BorderLayout());
         bottomPanel.setBorder(JBUI.Borders.emptyTop(10));
         
-        // Character counter
-        characterCounterLabel.setFont(characterCounterLabel.getFont().deriveFont(Font.PLAIN, 11f));
-        characterCounterLabel.setForeground(UIUtil.getLabelDisabledForeground());
+        // Character counter - now zoom-responsive
+        // No need to set font here as it's handled by the zoom-responsive label
         
         // Buttons panel
         JPanel buttonPanel = new JBPanel<>(new FlowLayout(FlowLayout.RIGHT));
@@ -197,6 +196,49 @@ public class CustomRulePanel extends JBPanel<CustomRulePanel> {
             public void setForeground(Color color) {
                 // Override to always use disabled foreground color
                 super.setForeground(UIUtil.getLabelDisabledForeground());
+            }
+        };
+    }
+    
+    /**
+     * Creates a zoom-responsive character counter label that updates with font changes.
+     * 
+     * @return a JBLabel that responds to zoom changes
+     */
+    private JBLabel createZoomResponsiveCharacterCounter() {
+        return new JBLabel("0/500") {
+            @Override
+            public Font getFont() {
+                // Always return the current UI font to respond to zoom changes
+                Font baseFont = UIUtil.getLabelFont();
+                return baseFont.deriveFont(Font.PLAIN, baseFont.getSize() - 1);
+            }
+            
+            @Override
+            public void setFont(Font font) {
+                // Override to always use UI font for zoom responsiveness
+                Font baseFont = UIUtil.getLabelFont();
+                super.setFont(baseFont.deriveFont(Font.PLAIN, baseFont.getSize() - 1));
+            }
+            
+            @Override
+            public void paint(Graphics g) {
+                // Ensure font is always current before painting
+                Font baseFont = UIUtil.getLabelFont();
+                setFont(baseFont.deriveFont(Font.PLAIN, baseFont.getSize() - 1));
+                super.paint(g);
+            }
+            
+            @Override
+            public Color getForeground() {
+                // Always return the disabled foreground color by default
+                return UIUtil.getLabelDisabledForeground();
+            }
+            
+            @Override
+            public void setForeground(Color color) {
+                // Allow setting custom colors (for error/warning states) but ensure zoom responsiveness
+                super.setForeground(color);
             }
         };
     }
