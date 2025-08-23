@@ -2284,7 +2284,7 @@ public class TriagePanelView {
         } else {
             // TRACE is disabled - gray color
             button.setForeground(new JBColor(new Color(158, 158, 158), new Color(158, 158, 158))); // Material Design Gray
-            button.setToolTipText("Enable TRACE");
+            button.setToolTipText("Enable TRACE - Parse test failures locally for AI analysis");
             LOG.info("TRACE toggle button set to disabled state (gray)");
         }
     }

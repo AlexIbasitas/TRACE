@@ -16,6 +16,7 @@ import java.awt.event.ComponentAdapter;
 import java.awt.event.ComponentEvent;
 import java.awt.event.HierarchyEvent;
 import java.awt.event.HierarchyListener;
+import java.awt.event.MouseWheelEvent;
 import java.util.Arrays;
 import com.trace.common.constants.TriagePanelConstants;
 import com.trace.common.utils.ThemeUtils;
@@ -83,8 +84,8 @@ public final class MarkdownRenderer {
         }
 
         try {
-            // Check if the markdown contains wide Java code blocks
-            if (containsWideJavaCodeBlocks(markdown)) {
+            // Check if the markdown contains Java code blocks
+            if (containsJavaCodeBlocks(markdown)) {
                 return createMixedMarkdownComponent(markdown);
             } else {
                 // Use standard markdown pane for normal content
@@ -821,12 +822,12 @@ public final class MarkdownRenderer {
     }
 
     /**
-     * Checks if the markdown contains wide Java code blocks that would benefit from scrolling.
+     * Checks if the markdown contains Java code blocks that should use scrollable components.
      * 
      * @param markdown The markdown text to check
-     * @return true if wide Java code blocks are found
+     * @return true if Java code blocks are found
      */
-    private static boolean containsWideJavaCodeBlocks(String markdown) {
+    private static boolean containsJavaCodeBlocks(String markdown) {
         if (markdown == null || markdown.trim().isEmpty()) {
             return false;
         }
@@ -835,15 +836,12 @@ public final class MarkdownRenderer {
         Pattern javaCodePattern = Pattern.compile("```java\\s*\\n(.*?)```", Pattern.DOTALL);
         Matcher matcher = javaCodePattern.matcher(markdown);
         
-        while (matcher.find()) {
-            String codeContent = matcher.group(1);
-            if (isCodeBlockWide(codeContent)) {
-                LOG.info("Found wide Java code block - will use scrollable component");
-                return true;
-            }
+        boolean found = matcher.find();
+        if (found) {
+            LOG.info("Found Java code blocks - will use scrollable components");
         }
         
-        return false;
+        return found;
     }
 
     /**
@@ -893,17 +891,10 @@ public final class MarkdownRenderer {
                 // Extract just the code content (remove ```java and ```)
                 String codeContent = codeBlock.replaceFirst("```java\\s*\\n", "").replaceFirst("```$", "");
                 
-                if (isCodeBlockWide(codeContent)) {
-                    // Create scrollable component for wide code
-                    JScrollPane scrollableCode = createScrollableCodeComponent(codeContent);
-                    scrollableCode.setAlignmentX(Component.LEFT_ALIGNMENT);
-                    container.add(scrollableCode);
-                } else {
-                    // Use regular markdown pane for narrow code
-                    JEditorPane codePane = createMarkdownPane(codeBlock);
-                    codePane.setAlignmentX(Component.LEFT_ALIGNMENT);
-                    container.add(codePane);
-                }
+                // Create scrollable component for ALL Java code blocks
+                JScrollPane scrollableCode = createScrollableCodeComponent(codeContent);
+                scrollableCode.setAlignmentX(Component.LEFT_ALIGNMENT);
+                container.add(scrollableCode);
                 
                 codeBlockIndex++;
                 
@@ -963,7 +954,7 @@ public final class MarkdownRenderer {
         codeArea.setFont(codeFont);
         
         // Apply theme-aware colors
-        codeArea.setForeground(ThemeUtils.codeForeground()); // Light gray text for code
+        codeArea.setForeground(ThemeUtils.codeForeground()); // Theme-aware text color
         codeArea.setBackground(ThemeUtils.codeBackground());
         codeArea.setBorder(BorderFactory.createEmptyBorder(8, 8, 8, 8));
         
@@ -997,6 +988,39 @@ public final class MarkdownRenderer {
         
         // Enable proper alignment for container layout
         scrollPane.setAlignmentX(Component.LEFT_ALIGNMENT);
+        
+        // Forward mouse wheel events to parent when no vertical scrolling is needed
+        // This allows parent chat container to handle scrolling when hovering over code blocks
+        codeArea.addMouseWheelListener(e -> {
+            // Check if we have vertical scrollbar disabled (which we do)
+            if (scrollPane.getVerticalScrollBarPolicy() == JScrollPane.VERTICAL_SCROLLBAR_NEVER) {
+                // Forward the event to parent container for chat scrolling
+                Container parent = scrollPane.getParent();
+                while (parent != null) {
+                    if (parent instanceof JScrollPane) {
+                        // Found a parent scroll pane - forward the event
+                        parent.dispatchEvent(new MouseWheelEvent(
+                            (Component) parent,
+                            e.getID(),
+                            e.getWhen(),
+                            e.getModifiers(),
+                            e.getX(),
+                            e.getY(),
+                            e.getXOnScreen(),
+                            e.getYOnScreen(),
+                            e.getClickCount(),
+                            e.isPopupTrigger(),
+                            e.getScrollType(),
+                            e.getScrollAmount(),
+                            e.getWheelRotation()
+                        ));
+                        break;
+                    }
+                    parent = parent.getParent();
+                }
+            }
+            // If we have vertical scrolling enabled, let the default behavior handle it
+        });
         
         // Style the scroll pane border
         scrollPane.setBorder(BorderFactory.createCompoundBorder(

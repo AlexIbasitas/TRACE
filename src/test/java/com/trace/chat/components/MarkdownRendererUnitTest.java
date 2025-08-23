@@ -281,8 +281,8 @@ class MarkdownRendererUnitTest {
         }
 
         @Test
-        @DisplayName("should handle mixed content with both wide and narrow code blocks")
-        void shouldHandleMixedContentWithBothWideAndNarrowCodeBlocks() {
+        @DisplayName("should handle mixed content with all Java code blocks as scrollable")
+        void shouldHandleMixedContentWithAllJavaCodeBlocksAsScrollable() {
             String longLine = "public class VeryLongClassNameThatExceedsEightyCharactersAndShouldTriggerScrolling {";
             String markdown = "# Code Examples\n\nHere's normal code:\n\n```java\npublic class Short {\n    void method() {}\n}\n```\n\nAnd here's wide code:\n\n```java\n" + longLine + "\n    // This class has very long names\n}\n```\n\nEnd of examples.";
             
@@ -307,8 +307,8 @@ class MarkdownRendererUnitTest {
                 }
             }
             
-            assertTrue(editorPaneCount > 0, "Should contain JEditorPane components for text and narrow code");
-            assertTrue(scrollPaneCount > 0, "Should contain JScrollPane components for wide code");
+            assertTrue(editorPaneCount > 0, "Should contain JEditorPane components for text");
+            assertTrue(scrollPaneCount >= 2, "Should contain JScrollPane components for ALL Java code blocks (both narrow and wide)");
         }
     }
 
@@ -657,5 +657,76 @@ class MarkdownRendererUnitTest {
             // Verify dynamic width (preferred width should be 0 for dynamic sizing)
             assertEquals(0, scrollPane.getPreferredSize().width, "Should have width 0 for dynamic sizing");
             assertEquals(Integer.MAX_VALUE, scrollPane.getMaximumSize().width, "Should have unlimited maximum width");
+        }
+
+        @Test
+        @DisplayName("should configure mouse wheel events to forward to parent")
+        void shouldConfigureMouseWheelEventsToForwardToParent() {
+            String longLine = "public class VeryLongClassNameThatExceedsEightyCharactersAndShouldTriggerScrolling {";
+            String markdown = "Here's some wide Java code:\n\n```java\n" + longLine + "\n    // This class has very long names\n}\n```";
+            
+            JComponent result = MarkdownRenderer.createMarkdownComponent(markdown);
+            
+            assertNotNull(result);
+            assertTrue(result instanceof JPanel, "Should return JPanel container for mixed content");
+            
+            JPanel container = (JPanel) result;
+            
+            // Find the scrollable code component
+            JScrollPane scrollPane = null;
+            for (Component comp : container.getComponents()) {
+                if (comp instanceof JScrollPane) {
+                    scrollPane = (JScrollPane) comp;
+                    break;
+                }
+            }
+            
+            assertNotNull(scrollPane, "Should contain a JScrollPane for code block");
+            
+            // Verify the JTextArea inside has mouse wheel listener configured
+            Component viewportView = scrollPane.getViewport().getView();
+            assertTrue(viewportView instanceof JTextArea, "Viewport should contain JTextArea");
+            
+            JTextArea textArea = (JTextArea) viewportView;
+            
+            // Check that mouse wheel listeners are configured for event forwarding
+            assertTrue(textArea.getMouseWheelListeners().length > 0, 
+                "JTextArea should have mouse wheel listener to forward events to parent");
+            
+            // Verify that vertical scrollbar is disabled (required for event forwarding)
+            assertEquals(JScrollPane.VERTICAL_SCROLLBAR_NEVER, scrollPane.getVerticalScrollBarPolicy(),
+                "Vertical scrollbar should be disabled to enable event forwarding");
+        }
+
+        @Test
+        @DisplayName("should use scrollable components for all Java code blocks")
+        void shouldUseScrollableComponentsForAllJavaCodeBlocks() {
+            String markdown = "Here's a simple Java code block:\n\n```java\npublic class Simple {\n    void test() {\n        System.out.println(\"Hello\");\n    }\n}\n```";
+            
+            JComponent result = MarkdownRenderer.createMarkdownComponent(markdown);
+            
+            assertNotNull(result);
+            assertTrue(result instanceof JPanel, "Should return JPanel for Java code blocks");
+            
+            JPanel container = (JPanel) result;
+            
+            // Find the scrollable code component
+            JScrollPane scrollPane = null;
+            for (Component comp : container.getComponents()) {
+                if (comp instanceof JScrollPane) {
+                    scrollPane = (JScrollPane) comp;
+                    break;
+                }
+            }
+            
+            assertNotNull(scrollPane, "Should contain a JScrollPane for Java code block");
+            
+            // Verify the content is preserved
+            Component viewportView = scrollPane.getViewport().getView();
+            assertTrue(viewportView instanceof JTextArea, "Viewport should contain JTextArea");
+            
+            JTextArea textArea = (JTextArea) viewportView;
+            assertTrue(textArea.getText().contains("public class Simple"), "Should contain Java code");
+            assertTrue(textArea.getText().contains("System.out.println"), "Should contain method call");
         }
 } 
