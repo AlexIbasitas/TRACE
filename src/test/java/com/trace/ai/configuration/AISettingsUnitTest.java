@@ -1,278 +1,543 @@
 package com.trace.ai.configuration;
 
-import com.intellij.openapi.application.ApplicationManager;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.MockedStatic;
-import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.when;
+import java.time.LocalDateTime;
 
-/**
- * Unit tests for AISettings service.
- * 
- * <p>These tests verify the core functionality of the AISettings service including
- * state management, user consent handling, and configuration validation.</p>
- * 
- * <p>This test uses mocking to avoid requiring the full IntelliJ Platform test framework.</p>
- * 
- * @author Alex Ibasitas
- * @since 1.0.0
- */
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.Mockito.*;
+
 @ExtendWith(MockitoExtension.class)
-public class AISettingsUnitTest {
+@DisplayName("AI Settings Unit Tests")
+class AISettingsUnitTest {
     
-    private AISettings aiSettings;
-    private ApplicationManager mockApplicationManager;
+    private AISettings.State testState;
+    private AISettings settings;
     
     @BeforeEach
-    public void setUp() {
-        // Create a mock ApplicationManager
-        mockApplicationManager = Mockito.mock(ApplicationManager.class);
-        
-        // Create a new AISettings instance for testing using reflection
+    void setUp() {
+        testState = new AISettings.State();
+        // Create a testable instance by using reflection to access the private constructor
+        // or by creating a test subclass. For now, we'll test the State class directly
+        // and the public methods through a different approach
+        settings = createTestableAISettings();
+        settings.loadState(testState);
+    }
+    
+    /**
+     * Creates a testable instance of AISettings for unit testing.
+     * This bypasses the singleton pattern to allow isolated testing.
+     */
+    private AISettings createTestableAISettings() {
         try {
-            java.lang.reflect.Constructor<AISettings> constructor = AISettings.class.getDeclaredConstructor();
+            // Use reflection to access the private constructor
+            java.lang.reflect.Constructor<AISettings> constructor = 
+                AISettings.class.getDeclaredConstructor();
             constructor.setAccessible(true);
-            aiSettings = constructor.newInstance();
+            return constructor.newInstance();
         } catch (Exception e) {
-            throw new RuntimeException("Failed to create AISettings instance for testing", e);
-        }
-        
-        // Reset to defaults before each test
-        aiSettings.resetToDefaults();
-    }
-    
-    @AfterEach
-    public void tearDown() {
-        // Reset to defaults to prevent test interference
-        if (aiSettings != null) {
-            aiSettings.resetToDefaults();
-        }
-        
-        // Clear any mock references
-        mockApplicationManager = null;
-        aiSettings = null;
-    }
-    
-    @Test
-    public void shouldInitializeWithDefaultValues() {
-        // Verify default values
-        assertFalse(aiSettings.isTraceEnabled(), "TRACE should be disabled by default");
-        assertFalse(aiSettings.hasUserConsent(), "User consent should be false by default");
-        assertNull(aiSettings.getConsentDate(), "Consent date should be null by default");
-        assertEquals(AIServiceType.OPENAI, aiSettings.getPreferredAIService(), "Default AI service should be OpenAI");
-        assertTrue(aiSettings.isAIAnalysisEnabled(), "AI Analysis should be enabled by default");
-        assertTrue(aiSettings.isShowConfidenceScores(), "Confidence scores should be shown by default");
-        assertTrue(aiSettings.isPersistChatHistory(), "Chat history should be persisted by default");
-        assertEquals(50, aiSettings.getMaxChatHistorySize(), "Default max history size should be 50");
-        assertFalse(aiSettings.isCustomRulesEnabled(), "Custom rules should be disabled by default");
-    }
-    
-    @Test
-    public void shouldManageAIEnabledState() {
-        // Test setting AI enabled
-        aiSettings.setTraceEnabled(true);
-        assertTrue(aiSettings.isTraceEnabled(), "TRACE should be enabled");
-        
-        // Test setting AI disabled
-        aiSettings.setTraceEnabled(false);
-        assertFalse(aiSettings.isTraceEnabled(), "TRACE should be disabled");
-    }
-    
-    @Test
-    public void shouldManageUserConsent() {
-        // Test setting consent
-        aiSettings.setUserConsentGiven(true);
-        assertTrue(aiSettings.hasUserConsent(), "User consent should be true");
-        assertNotNull(aiSettings.getConsentDate(), "Consent date should be set");
-        
-        // Test revoking consent
-        aiSettings.setUserConsentGiven(false);
-        assertFalse(aiSettings.hasUserConsent(), "User consent should be false");
-        assertNull(aiSettings.getConsentDate(), "Consent date should be null");
-    }
-    
-    @Test
-    public void shouldManagePreferredAIService() {
-        // Test setting OpenAI
-        aiSettings.setPreferredAIService(AIServiceType.OPENAI);
-        assertEquals(AIServiceType.OPENAI, aiSettings.getPreferredAIService(), "Preferred service should be OpenAI");
-        
-        // Test setting Gemini
-        aiSettings.setPreferredAIService(AIServiceType.GEMINI);
-        assertEquals(AIServiceType.GEMINI, aiSettings.getPreferredAIService(), "Preferred service should be Gemini");
-        
-        // Test setting null (should default to OpenAI)
-        aiSettings.setPreferredAIService((AIServiceType) null);
-        assertEquals(AIServiceType.OPENAI, aiSettings.getPreferredAIService(), "Preferred service should default to OpenAI");
-        
-        // Test backward compatibility with string IDs
-        aiSettings.setPreferredAIService("gemini");
-        assertEquals(AIServiceType.GEMINI, aiSettings.getPreferredAIService(), "Should handle string ID correctly");
-        
-        // Test invalid string ID (should default to OpenAI)
-        aiSettings.setPreferredAIService("invalid-service");
-        assertEquals(AIServiceType.OPENAI, aiSettings.getPreferredAIService(), "Should default to OpenAI for invalid service");
-    }
-    
-    @Test
-    public void shouldManageAutoAnalysisSetting() {
-        // Test enabling auto-analysis
-        aiSettings.setAIAnalysisEnabled(true);
-        assertTrue(aiSettings.isAIAnalysisEnabled(), "AI Analysis should be enabled");
-        
-        // Test disabling auto-analysis
-        aiSettings.setAIAnalysisEnabled(false);
-        assertFalse(aiSettings.isAIAnalysisEnabled(), "AI Analysis should be disabled");
-    }
-    
-    @Test
-    public void shouldManageConfidenceScoresSetting() {
-        // Test showing confidence scores
-        aiSettings.setShowConfidenceScores(true);
-        assertTrue(aiSettings.isShowConfidenceScores(), "Confidence scores should be shown");
-        
-        // Test hiding confidence scores
-        aiSettings.setShowConfidenceScores(false);
-        assertFalse(aiSettings.isShowConfidenceScores(), "Confidence scores should be hidden");
-    }
-    
-    @Test
-    public void shouldManageChatHistoryPersistence() {
-        // Test enabling chat history persistence
-        aiSettings.setPersistChatHistory(true);
-        assertTrue(aiSettings.isPersistChatHistory(), "Chat history should be persisted");
-        
-        // Test disabling chat history persistence
-        aiSettings.setPersistChatHistory(false);
-        assertFalse(aiSettings.isPersistChatHistory(), "Chat history should not be persisted");
-    }
-    
-    @Test
-    public void shouldManageMaxChatHistorySizeWithBounds() {
-        // Test setting valid size
-        aiSettings.setMaxChatHistorySize(100);
-        assertEquals(100, aiSettings.getMaxChatHistorySize(), "Max history size should be 100");
-        
-        // Test setting size below minimum (should clamp to 10)
-        aiSettings.setMaxChatHistorySize(5);
-        assertEquals(10, aiSettings.getMaxChatHistorySize(), "Max history size should be clamped to 10");
-        
-        // Test setting size above maximum (should clamp to 500)
-        aiSettings.setMaxChatHistorySize(1000);
-        assertEquals(500, aiSettings.getMaxChatHistorySize(), "Max history size should be clamped to 500");
-    }
-    
-    @Test
-    public void shouldManageCustomRulesSetting() {
-        // Test enabling custom rules
-        aiSettings.setCustomRulesEnabled(true);
-        assertTrue(aiSettings.isCustomRulesEnabled(), "Custom rules should be enabled");
-        
-        // Test disabling custom rules
-        aiSettings.setCustomRulesEnabled(false);
-        assertFalse(aiSettings.isCustomRulesEnabled(), "Custom rules should be disabled");
-    }
-    
-    @Test
-    public void shouldValidateConfigurationStatusCorrectly() {
-        // Test when AI is disabled
-        aiSettings.setTraceEnabled(false);
-        assertFalse(aiSettings.isConfigured(), "Should not be configured when AI is disabled");
-        assertEquals("AI features are disabled", aiSettings.getConfigurationStatus());
-        
-        // Test when AI is enabled but no consent
-        aiSettings.setTraceEnabled(true);
-        aiSettings.setUserConsentGiven(false);
-        assertFalse(aiSettings.isConfigured(), "Should not be configured without consent");
-        assertEquals("User consent required", aiSettings.getConfigurationStatus());
-        
-        // Test when AI is enabled and consent given but no service
-        aiSettings.setUserConsentGiven(true);
-        aiSettings.setPreferredAIService("");
-        assertFalse(aiSettings.isConfigured(), "Should not be configured without service");
-        assertEquals("No AI service configured", aiSettings.getConfigurationStatus());
-        
-        // Test when fully configured
-        aiSettings.setPreferredAIService(AIServiceType.OPENAI);
-        assertTrue(aiSettings.isConfigured(), "Should be configured when all requirements met");
-        assertTrue(aiSettings.getConfigurationStatus().contains("openai"), "Status should mention configured service");
-    }
-    
-    @Test
-    public void shouldResetToDefaultsCorrectly() {
-        // Set some custom values
-        aiSettings.setTraceEnabled(true);
-        aiSettings.setUserConsentGiven(true);
-        aiSettings.setPreferredAIService(AIServiceType.GEMINI);
-        aiSettings.setAIAnalysisEnabled(false);
-        aiSettings.setMaxChatHistorySize(100);
-        
-        // Reset to defaults
-        aiSettings.resetToDefaults();
-        
-        // Verify all values are back to defaults
-        assertFalse(aiSettings.isTraceEnabled(), "TRACE should be disabled after reset");
-        assertFalse(aiSettings.hasUserConsent(), "User consent should be false after reset");
-        assertNull(aiSettings.getConsentDate(), "Consent date should be null after reset");
-        assertEquals(AIServiceType.OPENAI, aiSettings.getPreferredAIService(), "Service should be OpenAI after reset");
-        assertTrue(aiSettings.isAIAnalysisEnabled(), "AI Analysis should be enabled after reset");
-        assertEquals(50, aiSettings.getMaxChatHistorySize(), "Max history size should be 50 after reset");
-    }
-    
-    @Test
-    public void shouldHandleStatePersistence() {
-        // Set some values
-        aiSettings.setAIEnabled(true);
-        aiSettings.setUserConsentGiven(true);
-        aiSettings.setPreferredAIService(AIServiceType.GEMINI);
-        
-        // Get the state
-        AISettings.State state = aiSettings.getState();
-        
-        // Verify state contains correct values
-        assertTrue(state.aiEnabled, "State should contain AI enabled");
-        assertTrue(state.userConsentGiven, "State should contain user consent");
-        assertEquals("gemini", state.preferredAIService, "State should contain preferred service ID");
-        
-        // Create new state with different values
-        AISettings.State newState = new AISettings.State();
-        newState.aiEnabled = false;
-        newState.userConsentGiven = false;
-        newState.preferredAIService = "openai";
-        
-        // Load the new state
-        aiSettings.loadState(newState);
-        
-        // Verify values are updated
-        assertFalse(aiSettings.isTraceEnabled(), "TRACE should be disabled after loading new state");
-        assertFalse(aiSettings.hasUserConsent(), "User consent should be false after loading new state");
-        assertEquals(AIServiceType.OPENAI, aiSettings.getPreferredAIService(), "Service should be OpenAI after loading new state");
-    }
-    
-    @Test
-    public void shouldProvideSingletonInstance() {
-        // Mock the ApplicationManager.getApplication() call
-        try (MockedStatic<ApplicationManager> mockedApplicationManager = Mockito.mockStatic(ApplicationManager.class)) {
-            // Mock the application instance
-            com.intellij.openapi.application.Application mockApplication = Mockito.mock(com.intellij.openapi.application.Application.class);
-            mockedApplicationManager.when(ApplicationManager::getApplication).thenReturn(mockApplication);
-            
-            // Mock the getService call
-            when(mockApplication.getService(AISettings.class)).thenReturn(aiSettings);
-            
-            // Test singleton behavior
-            AISettings instance1 = AISettings.getInstance();
-            AISettings instance2 = AISettings.getInstance();
-            
-            assertNotNull(instance1, "First instance should not be null");
-            assertNotNull(instance2, "Second instance should not be null");
-            assertSame(instance1, instance2, "Both instances should be the same");
+            throw new RuntimeException("Failed to create testable AISettings instance", e);
         }
     }
-} 
+    
+    @Nested
+    @DisplayName("User Consent Management")
+    class UserConsentManagement {
+        
+        @Test
+        @DisplayName("should enable AI features when set to true")
+        void shouldEnableAIFeatures_whenSetToTrue() {
+            // Act
+            settings.setAIEnabled(true);
+            
+            // Assert
+            assertThat(settings.isAIEnabled()).isTrue();
+            assertThat(settings.isTraceEnabled()).isTrue();
+        }
+        
+        @Test
+        @DisplayName("should disable AI features when set to false")
+        void shouldDisableAIFeatures_whenSetToFalse() {
+            // Act
+            settings.setAIEnabled(false);
+            
+            // Assert
+            assertThat(settings.isAIEnabled()).isFalse();
+            assertThat(settings.isTraceEnabled()).isFalse();
+        }
+        
+        @Test
+        @DisplayName("should set user consent and record timestamp when consent given")
+        void shouldSetUserConsentAndRecordTimestamp_whenConsentGiven() {
+            // Act
+            settings.setUserConsentGiven(true);
+            
+            // Assert
+            assertThat(settings.hasUserConsent()).isTrue();
+            assertThat(settings.getConsentDate()).isNotNull();
+            assertThat(settings.getConsentDate()).isInstanceOf(LocalDateTime.class);
+        }
+        
+        @Test
+        @DisplayName("should clear consent date when consent revoked")
+        void shouldClearConsentDate_whenConsentRevoked() {
+            // Arrange
+            settings.setUserConsentGiven(true);
+            assertThat(settings.getConsentDate()).isNotNull();
+            
+            // Act
+            settings.setUserConsentGiven(false);
+            
+            // Assert
+            assertThat(settings.hasUserConsent()).isFalse();
+            assertThat(settings.getConsentDate()).isNull();
+        }
+        
+        @Test
+        @DisplayName("should handle invalid consent date gracefully")
+        void shouldHandleInvalidConsentDateGracefully() {
+            // Arrange
+            testState.consentDate = "invalid-date-format";
+            
+            // Act
+            LocalDateTime result = settings.getConsentDate();
+            
+            // Assert
+            assertThat(result).isNull();
+        }
+    }
+    
+    @Nested
+    @DisplayName("AI Service Configuration")
+    class AIServiceConfiguration {
+        
+        @Test
+        @DisplayName("should set OpenAI as preferred service")
+        void shouldSetOpenAIAsPreferredService() {
+            // Act
+            settings.setPreferredAIService(AIServiceType.OPENAI);
+            
+            // Assert
+            assertThat(settings.getPreferredAIService()).isEqualTo(AIServiceType.OPENAI);
+        }
+        
+        @Test
+        @DisplayName("should set Gemini as preferred service")
+        void shouldSetGeminiAsPreferredService() {
+            // Act
+            settings.setPreferredAIService(AIServiceType.GEMINI);
+            
+            // Assert
+            assertThat(settings.getPreferredAIService()).isEqualTo(AIServiceType.GEMINI);
+        }
+        
+        @Test
+        @DisplayName("should return default service when invalid service ID provided")
+        void shouldReturnDefaultService_whenInvalidServiceIdProvided() {
+            // Arrange
+            settings.setPreferredAIService("invalid-service");
+            
+            // Act
+            AIServiceType result = settings.getPreferredAIService();
+            
+            // Assert
+            assertThat(result).isEqualTo(AIServiceType.getDefault());
+        }
+        
+        @Test
+        @DisplayName("should handle null service type gracefully")
+        void shouldHandleNullServiceTypeGracefully() {
+            // Act
+            settings.setPreferredAIService((AIServiceType) null);
+            
+            // Assert
+            assertThat(settings.getPreferredAIService()).isEqualTo(AIServiceType.getDefault());
+        }
+        
+        @Test
+        @DisplayName("should set service by string ID")
+        void shouldSetServiceByStringId() {
+            // Act
+            settings.setPreferredAIService("openai");
+            
+            // Assert
+            assertThat(settings.getPreferredAIService()).isEqualTo(AIServiceType.OPENAI);
+        }
+    }
+    
+    @Nested
+    @DisplayName("Analysis Configuration")
+    class AnalysisConfiguration {
+        
+        @Test
+        @DisplayName("should enable auto-analysis when set to true")
+        void shouldEnableAutoAnalysis_whenSetToTrue() {
+            // Act
+            settings.setAutoAnalyzeEnabled(true);
+            
+            // Assert
+            assertThat(settings.isAutoAnalyzeEnabled()).isTrue();
+            assertThat(settings.isAIAnalysisEnabled()).isTrue();
+        }
+        
+        @Test
+        @DisplayName("should disable auto-analysis when set to false")
+        void shouldDisableAutoAnalysis_whenSetToFalse() {
+            // Act
+            settings.setAutoAnalyzeEnabled(false);
+            
+            // Assert
+            assertThat(settings.isAutoAnalyzeEnabled()).isFalse();
+            assertThat(settings.isAIAnalysisEnabled()).isFalse();
+        }
+        
+        @Test
+        @DisplayName("should show confidence scores when enabled")
+        void shouldShowConfidenceScores_whenEnabled() {
+            // Act
+            settings.setShowConfidenceScores(true);
+            
+            // Assert
+            assertThat(settings.isShowConfidenceScores()).isTrue();
+        }
+        
+        @Test
+        @DisplayName("should hide confidence scores when disabled")
+        void shouldHideConfidenceScores_whenDisabled() {
+            // Act
+            settings.setShowConfidenceScores(false);
+            
+            // Assert
+            assertThat(settings.isShowConfidenceScores()).isFalse();
+        }
+    }
+    
+    @Nested
+    @DisplayName("Chat Settings")
+    class ChatSettings {
+        
+        @Test
+        @DisplayName("should enable chat history persistence when set to true")
+        void shouldEnableChatHistoryPersistence_whenSetToTrue() {
+            // Act
+            settings.setPersistChatHistory(true);
+            
+            // Assert
+            assertThat(settings.isPersistChatHistory()).isTrue();
+        }
+        
+        @Test
+        @DisplayName("should disable chat history persistence when set to false")
+        void shouldDisableChatHistoryPersistence_whenSetToFalse() {
+            // Act
+            settings.setPersistChatHistory(false);
+            
+            // Assert
+            assertThat(settings.isPersistChatHistory()).isFalse();
+        }
+        
+        @Test
+        @DisplayName("should set valid chat history size")
+        void shouldSetValidChatHistorySize() {
+            // Act
+            settings.setMaxChatHistorySize(100);
+            
+            // Assert
+            assertThat(settings.getMaxChatHistorySize()).isEqualTo(100);
+        }
+        
+        @Test
+        @DisplayName("should clamp chat history size to minimum when below 10")
+        void shouldClampChatHistorySizeToMinimum_whenBelow10() {
+            // Act
+            settings.setMaxChatHistorySize(5);
+            
+            // Assert
+            assertThat(settings.getMaxChatHistorySize()).isEqualTo(10);
+        }
+        
+        @Test
+        @DisplayName("should clamp chat history size to maximum when above 500")
+        void shouldClampChatHistorySizeToMaximum_whenAbove500() {
+            // Act
+            settings.setMaxChatHistorySize(1000);
+            
+            // Assert
+            assertThat(settings.getMaxChatHistorySize()).isEqualTo(500);
+        }
+    }
+    
+    @Nested
+    @DisplayName("Custom Rules")
+    class CustomRules {
+        
+        @Test
+        @DisplayName("should enable custom rules when set to true")
+        void shouldEnableCustomRules_whenSetToTrue() {
+            // Act
+            settings.setCustomRulesEnabled(true);
+            
+            // Assert
+            assertThat(settings.isCustomRulesEnabled()).isTrue();
+        }
+        
+        @Test
+        @DisplayName("should disable custom rules when set to false")
+        void shouldDisableCustomRules_whenSetToFalse() {
+            // Act
+            settings.setCustomRulesEnabled(false);
+            
+            // Assert
+            assertThat(settings.isCustomRulesEnabled()).isFalse();
+        }
+        
+        @Test
+        @DisplayName("should set custom rule text")
+        void shouldSetCustomRuleText() {
+            // Arrange
+            String ruleText = "Always suggest unit tests for new methods";
+            
+            // Act
+            settings.setCustomRule(ruleText);
+            
+            // Assert
+            assertThat(settings.getCustomRule()).isEqualTo(ruleText);
+        }
+        
+        @Test
+        @DisplayName("should trim whitespace from custom rule")
+        void shouldTrimWhitespaceFromCustomRule() {
+            // Arrange
+            String ruleText = "  Trim whitespace  ";
+            
+            // Act
+            settings.setCustomRule(ruleText);
+            
+            // Assert
+            assertThat(settings.getCustomRule()).isEqualTo("Trim whitespace");
+        }
+        
+        @Test
+        @DisplayName("should return null for empty custom rule")
+        void shouldReturnNullForEmptyCustomRule() {
+            // Act
+            settings.setCustomRule("");
+            
+            // Assert
+            assertThat(settings.getCustomRule()).isNull();
+        }
+        
+        @Test
+        @DisplayName("should handle null custom rule")
+        void shouldHandleNullCustomRule() {
+            // Act
+            settings.setCustomRule(null);
+            
+            // Assert
+            assertThat(settings.getCustomRule()).isNull();
+        }
+    }
+    
+    @Nested
+    @DisplayName("Configuration Validation")
+    class ConfigurationValidation {
+        
+        @Test
+        @DisplayName("should return false when AI is disabled")
+        void shouldReturnFalse_whenAIIsDisabled() {
+            // Arrange
+            settings.setAIEnabled(false);
+            settings.setUserConsentGiven(true);
+            settings.setPreferredAIService(AIServiceType.OPENAI);
+            
+            // Act
+            boolean result = settings.isConfigured();
+            
+            // Assert
+            assertThat(result).isFalse();
+        }
+        
+        @Test
+        @DisplayName("should return false when user consent not given")
+        void shouldReturnFalse_whenUserConsentNotGiven() {
+            // Arrange
+            settings.setAIEnabled(true);
+            settings.setUserConsentGiven(false);
+            settings.setPreferredAIService(AIServiceType.OPENAI);
+            
+            // Act
+            boolean result = settings.isConfigured();
+            
+            // Assert
+            assertThat(result).isFalse();
+        }
+        
+        @Test
+        @DisplayName("should return false when no service configured")
+        void shouldReturnFalse_whenNoServiceConfigured() {
+            // Arrange
+            settings.setAIEnabled(true);
+            settings.setUserConsentGiven(true);
+            settings.setPreferredAIService("");
+            
+            // Act
+            boolean result = settings.isConfigured();
+            
+            // Assert
+            assertThat(result).isFalse();
+        }
+        
+        @Test
+        @DisplayName("should return true when fully configured")
+        void shouldReturnTrue_whenFullyConfigured() {
+            // Arrange
+            settings.setAIEnabled(true);
+            settings.setUserConsentGiven(true);
+            settings.setPreferredAIService(AIServiceType.OPENAI);
+            
+            // Act
+            boolean result = settings.isConfigured();
+            
+            // Assert
+            assertThat(result).isTrue();
+        }
+    }
+    
+    @Nested
+    @DisplayName("State Management")
+    class StateManagement {
+        
+        @Test
+        @DisplayName("should get current state")
+        void shouldGetCurrentState() {
+            // Act
+            AISettings.State state = settings.getState();
+            
+            // Assert
+            assertThat(state).isNotNull();
+            assertThat(state).isEqualTo(testState);
+        }
+        
+        @Test
+        @DisplayName("should load new state")
+        void shouldLoadNewState() {
+            // Arrange
+            AISettings.State newState = new AISettings.State();
+            newState.aiEnabled = true;
+            newState.userConsentGiven = true;
+            newState.preferredAIService = "openai";
+            
+            // Act
+            settings.loadState(newState);
+            
+            // Assert
+            assertThat(settings.isAIEnabled()).isTrue();
+            assertThat(settings.hasUserConsent()).isTrue();
+            assertThat(settings.getPreferredAIService()).isEqualTo(AIServiceType.OPENAI);
+        }
+        
+        @Test
+        @DisplayName("should reset to defaults")
+        void shouldResetToDefaults() {
+            // Arrange
+            settings.setAIEnabled(true);
+            settings.setUserConsentGiven(true);
+            settings.setPreferredAIService(AIServiceType.GEMINI);
+            settings.setAutoAnalyzeEnabled(false);
+            
+            // Act
+            settings.resetToDefaults();
+            
+            // Assert
+            assertThat(settings.isAIEnabled()).isFalse();
+            assertThat(settings.hasUserConsent()).isFalse();
+            assertThat(settings.getPreferredAIService()).isEqualTo(AIServiceType.getDefault());
+            assertThat(settings.isAutoAnalyzeEnabled()).isTrue();
+        }
+    }
+    
+    @Nested
+    @DisplayName("Configuration Status")
+    class ConfigurationStatus {
+        
+        @Test
+        @DisplayName("should return disabled status when AI is disabled")
+        void shouldReturnDisabledStatus_whenAIIsDisabled() {
+            // Arrange
+            settings.setAIEnabled(false);
+            
+            // Act
+            String status = settings.getConfigurationStatus();
+            
+            // Assert
+            assertThat(status).isEqualTo("AI features are disabled");
+        }
+        
+        @Test
+        @DisplayName("should return consent required status when consent not given")
+        void shouldReturnConsentRequiredStatus_whenConsentNotGiven() {
+            // Arrange
+            settings.setAIEnabled(true);
+            settings.setUserConsentGiven(false);
+            
+            // Act
+            String status = settings.getConfigurationStatus();
+            
+            // Assert
+            assertThat(status).isEqualTo("User consent required");
+        }
+        
+        @Test
+        @DisplayName("should return no service status when no service configured")
+        void shouldReturnNoServiceStatus_whenNoServiceConfigured() {
+            // Arrange
+            settings.setAIEnabled(true);
+            settings.setUserConsentGiven(true);
+            settings.setPreferredAIService("");
+            
+            // Act
+            String status = settings.getConfigurationStatus();
+            
+            // Assert
+            assertThat(status).isEqualTo("No AI service configured");
+        }
+        
+        @Test
+        @DisplayName("should return configured status with auto-analysis")
+        void shouldReturnConfiguredStatusWithAutoAnalysis() {
+            // Arrange
+            settings.setAIEnabled(true);
+            settings.setUserConsentGiven(true);
+            settings.setPreferredAIService(AIServiceType.OPENAI);
+            settings.setAutoAnalyzeEnabled(true);
+            
+            // Act
+            String status = settings.getConfigurationStatus();
+            
+            // Assert
+            assertThat(status).isEqualTo("Configured for openai with auto-analysis");
+        }
+        
+        @Test
+        @DisplayName("should return configured status without auto-analysis")
+        void shouldReturnConfiguredStatusWithoutAutoAnalysis() {
+            // Arrange
+            settings.setAIEnabled(true);
+            settings.setUserConsentGiven(true);
+            settings.setPreferredAIService(AIServiceType.GEMINI);
+            settings.setAutoAnalyzeEnabled(false);
+            
+            // Act
+            String status = settings.getConfigurationStatus();
+            
+            // Assert
+            assertThat(status).isEqualTo("Configured for gemini with manual analysis");
+        }
+    }
+}

@@ -22,7 +22,7 @@
         <toolWindow id="AI Assistant"
                    name=""
                    secondary="false" 
-                   icon="icons/logo_16.png" 
+                   icon="icons/logo_13.png" 
                    anchor="right" 
                    factoryClass="com.trace.chat.ui.TriagePanelToolWindowFactory"/>
 

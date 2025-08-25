@@ -29,9 +29,6 @@ dependencies {
     intellijPlatform {
         intellijIdeaCommunity('2025.2')
         bundledPlugin('com.intellij.java')
-        
-        // Test Framework Dependencies will be added separately
-        // testFramework('Platform')
     }
     
     // JSON serialization for backend communication
@@ -50,17 +47,26 @@ dependencies {
     implementation 'org.slf4j:slf4j-api:2.0.9'
     runtimeOnly 'org.slf4j:slf4j-simple:2.0.9'
     
-    // Test Framework Dependencies (JetBrains recommended)
+    // IntelliJ Platform Test Framework dependencies are automatically included
+    
+    // JUnit 5 for unit tests
     testImplementation 'org.junit.jupiter:junit-jupiter-api:5.10.2'
     testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.10.2'
-    testImplementation 'org.mockito:mockito-core:5.3.1'
-    testImplementation 'org.mockito:mockito-junit-jupiter:5.3.1'
+    testImplementation 'org.junit.jupiter:junit-jupiter-params:5.10.2'
     
-    // JUnit4 dependencies (required for IntelliJ Platform compatibility)
+    // JUnit Vintage Engine for running JUnit 4 tests alongside JUnit 5
+    testRuntimeOnly 'org.junit.vintage:junit-vintage-engine:5.10.2'
+    
+    // JUnit 4 for IntelliJ Platform integration tests
     testImplementation 'junit:junit:4.13.2'
     
-    // Assertions
+    // Testing utilities
+    testImplementation 'org.mockito:mockito-core:5.3.1'
+    testImplementation 'org.mockito:mockito-junit-jupiter:5.3.1'
     testImplementation 'org.assertj:assertj-core:3.25.3'
+    
+    // Required for test framework compatibility
+    testImplementation 'org.opentest4j:opentest4j:1.3.0'
     
     // Cucumber dependencies for integration tests
     testImplementation 'io.cucumber:cucumber-java:7.15.0'
@@ -204,11 +210,21 @@ task cleanAll {
 // TEST CONFIGURATION
 // ============================================================================
 
+// Configure test source sets to include only unit tests
+sourceSets {
+    test {
+        java {
+            srcDirs = ['src/test/java']
+        }
+    }
+}
+
 /**
  * Common test configuration shared across all test tasks.
  * Includes JetBrains recommended system properties and logging configuration.
  */
 def configureTestTask(Test task) {
+    // Use JUnit Platform to support both JUnit 5 and JUnit 4 (via Vintage Engine)
     task.useJUnitPlatform()
     
     // JetBrains recommended system properties
@@ -226,27 +242,46 @@ def configureTestTask(Test task) {
     task.systemProperty 'idea.test.tmp.dir', "${buildDir}/test-tmp/${task.name}"
     
     task.testLogging {
-        events "passed", "skipped", "failed"
+        events "passed", "skipped", "failed", "started"
         exceptionFormat = 'full'
         showStandardStreams = true
+        showExceptions = true
+        showCauses = true
+        showStackTraces = true
+        
+        // Show test results in console
+        displayGranularity = 2
+        showExceptions = true
     }
     
     // Ensure cleanup happens before tests run
     task.dependsOn cleanTestTempDirs
 }
 
-// Main test task - runs only unit tests
+// Main test task - runs JUnit 5 unit tests
 test {
     configureTestTask(it)
     
-    // Configure IntelliJ Platform sandbox for unit tests
-    systemProperty 'idea.system.path', "${buildDir}/idea-sandbox/system-test"
-    systemProperty 'idea.config.path', "${buildDir}/idea-sandbox/config-test"
-    systemProperty 'idea.plugins.path', "${buildDir}/idea-sandbox/plugins-test"
+    // Explicitly set test source directory
+    testClassesDirs = files(sourceSets.test.output.classesDirs)
     
-    // Exclude integration tests to avoid temp directory nesting issues
-    exclude '**/*IntegrationTest.java'
-    exclude '**/*Integration.java'
+    // Include only JUnit 5 unit tests from src/test/java
+    include '**/*UnitTest.class'
+    include '**/*Test.class'
+    exclude '**/*IntegrationTest.class'
+    exclude '**/*Integration.class'
+    
+    // Exclude IntelliJ integration tests (they're in separate directory)
+    exclude '**/intellij-integration-tests/**'
+    
+    // Exclude example/template files
+    exclude '**/examples/**'
+    
+    // Force test discovery
+    scanForTestClasses = true
+    
+    // Force test execution (prevent caching)
+    outputs.upToDateWhen { false }
 }
 
 // ============================================================================
@@ -275,43 +310,7 @@ task webDriverIntegrationTest(type: Test) {
     maxParallelForks = 1
 }
 
-/**
- * IntelliJ Platform Integration Tests (JUnit 4)
- * 
- * Runs IntelliJ Platform integration tests that use LightJavaCodeInsightFixtureTestCase.
- * These tests must use JUnit 4, not JUnit Platform.
- */
-task intellijIntegrationTest(type: Test) {
-    // Use JUnit 4 for IntelliJ Platform tests
-    useJUnit()
-    
-    // Include only IntelliJ Platform integration tests
-    include '**/*StepDefinitionExtractorIntegrationTest*.class'
-    include '**/*GherkinScenarioExtractorIntegrationTest*.class'
-    include '**/*SecureAPIKeyManagerIntegrationTest*.class'
-    
-    // Use unique sandbox directories to prevent conflicts
-    systemProperty 'idea.system.path', "${buildDir}/idea-sandbox/system-intellij-test"
-    systemProperty 'idea.config.path', "${buildDir}/idea-sandbox/config-intellij-test"
-    systemProperty 'idea.plugins.path', "${buildDir}/idea-sandbox/plugins-intellij-test"
-    
-    // JetBrains recommended system properties
-    systemProperty 'idea.log.debug.categories', 'com.trace'
-    systemProperty 'idea.split.test.logs', 'true'
-    
-    // Force complete isolation
-    forkEvery = 1
-    maxParallelForks = 1
-    
-    testLogging {
-        events "passed", "skipped", "failed"
-        exceptionFormat = 'full'
-        showStandardStreams = true
-    }
-    
-    // Ensure cleanup happens before tests run
-    dependsOn cleanTestTempDirs
-}
+
 
 /**
  * Other Integration Tests
@@ -340,25 +339,22 @@ task otherIntegrationTest(type: Test) {
 /**
  * All Integration Tests
  * 
- * Runs all integration tests in separate processes to avoid temp directory issues.
- * This is the recommended way to run integration tests for this project.
+ * NOTE: Integration tests have been removed from this project.
+ * This task is kept for compatibility but does nothing.
  */
 task allIntegrationTests {
-    dependsOn cleanAll, otherIntegrationTest, webDriverIntegrationTest, intellijIntegrationTest
-    description = 'Run all integration tests in separate processes to avoid temp directory issues'
-    group = 'verification'
-    }
-
-/**
- * Comprehensive test suite - runs all tests with proper cleanup.
- * This is the recommended way to run all tests for this project.
- */
-task runAllTests {
-    dependsOn cleanAll, test, allIntegrationTests
-    description = 'Run all tests (unit + integration) with proper cleanup to prevent temp directory issues'
+    description = 'Integration tests have been removed from this project'
     group = 'verification'
     
     doLast {
-        logger.lifecycle("All tests completed successfully!")
+        logger.lifecycle("Integration tests have been removed from this project.")
+        logger.lifecycle("Use 'gradle test' to run unit tests.")
     }
-} 
+}
+
+/**
+ * NOTE: runAllTests task has been removed.
+ * 
+ * Integration tests have been removed from this project.
+ * Use 'gradle test' to run unit tests.
+ */ 

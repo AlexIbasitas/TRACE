@@ -29,4 +29,12 @@ hs_err_pid*
 
 # OS specific
 .DS_Store
-Thumbs.db 
+Thumbs.db
+
+# IDE files
+.vscode/
+.cursor/
+
+# Temporary files
+*.tmp
+*.temp 
