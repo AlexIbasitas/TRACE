@@ -108,13 +108,11 @@ public final class ContainerHeightConstraintRemover {
     /**
      * Determines if a container should have its height constraint removed.
      * 
-     * <p>This method identifies containers that are likely constraining the height
-     * of ResponsiveHtmlPane components. It focuses on common container types that
-     * are known to cause height constraint issues, but excludes scroll-related
-     * containers that control the chat scroll behavior.</p>
-     * 
-     * @param container The container to evaluate
-     * @return true if the container should have its height constraint removed
+     * <p>This method checks if the container is a type that commonly constrains
+     * component height and should have those constraints removed.</p>
+     *
+     * @param container The container to check
+     * @return true if the container should have height constraints removed
      */
     private static boolean shouldRemoveHeightConstraint(Container container) {
         if (container == null) {
@@ -136,14 +134,13 @@ public final class ContainerHeightConstraintRemover {
     }
     
     /**
-     * Determines if a content panel container should have its height constraint removed.
+     * Determines if a content panel should have its height constraint removed.
      * 
-     * <p>This method is more restrictive than shouldRemoveHeightConstraint and only
-     * targets content panels (JPanel, Box) while explicitly excluding scroll containers
-     * to preserve chat scroll behavior.</p>
-     * 
-     * @param container The container to evaluate
-     * @return true if the container should have its height constraint removed
+     * <p>This method is more selective than shouldRemoveHeightConstraint and only
+     * targets content panels while preserving scroll containers.</p>
+     *
+     * @param container The container to check
+     * @return true if the container should have height constraints removed
      */
     private static boolean shouldRemoveHeightConstraintFromContentPanel(Container container) {
         if (container == null) {
@@ -163,12 +160,11 @@ public final class ContainerHeightConstraintRemover {
     }
     
     /**
-     * Removes height constraints from a container while preserving width constraints.
+     * Removes height constraints from a specific container.
      * 
-     * <p>This method sets the maximum height to Integer.MAX_VALUE while preserving
-     * the existing width constraint. This allows the container to expand vertically
-     * as needed while maintaining proper text wrapping behavior.</p>
-     * 
+     * <p>This method sets the maximum height of the container to Integer.MAX_VALUE
+     * to allow it to expand based on its content while preserving width constraints.</p>
+     *
      * @param container The container to remove height constraints from
      */
     private static void removeHeightConstraint(Container container) {
@@ -221,13 +217,13 @@ public final class ContainerHeightConstraintRemover {
     }
     
     /**
-     * Configures a scroll pane for optimal dynamic height behavior.
+     * Checks if a component has height constraints that should be removed.
      * 
-     * <p>This method ensures that a scroll pane is properly configured to handle
-     * dynamic height changes from ResponsiveHtmlPane components without causing
-     * text clipping or layout issues.</p>
-     * 
-     * @param scrollPane The scroll pane to configure
+     * <p>This method analyzes a component's sizing properties to determine
+     * if it has height constraints that are limiting its ability to size properly.</p>
+     *
+     * @param component The component to check
+     * @return true if the component has height constraints that should be removed
      */
     public static void configureScrollPaneForDynamicHeight(JScrollPane scrollPane) {
         if (scrollPane == null) {

@@ -18,14 +18,9 @@ import java.util.concurrent.CompletableFuture;
  * using IntelliJ Platform's built-in password management system. All keys are stored
  * encrypted and integrated with the user's system keychain.</p>
  * 
- * <p>Features:</p>
- * <ul>
- *   <li>Secure storage using IntelliJ's PasswordSafe</li>
- *   <li>Support for multiple AI services</li>
- *   <li>API key validation with service endpoints</li>
- *   <li>Automatic key encryption and decryption</li>
- *   <li>Integration with system keychain</li>
- * </ul>
+ * <p>The service supports multiple AI providers and provides validation capabilities
+ * to ensure stored keys are valid before use. All operations are logged for security
+ * auditing purposes.</p>
  * 
  * @author Alex Ibasitas
  * @since 1.0.0
@@ -43,6 +38,7 @@ public final class SecureAPIKeyManager {
     
     /**
      * Private constructor to prevent instantiation.
+     * This is a utility class and should not be instantiated.
      */
     private SecureAPIKeyManager() {
         throw new UnsupportedOperationException("Utility class cannot be instantiated");
@@ -56,7 +52,8 @@ public final class SecureAPIKeyManager {
      * Stores an API key securely for the specified AI service.
      * 
      * <p>The key is encrypted and stored using IntelliJ's PasswordSafe, which integrates
-     * with the system keychain for additional security.</p>
+     * with the system keychain for additional security. Empty or null keys are rejected
+     * and logged as warnings.</p>
      * 
      * @param serviceType the AI service type
      * @param apiKey the API key to store
@@ -64,7 +61,7 @@ public final class SecureAPIKeyManager {
      */
     public static boolean storeAPIKey(@NotNull AIServiceType serviceType, @NotNull String apiKey) {
         if (apiKey.trim().isEmpty()) {
-            LOG.warn("Attempted to store empty API key for service: " + serviceType);
+            LOG.warn("Attempted to store empty API key for service: " + serviceType.getDisplayName());
             return false;
         }
         
@@ -75,11 +72,11 @@ public final class SecureAPIKeyManager {
             
             PasswordSafe.getInstance().set(attributes, credentials);
             
-            LOG.info("API key stored successfully for service: " + serviceType.getDisplayName());
+            LOG.info("API key stored for service: " + serviceType.getDisplayName());
             return true;
             
         } catch (Exception e) {
-            LOG.error("Failed to store API key for service: " + serviceType, e);
+            LOG.error("Failed to store API key for service: " + serviceType.getDisplayName(), e);
             return false;
         }
     }
@@ -88,7 +85,8 @@ public final class SecureAPIKeyManager {
      * Retrieves the API key for the specified AI service.
      * 
      * <p>The key is decrypted from secure storage. Returns null if no key is found
-     * or if there's an error retrieving the key.</p>
+     * or if there's an error retrieving the key. Empty keys are treated as missing
+     * and logged as warnings.</p>
      * 
      * @param serviceType the AI service type
      * @return the API key, or null if not found or error occurred
@@ -100,7 +98,9 @@ public final class SecureAPIKeyManager {
             
             Credentials credentials = PasswordSafe.getInstance().get(attributes);
             if (credentials == null) {
-                LOG.debug("No API key found for service: " + serviceType.getDisplayName());
+                if (LOG.isDebugEnabled()) {
+                    LOG.debug("No API key found for service: " + serviceType.getDisplayName());
+                }
                 return null;
             }
             
@@ -110,11 +110,13 @@ public final class SecureAPIKeyManager {
                 return null;
             }
             
-            LOG.debug("API key retrieved successfully for service: " + serviceType.getDisplayName());
+            if (LOG.isDebugEnabled()) {
+                LOG.debug("API key retrieved for service: " + serviceType.getDisplayName());
+            }
             return apiKey;
             
         } catch (Exception e) {
-            LOG.error("Failed to retrieve API key for service: " + serviceType, e);
+            LOG.error("Failed to retrieve API key for service: " + serviceType.getDisplayName(), e);
             return null;
         }
     }
@@ -122,7 +124,8 @@ public final class SecureAPIKeyManager {
     /**
      * Removes the API key for the specified AI service.
      * 
-     * <p>The key is permanently deleted from secure storage. This operation cannot be undone.</p>
+     * <p>The key is permanently deleted from secure storage. This operation cannot be undone.
+     * The method logs successful removals and any errors that occur during the process.</p>
      * 
      * @param serviceType the AI service type
      * @return true if the key was removed successfully, false otherwise
@@ -134,11 +137,11 @@ public final class SecureAPIKeyManager {
             
             PasswordSafe.getInstance().set(attributes, null);
             
-            LOG.info("API key cleared successfully for service: " + serviceType.getDisplayName());
+            LOG.info("API key cleared for service: " + serviceType.getDisplayName());
             return true;
             
         } catch (Exception e) {
-            LOG.error("Failed to clear API key for service: " + serviceType, e);
+            LOG.error("Failed to clear API key for service: " + serviceType.getDisplayName(), e);
             return false;
         }
     }
@@ -146,115 +149,15 @@ public final class SecureAPIKeyManager {
     /**
      * Checks if an API key exists for the specified AI service.
      * 
+     * <p>This method verifies that a valid, non-empty API key exists for the service.
+     * It uses the getAPIKey method internally to perform the check.</p>
+     * 
      * @param serviceType the AI service type
-     * @return true if a key exists, false otherwise
+     * @return true if a valid key exists, false otherwise
      */
     public static boolean hasAPIKey(@NotNull AIServiceType serviceType) {
         String apiKey = getAPIKey(serviceType);
         return apiKey != null && !apiKey.trim().isEmpty();
-    }
-    
-    // ============================================================================
-    // API KEY VALIDATION METHODS
-    // ============================================================================
-    
-    /**
-     * Validates an API key by testing it against the service's API endpoint.
-     * 
-     * <p>This method performs an actual API call to verify the key is valid and
-     * has the necessary permissions. The validation is asynchronous to avoid
-     * blocking the UI thread.</p>
-     * 
-     * @param serviceType the AI service type
-     * @param apiKey the API key to validate
-     * @return a CompletableFuture that completes with true if valid, false otherwise
-     */
-    public static CompletableFuture<Boolean> validateAPIKey(@NotNull AIServiceType serviceType, @NotNull String apiKey) {
-        return CompletableFuture.supplyAsync(() -> {
-            try {
-                LOG.info("Validating API key for service: " + serviceType.getDisplayName());
-                
-                switch (serviceType) {
-                    case OPENAI:
-                        return validateOpenAIKey(apiKey);
-                    case GEMINI:
-                        return validateGeminiKey(apiKey);
-                    default:
-                        LOG.warn("Unknown service type for validation: " + serviceType);
-                        return false;
-                }
-                
-            } catch (Exception e) {
-                LOG.error("Error validating API key for service: " + serviceType, e);
-                return false;
-            }
-        });
-    }
-    
-    /**
-     * Validates an API key for the specified service using the stored key.
-     * 
-     * <p>This is a convenience method that retrieves the stored key and validates it.</p>
-     * 
-     * @param serviceType the AI service type
-     * @return a CompletableFuture that completes with true if valid, false otherwise
-     */
-    public static CompletableFuture<Boolean> validateStoredAPIKey(@NotNull AIServiceType serviceType) {
-        String apiKey = getAPIKey(serviceType);
-        if (apiKey == null) {
-            return CompletableFuture.completedFuture(false);
-        }
-        return validateAPIKey(serviceType, apiKey);
-    }
-    
-    // ============================================================================
-    // PRIVATE VALIDATION METHODS
-    // ============================================================================
-    
-    /**
-     * Validates an OpenAI API key by making a test request to the models endpoint.
-     * 
-     * @param apiKey the OpenAI API key to validate
-     * @return true if the key is valid, false otherwise
-     */
-    private static boolean validateOpenAIKey(@NotNull String apiKey) {
-        try {
-            // TODO: Implement actual OpenAI API validation
-            // For now, perform basic format validation
-            return apiKey.startsWith("sk-") && apiKey.length() > 20;
-            
-        } catch (Exception e) {
-            LOG.error("Error validating OpenAI API key", e);
-            return false;
-        }
-    }
-    
-    /**
-     * Validates a Google Gemini API key by making a test request to the models endpoint.
-     * 
-     * @param apiKey the Google Gemini API key to validate
-     * @return true if the key is valid, false otherwise
-     */
-    private static boolean validateGeminiKey(@NotNull String apiKey) {
-        try {
-            // TODO: Implement actual Gemini API validation
-            // For now, perform basic format validation
-            boolean hasValidLength = apiKey.length() > 20;
-            boolean hasNoSpaces = !apiKey.contains(" ");
-            
-            boolean isValid = hasValidLength && hasNoSpaces;
-            
-            LOG.info("Gemini key validation - Length: " + apiKey.length() + 
-                    " (>20: " + hasValidLength + "), Contains spaces: " + hasNoSpaces + 
-                    ", Valid: " + isValid + 
-                    ", Key prefix: " + apiKey.substring(0, Math.min(10, apiKey.length())));
-            
-            return isValid;
-            
-        } catch (Exception e) {
-            LOG.error("Error validating Gemini API key", e);
-            return false;
-        }
     }
     
     // ============================================================================
@@ -264,8 +167,12 @@ public final class SecureAPIKeyManager {
     /**
      * Gets the service-specific key for PasswordSafe storage.
      * 
+     * <p>This method maps service types to their corresponding storage keys used
+     * by the PasswordSafe system. It throws an exception for unknown service types.</p>
+     * 
      * @param serviceType the AI service type
      * @return the service key for secure storage
+     * @throws IllegalArgumentException if the service type is not supported
      */
     private static String getServiceKey(@NotNull AIServiceType serviceType) {
         switch (serviceType) {
@@ -274,12 +181,15 @@ public final class SecureAPIKeyManager {
             case GEMINI:
                 return GEMINI_KEY;
             default:
-                throw new IllegalArgumentException("Unsupported service type: " + serviceType);
+                throw new IllegalArgumentException("Unknown service type: " + serviceType);
         }
     }
     
     /**
      * Gets a summary of API key status for all supported services.
+     * 
+     * <p>This method checks the status of all configured AI services and returns
+     * a human-readable summary of which services have API keys configured.</p>
      * 
      * @return a string describing the status of all API keys
      */
@@ -300,7 +210,9 @@ public final class SecureAPIKeyManager {
     /**
      * Clears all stored API keys for all services.
      * 
-     * <p>Use with caution - this will remove all API keys and require reconfiguration.</p>
+     * <p>This method removes all API keys from secure storage. Use with caution
+     * as this will require reconfiguration of all AI services. The method logs
+     * the overall success or failure of the operation.</p>
      * 
      * @return true if all keys were cleared successfully, false if any failed
      */
@@ -313,7 +225,7 @@ public final class SecureAPIKeyManager {
             }
         }
         
-        LOG.info("Cleared all API keys. Success: " + allCleared);
+        LOG.info("Cleared all API keys - Success: " + allCleared);
         return allCleared;
     }
 } 

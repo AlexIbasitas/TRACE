@@ -20,16 +20,17 @@ import java.util.regex.Pattern;
 /**
  * Extracts step definition method information using IntelliJ's PSI.
  * 
- * <p>This class uses PSI-based navigation to find Cucumber step definitions by:</p>
- * <ul>
- *   <li>Extracting Java step definition file path from stack trace</li>
- *   <li>Navigating directly to the failure location using file path and line number</li>
- *   <li>Finding the containing method at the failure location</li>
- *   <li>Extracting method implementation and parameters</li>
- *   <li>Providing accurate source file and line number information</li>
- * </ul>
+ * <p>This class uses PSI-based navigation to find Cucumber step definitions by extracting
+ * Java step definition file paths from stack traces and navigating directly to failure
+ * locations. It provides accurate source file and line number information using
+ * IntelliJ's built-in code analysis.</p>
  * 
- * <p>Follows JetBrains best practices for PSI-based code analysis and thread safety.</p>
+ * <p>The extractor follows IntelliJ Platform best practices by using PSI navigation
+ * to the exact failure location, extracting step definitions from actual methods,
+ * and avoiding fragile pattern matching in favor of IntelliJ's built-in code analysis.</p>
+ * 
+ * @author Alex Ibasitas
+ * @since 1.0.0
  */
 public class StepDefinitionExtractor {
     private static final Logger LOG = Logger.getInstance(StepDefinitionExtractor.class);
@@ -80,14 +81,10 @@ public class StepDefinitionExtractor {
      * This method extracts the Java step definition file path from the stack trace
      * and navigates to the actual method that contains the step definition.
      * 
-     * <p>This method follows IntelliJ Platform best practices by:</p>
-     * <ul>
-     *   <li>Extracting Java file path from stack trace (not feature file path)</li>
-     *   <li>Using PSI navigation to the exact failure location</li>
-     *   <li>Extracting step definition from the actual method that failed</li>
-     *   <li>Avoiding fragile pattern matching</li>
-     *   <li>Using IntelliJ's built-in code analysis</li>
-     * </ul>
+     * <p>This method follows IntelliJ Platform best practices by extracting Java file paths
+     * from stack traces (not feature file paths), using PSI navigation to exact failure
+     * locations, extracting step definitions from actual methods that failed, avoiding
+     * fragile pattern matching, and using IntelliJ's built-in code analysis.</p>
      *
      * @param stackTrace The stack trace containing the failure information
      * @return StepDefinitionInfo containing method details, or null if not found

@@ -146,12 +146,11 @@ public final class MarkdownRenderer {
                 // Add background color for code blocks using theme-aware colors
                 String codeBackgroundColor = ThemeUtils.toHex(ThemeUtils.codeBackground());
                 docSheet.addRule("pre { background-color:" + codeBackgroundColor + "; padding:8px; border-radius:4px; }");
-                LOG.info("Applied pre background color rule: " + codeBackgroundColor);
                 
                 // Add background color for inline code blocks
                 String inlineCodeBackgroundColor = ThemeUtils.toHex(ThemeUtils.inlineCodeBackground());
                 docSheet.addRule("code { background-color:" + inlineCodeBackgroundColor + "; padding:2px 4px; border-radius:2px; }");
-                LOG.info("Applied code background color rule: " + inlineCodeBackgroundColor);
+                
                 // Set base body text size to use IDE's default font size
                 int baseFontSize = UIUtil.getLabelFont().getSize();
                 docSheet.addRule("body, p, li, ul, ol, span, div, td, th, a, b, i { font-size:" + baseFontSize + "px; }");
@@ -163,43 +162,20 @@ public final class MarkdownRenderer {
                 // Add slightly larger bottom padding to avoid last-line clipping during dynamic wrap
                 docSheet.addRule("body { padding-bottom:12px; }");
                 editorPane.setDocument(doc);
-                logHtmlKitAndStyles(editorPane, kit, docSheet);
             } catch (Exception ex) {
                 LOG.warn("Failed to set custom HTMLEditorKit stylesheet: " + ex.getMessage());
             }
 
             // Set the styled HTML content (with safe post-processing)
             String styledHtml = wrapHtmlWithStyling(html);
-            LOG.info("Setting HTML content with font-size: 14px in CSS");
-            LOG.info("HTML content length: " + styledHtml.length());
-            LOG.info("HTML contains font-size: " + styledHtml.contains("font-size: 14px"));
-            
-            // Log a sample of the HTML to see what's being set
-            if (styledHtml.length() > 200) {
-                LOG.info("HTML sample (first 200 chars): " + styledHtml.substring(0, 200));
-            }
-            
             editorPane.setText(styledHtml);
+            
             // Trigger reflow after text is set
             ApplicationManager.getApplication().invokeLater(() -> {
                 if (editorPane instanceof ResponsiveHtmlPane) {
                     ((ResponsiveHtmlPane) editorPane).applyWidthFromParent();
                 }
-                try {
-                    logDocumentStyles(editorPane);
-                } catch (Exception e) {
-                    LOG.warn("Post-setText style logging failed: " + e.getMessage());
-                }
             });
-            
-            // Log the font after setting HTML content
-            LOG.info("JEditorPane font after setting HTML: " + editorPane.getFont());
-            LOG.info("JEditorPane font size after HTML: " + editorPane.getFont().getSize());
-            
-            // Also log the actual text content to see if HTML is being rendered
-            String actualText = editorPane.getText();
-            LOG.info("JEditorPane actual text length: " + actualText.length());
-            LOG.info("JEditorPane text sample: " + (actualText.length() > 100 ? actualText.substring(0, 100) : actualText));
 
             return editorPane;
 
@@ -215,9 +191,6 @@ public final class MarkdownRenderer {
      * @param editorPane The JEditorPane to configure
      */
     private static void configureEditorPane(JEditorPane editorPane) {
-        // Apply consistent styling to match other chat elements
-        LOG.info("Configuring JEditorPane with larger font to match input area and initial failure message");
-        
         // Use JetBrains standard font that responds to IDE font size changes
         Font dynamicFont = UIUtil.getLabelFont();
         editorPane.setFont(dynamicFont);
@@ -227,39 +200,6 @@ public final class MarkdownRenderer {
 
         // Enable proper HTML rendering
         editorPane.putClientProperty("JEditorPane.honorDisplayProperties", Boolean.TRUE);
-
-        // Log the final font after configuration
-        LOG.info("JEditorPane font after configuration: " + editorPane.getFont());
-        LOG.info("JEditorPane font size: " + editorPane.getFont().getSize());
-
-        // JEditorPane doesn't have setLineWrap/setWrapStyleWord - these are JTextArea methods
-        // JEditorPane handles wrapping automatically with its layout
-    }
-
-    private static void logHtmlKitAndStyles(JEditorPane pane, HTMLEditorKit kit, StyleSheet ss) {
-        try {
-            LOG.info("HTML Kit class: " + kit.getClass().getName());
-            LOG.info("Pane EditorKit class: " + (pane.getEditorKit() != null ? pane.getEditorKit().getClass().getName() : "null"));
-            LOG.info("Custom StyleSheet rules applied: * { color:#ffffff } and code/pre dimming");
-        } catch (Exception e) {
-            LOG.warn("Failed logging kit/styles: " + e.getMessage());
-        }
-    }
-
-    private static void logDocumentStyles(JEditorPane pane) {
-        try {
-            javax.swing.text.Document doc = pane.getDocument();
-            LOG.info("Document class: " + (doc != null ? doc.getClass().getName() : "null"));
-            LOG.info("Foreground color of pane: " + pane.getForeground());
-            // Dump a small sample of HTML actually stored to verify tags
-            String text = pane.getText();
-            LOG.info("Pane HTML length: " + (text != null ? text.length() : -1));
-            if (text != null) {
-                LOG.info("Pane HTML sample: " + text.substring(0, Math.min(200, text.length())));
-            }
-        } catch (Exception e) {
-            LOG.warn("Failed logging document styles: " + e.getMessage());
-        }
     }
 
     /**
@@ -272,7 +212,6 @@ public final class MarkdownRenderer {
      * @return HTML content with professional styling
      */
     private static String wrapHtmlWithStyling(String html) {
-        LOG.info("Wrapping HTML with styling - input HTML length: " + html.length());
         // Keep HTML minimal and safe for Swing; prefer global stylesheet for colors
         String safeHtml = convertToLegacyHtmlTags(html);
         safeHtml = escapeHtmlCommentOpeners(safeHtml);
@@ -290,8 +229,6 @@ public final class MarkdownRenderer {
         int baseFontSize = UIUtil.getLabelFont().getSize();
         String styledHtml = "<html><head></head><body style=\"color:" + textColor + "; font-size:" + baseFontSize + "px;\">" + safeHtml + "</body></html>";
         
-        LOG.info("Final styled HTML length: " + styledHtml.length());
-        LOG.info("Final HTML contains font-size: " + styledHtml.contains("font-size: 14px"));
         return styledHtml;
     }
 
@@ -357,6 +294,14 @@ public final class MarkdownRenderer {
         }
     }
 
+    /**
+     * Applies a specific style to heading tags of a given level.
+     *
+     * @param html The HTML content to process
+     * @param level The heading level (1-6)
+     * @param styleToAppend The CSS style to append
+     * @return The HTML with applied heading styles
+     */
     private static String applyHeadingStyleForLevel(String html, int level, String styleToAppend) {
         String tag = "h" + level;
         // Match the opening tag with any attributes: <hN ...>
@@ -423,6 +368,14 @@ public final class MarkdownRenderer {
         }
     }
 
+    /**
+     * Replaces a single heading level with styled divs.
+     *
+     * @param html The HTML content to process
+     * @param level The heading level to replace
+     * @param divStyle The CSS style for the div
+     * @return The HTML with replaced headings
+     */
     private static String replaceSingleHeadingLevel(String html, int level, String divStyle) {
         String tag = "h" + level;
         Pattern pattern = Pattern.compile("(?is)<" + tag + "\\b[^>]*>(.*?)</" + tag + ">" );
@@ -485,6 +438,12 @@ public final class MarkdownRenderer {
         }
     }
 
+    /**
+     * Escapes HTML comment openers to avoid Swing parser errors.
+     *
+     * @param html The HTML content to process
+     * @return The HTML with escaped comment openers
+     */
     private static String escapeHtmlCommentOpeners(String html) {
         // Replace <!-- with &lt;!-- to avoid Swing parser "Unclosed comment" errors
         try {
@@ -494,6 +453,12 @@ public final class MarkdownRenderer {
         }
     }
 
+    /**
+     * Converts modern HTML tags to legacy tags for Swing compatibility.
+     *
+     * @param html The HTML content to convert
+     * @return The HTML with legacy tags
+     */
     private static String convertToLegacyHtmlTags(String html) {
         try {
             String result = html;
@@ -510,6 +475,11 @@ public final class MarkdownRenderer {
 
     /**
      * Breaks long non-whitespace tokens by inserting zero-width spaces (&#8203;) at safe intervals.
+     *
+     * @param text The text to process
+     * @param longTokenThreshold The threshold for considering a token long
+     * @param insertEvery The interval for inserting breaks
+     * @return The text with inserted breaks
      */
     private static String breakLongTokens(String text, int longTokenThreshold, int insertEvery) {
         StringBuilder output = new StringBuilder(text.length() + 32);
@@ -616,15 +586,18 @@ public final class MarkdownRenderer {
                     int baseFontSize = UIUtil.getLabelFont().getSize();
                     int dynamicBuffer = Math.max(16, baseFontSize);
                     
-                    // Basic logging for debugging text rendering issues (avoiding recursive calls)
-                    LOG.debug("ResponsiveHtmlPane.getPreferredSize() - targetWidth: " + targetWidth + 
-                             ", baseFontSize: " + baseFontSize + ", dynamicBuffer: " + dynamicBuffer + 
-                             ", final height: " + (pref.height + dynamicBuffer));
+                    if (LOG.isDebugEnabled()) {
+                        LOG.debug("ResponsiveHtmlPane.getPreferredSize() - targetWidth: " + targetWidth + 
+                                 ", baseFontSize: " + baseFontSize + ", dynamicBuffer: " + dynamicBuffer + 
+                                 ", final height: " + (pref.height + dynamicBuffer));
+                    }
                     
                     // Add dynamic buffer to prevent last-line clipping during text wrapping
                     return new Dimension(targetWidth, pref.height + dynamicBuffer);
                 } else {
-                    LOG.debug("ResponsiveHtmlPane.getPreferredSize() - targetWidth <= 0: " + targetWidth);
+                    if (LOG.isDebugEnabled()) {
+                        LOG.debug("ResponsiveHtmlPane.getPreferredSize() - targetWidth <= 0: " + targetWidth);
+                    }
                 }
             } catch (Exception ex) {
                 LOG.warn("ResponsiveHtmlPane.getPreferredSize() - Exception: " + ex.getMessage(), ex);
@@ -633,8 +606,6 @@ public final class MarkdownRenderer {
             return super.getPreferredSize();
         }
         
-
-
         @Override
         public Dimension getMaximumSize() {
             Dimension pref = getPreferredSize();
@@ -647,6 +618,9 @@ public final class MarkdownRenderer {
             ApplicationManager.getApplication().invokeLater(this::applyWidthFromParent);
         }
 
+        /**
+         * Applies width from parent container and recalculates preferred size.
+         */
         void applyWidthFromParent() {
             try {
                 int targetWidth = computeTargetWidth();
@@ -656,7 +630,9 @@ public final class MarkdownRenderer {
                 }
                 
                 if (targetWidth != lastAppliedWidth) {
-                    LOG.debug("ResponsiveHtmlPane.applyWidthFromParent() - width change: " + lastAppliedWidth + " -> " + targetWidth);
+                    if (LOG.isDebugEnabled()) {
+                        LOG.debug("ResponsiveHtmlPane.applyWidthFromParent() - width change: " + lastAppliedWidth + " -> " + targetWidth);
+                    }
                     
                     // First set an arbitrarily large height to allow proper preferred size computation
                     super.setSize(new Dimension(targetWidth, Integer.MAX_VALUE));
@@ -678,6 +654,11 @@ public final class MarkdownRenderer {
             }
         }
 
+        /**
+         * Computes the target width based on parent container constraints.
+         *
+         * @return The computed target width, or -1 if unable to determine
+         */
         private int computeTargetWidth() {
             // Prefer enclosing viewport width and subtract cumulative insets of ancestor containers
             Container c = this;
@@ -763,20 +744,19 @@ public final class MarkdownRenderer {
                text.contains("++") ||          // Underline
                text.contains("http://") ||     // Auto-links
                text.contains("https://") ||    // Auto-links
-                               text.contains("~~"); // Strikethrough
+               text.contains("~~");            // Strikethrough
     }
 
     /**
      * Re-applies the current theme stylesheet to an existing HTML JEditorPane.
      * Uses dynamic theme-aware colors instead of hardcoded values.
+     *
+     * @param pane The JEditorPane to update
      */
     public static void reapplyThemeStyles(JEditorPane pane) {
         if (pane == null) return;
         try {
-            LOG.info("=== REAPPLYING THEME STYLES TO JEDITORPANE ===");
-            LOG.info("Current theme colors:");
-            LOG.info("  - Panel background: " + ThemeUtils.panelBackground());
-            LOG.info("  - Text foreground: " + ThemeUtils.textForeground());
+            LOG.info("Reapplying theme styles to JEditorPane");
             
             // DON'T set component colors - they override HTML CSS
             // Let HTML CSS handle all color styling
@@ -799,7 +779,7 @@ public final class MarkdownRenderer {
             pane.revalidate();
             pane.repaint();
             
-            LOG.info("=== THEME STYLES REAPPLIED ===");
+            LOG.info("Theme styles reapplied successfully");
         } catch (Exception e) {
             LOG.warn("Error reapplying theme styles: " + e.getMessage(), e);
         }
@@ -807,6 +787,9 @@ public final class MarkdownRenderer {
 
     /**
      * Extracts the content between <body> tags from HTML.
+     *
+     * @param html The HTML content to parse
+     * @return The body content, or null if not found
      */
     private static String extractBodyContent(String html) {
         try {
@@ -925,8 +908,10 @@ public final class MarkdownRenderer {
             // Consider a line "wide" if it's longer than 80 characters
             // This is a reasonable threshold for code readability
             if (line.length() > 80) {
-                LOG.info("Detected wide code line (" + line.length() + " chars): " + 
-                        (line.length() > 50 ? line.substring(0, 50) + "..." : line));
+                if (LOG.isDebugEnabled()) {
+                    LOG.debug("Detected wide code line (" + line.length() + " chars): " + 
+                            (line.length() > 50 ? line.substring(0, 50) + "..." : line));
+                }
                 return true;
             }
         }

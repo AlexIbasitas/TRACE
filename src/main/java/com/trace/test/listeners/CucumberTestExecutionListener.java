@@ -105,7 +105,9 @@ public class CucumberTestExecutionListener implements SMTRunnerEventsListener {
      */
     public void onTestOutput(SMTestProxy test, String outputLine) {
         if (test != null && outputLine != null) {
-            LOG.debug("Capturing test output for: " + test.getName());
+            if (LOG.isDebugEnabled()) {
+                LOG.debug("Capturing test output for: " + test.getName());
+            }
             TestOutputCaptureListener.captureTestOutput(test, outputLine);
         }
     }
@@ -121,7 +123,9 @@ public class CucumberTestExecutionListener implements SMTRunnerEventsListener {
         if (test != null && outputLine != null) {
             String contextualOutput = "[" + context + "] " + outputLine;
             TestOutputCaptureListener.captureTestOutput(test, contextualOutput);
-            LOG.debug("Captured contextual output for: " + test.getName() + " - " + context);
+            if (LOG.isDebugEnabled()) {
+                LOG.debug("Captured contextual output for: " + test.getName() + " - " + context);
+            }
         }
     }
 
@@ -169,10 +173,12 @@ public class CucumberTestExecutionListener implements SMTRunnerEventsListener {
             System.setOut(capturedOut);
             System.setErr(capturedErr);
             
-            LOG.debug("Output capture started for test: " + test.getName());
+            if (LOG.isDebugEnabled()) {
+                LOG.debug("Output capture started for test: " + test.getName());
+            }
             
         } catch (Exception e) {
-            LOG.warn("Error setting up output capture: " + e.getMessage());
+            LOG.warn("Error setting up output capture: " + e.getMessage(), e);
         }
     }
 
@@ -216,17 +222,14 @@ public class CucumberTestExecutionListener implements SMTRunnerEventsListener {
             testErrorStreams.remove(test);
             
         } catch (Exception e) {
-            LOG.warn("Error capturing test streams: " + e.getMessage());
+            LOG.warn("Error capturing test streams: " + e.getMessage(), e);
         }
     }
 
     // Required interface methods - minimal implementation for unused events
     @Override
     public void onTestingStarted(SMTestProxy.SMRootTestProxy root) {
-        LOG.info("=== TEST RUN STARTED ===");
-        LOG.info("Root Test: " + (root != null ? root.getName() : "null"));
-        LOG.info("Timestamp: " + System.currentTimeMillis());
-        LOG.info("=== END TEST RUN STARTED ===");
+        LOG.info("Test run started: " + (root != null ? root.getName() : "null"));
         
         // Notify TriagePanel that a new test run has started
         if (project != null) {
@@ -235,9 +238,11 @@ public class CucumberTestExecutionListener implements SMTRunnerEventsListener {
                     TriagePanelView triagePanel = getTriagePanelForProject(project);
                     if (triagePanel != null) {
                         triagePanel.onTestRunStarted();
-                        LOG.info("Successfully notified TriagePanel of new test run");
+                        LOG.info("TriagePanel notified of test run start");
                     } else {
-                        LOG.debug("TriagePanel not found for project: " + project.getName());
+                        if (LOG.isDebugEnabled()) {
+                            LOG.debug("TriagePanel not found for project: " + project.getName());
+                        }
                     }
                 } catch (Exception e) {
                     LOG.error("Error notifying TriagePanel of test run start", e);
@@ -306,7 +311,9 @@ public class CucumberTestExecutionListener implements SMTRunnerEventsListener {
     @Override
     public void onTestStarted(SMTestProxy test) {
         if (test != null) {
-            LOG.debug("Test started: " + test.getName());
+            if (LOG.isDebugEnabled()) {
+                LOG.debug("Test started: " + test.getName());
+            }
             
             // Initialize output capture for this test
             TestOutputCaptureListener.captureTestOutput(test, "=== Test Started ===\n");
@@ -317,7 +324,9 @@ public class CucumberTestExecutionListener implements SMTRunnerEventsListener {
     @Override
     public void onTestFinished(SMTestProxy test) {
         if (test != null) {
-            LOG.debug("Test finished: " + test.getName() + " (Status: " + test.getMagnitudeInfo() + ")");
+            if (LOG.isDebugEnabled()) {
+                LOG.debug("Test finished: " + test.getName() + " (Status: " + test.getMagnitudeInfo() + ")");
+            }
             
             // Capture any streams before finishing
             captureTestStreams(test);
@@ -329,7 +338,9 @@ public class CucumberTestExecutionListener implements SMTRunnerEventsListener {
 
     @Override
     public void onTestFailed(SMTestProxy test) {
-        LOG.debug("Test failed: " + (test != null ? test.getName() : "null"));
+        if (LOG.isDebugEnabled()) {
+            LOG.debug("Test failed: " + (test != null ? test.getName() : "null"));
+        }
         
         // Capture comprehensive test output for failed test
         if (test != null) {
@@ -439,7 +450,9 @@ public class CucumberTestExecutionListener implements SMTRunnerEventsListener {
                 return;
             }
             
-            LOG.debug("Successfully extracted failure info for scenario: " + basicFailureInfo.getScenarioName());
+            if (LOG.isDebugEnabled()) {
+                LOG.debug("Successfully extracted failure info for scenario: " + basicFailureInfo.getScenarioName());
+            }
             
             // Enhance with step definition information using stack trace-based extraction
             StepDefinitionInfo stepDefInfo = null;
@@ -462,7 +475,9 @@ public class CucumberTestExecutionListener implements SMTRunnerEventsListener {
                 stepDefInfo = finalStepDefinitionExtractor.extractStepDefinition(stackTrace);
                 
                 if (stepDefInfo != null) {
-                    LOG.debug("Step definition extraction successful - Method: " + stepDefInfo.getMethodName());
+                    if (LOG.isDebugEnabled()) {
+                        LOG.debug("Step definition extraction successful - Method: " + stepDefInfo.getMethodName());
+                    }
                     // Use step definition info for better source location
                     sourceFilePath = stepDefInfo.getSourceFilePath();
                     lineNumber = stepDefInfo.getLineNumber();
@@ -534,21 +549,27 @@ public class CucumberTestExecutionListener implements SMTRunnerEventsListener {
             return false;
         }
         
-        LOG.debug("Attempting to notify TriagePanel for project: " + currentProject.getName());
+        if (LOG.isDebugEnabled()) {
+            LOG.debug("Attempting to notify TriagePanel for project: " + currentProject.getName());
+        }
         
         // Get the TriagePanel instance for this project
         TriagePanelView triagePanel = getTriagePanelForProject(currentProject);
         if (triagePanel == null) {
-            LOG.debug("TriagePanel not found for project: " + currentProject.getName());
+            if (LOG.isDebugEnabled()) {
+                LOG.debug("TriagePanel not found for project: " + currentProject.getName());
+            }
             return false;
         }
         
         // Run on EDT to ensure thread safety and get the result
         final boolean[] wasProcessed = {false};
         try {
-            com.intellij.openapi.application.ApplicationManager.getApplication().invokeAndWait(() -> {
+            ApplicationManager.getApplication().invokeAndWait(() -> {
                 try {
-                    LOG.debug("Found TriagePanel, updating with failure info");
+                    if (LOG.isDebugEnabled()) {
+                        LOG.debug("Found TriagePanel, updating with failure info");
+                    }
                     wasProcessed[0] = triagePanel.updateFailure(failureInfo);
                 } catch (Exception e) {
                     LOG.error("Error notifying panel: " + e.getMessage(), e);
@@ -616,12 +637,10 @@ public class CucumberTestExecutionListener implements SMTRunnerEventsListener {
         
         // NOTE: AI analysis is now handled directly by TriagePanelView to avoid duplication
         // The TriagePanelView will handle the AI analysis when updateFailure() is called
-        LOG.info("=== AI ANALYSIS DELEGATED TO TRIAGE PANEL ===");
+        LOG.info("AI analysis delegated to TriagePanel");
         LOG.info("Failure: " + failureInfo.getScenarioName());
         LOG.info("Failed Step: " + failureInfo.getFailedStepText());
         LOG.info("Error Message: " + failureInfo.getErrorMessage());
-        LOG.info("AI analysis will be handled by TriagePanelView to avoid duplication");
-        LOG.info("=== END AI ANALYSIS DELEGATION ===");
         
         // No longer trigger AI analysis here - it's handled by TriagePanelView
         // This prevents duplicate AI responses and token waste
@@ -640,13 +659,15 @@ public class CucumberTestExecutionListener implements SMTRunnerEventsListener {
         }
         
         // Run on EDT to ensure thread safety
-        com.intellij.openapi.application.ApplicationManager.getApplication().invokeLater(() -> {
+        ApplicationManager.getApplication().invokeLater(() -> {
             try {
                 TriagePanelView triagePanel = getTriagePanelForProject(currentProject);
                 if (triagePanel != null) {
                     triagePanel.displayAIAnalysisResult(result);
                 } else {
-                    LOG.debug("TriagePanel not found for project: " + currentProject.getName());
+                    if (LOG.isDebugEnabled()) {
+                        LOG.debug("TriagePanel not found for project: " + currentProject.getName());
+                    }
                 }
             } catch (Exception e) {
                 LOG.error("Error displaying AI analysis result: " + e.getMessage(), e);
@@ -667,13 +688,15 @@ public class CucumberTestExecutionListener implements SMTRunnerEventsListener {
         }
         
         // Run on EDT to ensure thread safety
-        com.intellij.openapi.application.ApplicationManager.getApplication().invokeLater(() -> {
+        ApplicationManager.getApplication().invokeLater(() -> {
             try {
                 TriagePanelView triagePanel = getTriagePanelForProject(currentProject);
                 if (triagePanel != null) {
                     triagePanel.displayAIAnalysisError(errorMessage);
                 } else {
-                    LOG.debug("TriagePanel not found for project: " + currentProject.getName());
+                    if (LOG.isDebugEnabled()) {
+                        LOG.debug("TriagePanel not found for project: " + currentProject.getName());
+                    }
                 }
             } catch (Exception e) {
                 LOG.error("Error displaying AI analysis error: " + e.getMessage(), e);
@@ -719,7 +742,7 @@ public class CucumberTestExecutionListener implements SMTRunnerEventsListener {
         try {
             return com.intellij.openapi.project.ProjectManager.getInstance().getOpenProjects()[0];
         } catch (Exception e) {
-            LOG.warn("Could not get current project: " + e.getMessage());
+            LOG.warn("Could not get current project: " + e.getMessage(), e);
             return null;
         }
     }

@@ -100,6 +100,11 @@ public enum AIServiceType {
         return OPENAI;
     }
     
+    /**
+     * Returns the display name for this service type.
+     * 
+     * @return the human-readable display name
+     */
     @Override
     public String toString() {
         return displayName;

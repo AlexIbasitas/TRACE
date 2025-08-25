@@ -74,8 +74,10 @@ public class TriagePanelToolWindowFactory implements ToolWindowFactory {
             
             // Store the panel instance for this project
             panelInstances.put(project, triagePanelView);
-            LOG.debug("Stored TriagePanelView for project: " + project.getName() + 
-                     " (Total instances: " + panelInstances.size() + ")");
+            if (LOG.isDebugEnabled()) {
+                LOG.debug("Stored TriagePanelView for project: " + project.getName() + 
+                         " (Total instances: " + panelInstances.size() + ")");
+            }
             
             // Register the test execution listener for this project
             registerTestExecutionListener(project);
@@ -172,8 +174,12 @@ public class TriagePanelToolWindowFactory implements ToolWindowFactory {
         
         TriagePanelView removedPanel = panelInstances.remove(project);
         if (removedPanel != null) {
-            LOG.info("Removed panel instance for project: " + project.getName() + 
-                    " (Remaining instances: " + panelInstances.size() + ")");
+            if (LOG.isDebugEnabled()) {
+                LOG.info("Removed panel instance for project: " + project.getName() + 
+                        " (Remaining instances: " + panelInstances.size() + ")");
+            } else {
+                LOG.info("Removed panel instance for project: " + project.getName());
+            }
         } else {
             LOG.debug("No panel instance found to remove for project: " + project.getName());
         }

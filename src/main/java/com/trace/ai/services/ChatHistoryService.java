@@ -3,8 +3,7 @@ package com.trace.ai.services;
 import com.intellij.openapi.components.PersistentStateComponent;
 import com.intellij.openapi.components.State;
 import com.intellij.openapi.components.Storage;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.openapi.project.Project;
 import com.trace.ai.models.UserQuery;
 import org.jetbrains.annotations.NotNull;
@@ -49,7 +48,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 )
 public final class ChatHistoryService implements PersistentStateComponent<ChatHistoryService.State> {
     
-    private static final Logger LOG = LoggerFactory.getLogger(ChatHistoryService.class);
+    private static final Logger LOG = Logger.getInstance(ChatHistoryService.class);
     
     /**
      * Default window size for user messages (configurable).

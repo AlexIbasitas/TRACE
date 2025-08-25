@@ -78,7 +78,6 @@ public final class AISettings implements PersistentStateComponent<AISettings.Sta
      * Private constructor to enforce singleton pattern.
      */
     private AISettings() {
-        LOG.debug("AISettings service initialized");
     }
     
     /**
@@ -92,13 +91,11 @@ public final class AISettings implements PersistentStateComponent<AISettings.Sta
     
     @Override
     public @Nullable State getState() {
-        LOG.debug("Getting AISettings state");
         return myState;
     }
     
     @Override
     public void loadState(@NotNull State state) {
-        LOG.debug("Loading AISettings state");
         myState = state;
     }
     
@@ -121,17 +118,26 @@ public final class AISettings implements PersistentStateComponent<AISettings.Sta
      * @param enabled true to enable AI features, false to disable
      */
     public void setAIEnabled(boolean enabled) {
-        LOG.info("Setting AI enabled: " + enabled);
+        LOG.info("AI features " + (enabled ? "enabled" : "disabled"));
         myState.aiEnabled = enabled;
     }
 
-    // New, clearer naming for TRACE power
+    /**
+     * Checks if TRACE features are enabled.
+     * 
+     * @return true if TRACE features are enabled, false otherwise
+     */
     public boolean isTraceEnabled() {
         return myState.aiEnabled;
     }
 
+    /**
+     * Sets whether TRACE features are enabled.
+     * 
+     * @param enabled true to enable TRACE features, false to disable
+     */
     public void setTraceEnabled(boolean enabled) {
-        LOG.info("Setting TRACE enabled: " + enabled);
+        LOG.info("TRACE features " + (enabled ? "enabled" : "disabled"));
         myState.aiEnabled = enabled;
     }
     
@@ -150,7 +156,7 @@ public final class AISettings implements PersistentStateComponent<AISettings.Sta
      * @param consentGiven true if user has given consent, false otherwise
      */
     public void setUserConsentGiven(boolean consentGiven) {
-        LOG.info("Setting user consent: " + consentGiven);
+        LOG.info("User consent " + (consentGiven ? "granted" : "revoked"));
         myState.userConsentGiven = consentGiven;
         
         // Record consent timestamp for audit trail, clear when consent revoked
@@ -173,7 +179,7 @@ public final class AISettings implements PersistentStateComponent<AISettings.Sta
         try {
             return LocalDateTime.parse(myState.consentDate);
         } catch (Exception e) {
-            LOG.warn("Failed to parse consent date: " + myState.consentDate, e);
+            LOG.warn("Invalid consent date format: " + myState.consentDate, e);
             return null;
         }
     }
@@ -199,7 +205,7 @@ public final class AISettings implements PersistentStateComponent<AISettings.Sta
      */
     public void setPreferredAIService(AIServiceType serviceType) {
         String serviceId = serviceType != null ? serviceType.getId() : AIServiceType.getDefault().getId();
-        LOG.info("Setting preferred AI service: " + serviceId);
+        LOG.info("Preferred AI service set to: " + serviceId);
         myState.preferredAIService = serviceId;
     }
     
@@ -209,7 +215,7 @@ public final class AISettings implements PersistentStateComponent<AISettings.Sta
      * @param serviceId the AI service ID string
      */
     public void setPreferredAIService(String serviceId) {
-        LOG.info("Setting preferred AI service by ID: " + serviceId);
+        LOG.info("Preferred AI service set to: " + serviceId);
         myState.preferredAIService = serviceId;
     }
     
@@ -228,17 +234,26 @@ public final class AISettings implements PersistentStateComponent<AISettings.Sta
      * @param enabled true to enable auto-analysis, false to disable
      */
     public void setAutoAnalyzeEnabled(boolean enabled) {
-        LOG.info("Setting auto-analyze enabled: " + enabled);
+        LOG.info("Auto-analysis " + (enabled ? "enabled" : "disabled"));
         myState.autoAnalyzeEnabled = enabled;
     }
 
-    // New, clearer naming for AI analysis gate
+    /**
+     * Checks if AI analysis is enabled.
+     * 
+     * @return true if AI analysis is enabled, false otherwise
+     */
     public boolean isAIAnalysisEnabled() {
         return myState.autoAnalyzeEnabled;
     }
 
+    /**
+     * Sets whether AI analysis is enabled.
+     * 
+     * @param enabled true to enable AI analysis, false to disable
+     */
     public void setAIAnalysisEnabled(boolean enabled) {
-        LOG.info("Setting AI Analysis enabled: " + enabled);
+        LOG.info("AI analysis " + (enabled ? "enabled" : "disabled"));
         myState.autoAnalyzeEnabled = enabled;
     }
     
@@ -257,7 +272,7 @@ public final class AISettings implements PersistentStateComponent<AISettings.Sta
      * @param show true to show confidence scores, false to hide
      */
     public void setShowConfidenceScores(boolean show) {
-        LOG.info("Setting show confidence scores: " + show);
+        LOG.info("Confidence scores " + (show ? "enabled" : "disabled"));
         myState.showConfidenceScores = show;
     }
     
@@ -280,7 +295,7 @@ public final class AISettings implements PersistentStateComponent<AISettings.Sta
      * @param persist true to persist chat history, false to not persist
      */
     public void setPersistChatHistory(boolean persist) {
-        LOG.info("Setting persist chat history: " + persist);
+        LOG.info("Chat history persistence " + (persist ? "enabled" : "disabled"));
         myState.persistChatHistory = persist;
     }
     
@@ -299,9 +314,13 @@ public final class AISettings implements PersistentStateComponent<AISettings.Sta
      * @param maxSize the maximum number of messages to keep in history
      */
     public void setMaxChatHistorySize(int maxSize) {
-        LOG.info("Setting max chat history size: " + maxSize);
-        // Clamp between 10-500: 10 ensures minimal context, 500 prevents memory bloat
-        myState.maxChatHistorySize = Math.max(10, Math.min(500, maxSize));
+        int clampedSize = Math.max(10, Math.min(500, maxSize));
+        if (clampedSize != maxSize) {
+            LOG.info("Chat history size adjusted to " + clampedSize + " (clamped from " + maxSize + ")");
+        } else {
+            LOG.info("Chat history size set to: " + maxSize);
+        }
+        myState.maxChatHistorySize = clampedSize;
     }
     
     // ============================================================================
@@ -323,7 +342,7 @@ public final class AISettings implements PersistentStateComponent<AISettings.Sta
      * @param enabled true to enable custom rules, false to disable
      */
     public void setCustomRulesEnabled(boolean enabled) {
-        LOG.info("Setting custom rules enabled: " + enabled);
+        LOG.info("Custom rules " + (enabled ? "enabled" : "disabled"));
         myState.customRulesEnabled = enabled;
     }
     
@@ -343,7 +362,7 @@ public final class AISettings implements PersistentStateComponent<AISettings.Sta
      */
     public void setCustomRule(@Nullable String customRule) {
         String rule = customRule != null ? customRule.trim() : "";
-        LOG.info("Setting custom rule: " + (rule.length() > 50 ? rule.substring(0, 50) + "..." : rule));
+        LOG.info("Custom rule " + (rule.isEmpty() ? "cleared" : "updated"));
         myState.customRule = rule;
     }
     

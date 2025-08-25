@@ -111,8 +111,7 @@ public class GeminiProvider implements AIServiceProvider {
                 // Parse Gemini-specific response
                 AIAnalysisResult result = parseGeminiResponse(response, modelId, startTime);
                 
-                LOG.info("Gemini analysis completed successfully in " + 
-                        (System.currentTimeMillis() - startTime) + "ms");
+                LOG.info("Gemini analysis completed in " + (System.currentTimeMillis() - startTime) + "ms");
                 
                 return result;
                 

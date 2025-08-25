@@ -1,7 +1,6 @@
 package com.trace.ai.services;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.openapi.project.Project;
 import com.trace.ai.models.AIAnalysisResult;
 import com.trace.ai.prompts.InitialPromptFailureAnalysisService;
@@ -46,7 +45,7 @@ import java.util.concurrent.CompletableFuture;
  */
 public final class AIAnalysisOrchestrator {
     
-    private static final Logger LOG = LoggerFactory.getLogger(AIAnalysisOrchestrator.class);
+    private static final Logger LOG = Logger.getInstance(AIAnalysisOrchestrator.class);
     
     // Services
     private final Project project;

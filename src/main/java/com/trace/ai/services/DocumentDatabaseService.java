@@ -1,7 +1,6 @@
 package com.trace.ai.services;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.openapi.util.io.FileUtil;
 import com.trace.ai.models.DocumentEntry;
 import org.jetbrains.annotations.NotNull;
@@ -38,7 +37,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
  */
 public class DocumentDatabaseService {
     
-    private static final Logger LOG = LoggerFactory.getLogger(DocumentDatabaseService.class);
+    private static final Logger LOG = Logger.getInstance(DocumentDatabaseService.class);
     
     private static final String DATABASE_NAME = "trace-documents.db";
     private static final String DATABASE_VERSION = "1.0";

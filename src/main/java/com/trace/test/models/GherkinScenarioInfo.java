@@ -11,12 +11,12 @@ import java.util.List;
  * 
  * <p>The model supports multiple use cases:</p>
  * <ul>
- *   <li><strong>Scenario Analysis:</strong> Complete scenario context and step details</li>
- *   <li><strong>Feature Context:</strong> Full feature file information and background</li>
- *   <li><strong>Data-Driven Testing:</strong> Support for scenario outlines and data tables</li>
- *   <li><strong>Tag Management:</strong> Scenario and feature-level tagging information</li>
- *   <li><strong>Code Navigation:</strong> Precise file location and line number information</li>
- *   <li><strong>Content Analysis:</strong> Full feature file content for comprehensive review</li>
+ *   <li>Scenario Analysis: Complete scenario context and step details</li>
+ *   <li>Feature Context: Full feature file information and background</li>
+ *   <li>Data-Driven Testing: Support for scenario outlines and data tables</li>
+ *   <li>Tag Management: Scenario and feature-level tagging information</li>
+ *   <li>Code Navigation: Precise file location and line number information</li>
+ *   <li>Content Analysis: Full feature file content for comprehensive review</li>
  * </ul>
  * 
  * <p>This model is designed to be immutable and thread-safe, making it suitable

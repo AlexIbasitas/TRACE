@@ -16,17 +16,14 @@ import com.trace.test.models.FailureInfo;
  * Extracts failure information and step definitions using PSI-based analysis.
  * 
  * <p>This class uses IntelliJ's PSI (Program Structure Interface) to navigate to the exact
- * location of test failures and extract step definitions reliably, following JetBrains best practices.</p>
+ * location of test failures and extract step definitions reliably, following JetBrains best practices.
+ * It provides comprehensive error information capture and direct file navigation to failure locations.</p>
  * 
- * <p><strong>Key Features:</strong></p>
- * <ul>
- *   <li>PSI-based step text extraction (reliable)</li>
- *   <li>Direct file navigation to failure location</li>
- *   <li>Step definition extraction from annotations</li>
- *   <li>Comprehensive error information capture</li>
- * </ul>
+ * <p>The extractor uses PSI-based step text extraction for reliability and provides
+ * comprehensive error information for test failure analysis.</p>
  * 
- * <p>Follows JetBrains best practices for PSI-based file parsing and thread safety.</p>
+ * @author Alex Ibasitas
+ * @since 1.0.0
  */
 public class StackTraceExtractor {
     private static final Logger LOG = Logger.getInstance(StackTraceExtractor.class);

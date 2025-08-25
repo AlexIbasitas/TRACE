@@ -270,15 +270,16 @@ public class TriagePanelView {
 
     private void refreshTheme() {
         try {
-            LOG.info("=== THEME REFRESH STARTED ===");
-            LOG.info("Current theme: " + UIManager.getLookAndFeel().getName());
-            LOG.info("Current theme colors:");
-            LOG.info("  - Panel background: " + ThemeUtils.panelBackground());
-            LOG.info("  - Text foreground: " + ThemeUtils.textForeground());
-            LOG.info("  - Text field background: " + ThemeUtils.textFieldBackground());
-            LOG.info("  - UIManager Panel.background: " + UIManager.getColor("Panel.background"));
-            LOG.info("  - UIManager Label.foreground: " + UIManager.getColor("Label.foreground"));
-            LOG.info("  - UIManager TextField.background: " + UIManager.getColor("TextField.background"));
+            LOG.info("Theme refresh started");
+            if (LOG.isDebugEnabled()) {
+                LOG.debug("Current theme: " + UIManager.getLookAndFeel().getName());
+                LOG.debug("Theme colors - Panel background: " + ThemeUtils.panelBackground());
+                LOG.debug("Theme colors - Text foreground: " + ThemeUtils.textForeground());
+                LOG.debug("Theme colors - Text field background: " + ThemeUtils.textFieldBackground());
+                LOG.debug("UIManager Panel.background: " + UIManager.getColor("Panel.background"));
+                LOG.debug("UIManager Label.foreground: " + UIManager.getColor("Label.foreground"));
+                LOG.debug("UIManager TextField.background: " + UIManager.getColor("TextField.background"));
+            }
             
             // Update main panel background
             if (mainPanel != null) {
@@ -286,7 +287,7 @@ public class TriagePanelView {
                 mainPanel.setBackground(bg);
                 mainPanel.revalidate();
                 mainPanel.repaint();
-                LOG.info("Updated main panel background to: " + bg);
+                LOG.debug("Updated main panel background to: " + bg);
             }
             
             // Update chat scroll pane and viewport
@@ -378,7 +379,7 @@ public class TriagePanelView {
             
             LOG.info("Theme refresh completed");
         } catch (Exception e) {
-            LOG.warn("Error during theme refresh: " + e.getMessage(), e);
+            LOG.error("Error during theme refresh: " + e.getMessage(), e);
         }
     }
     
@@ -388,7 +389,7 @@ public class TriagePanelView {
      */
     private void recreateAllMessageComponents() {
         try {
-            LOG.info("Recreating all message components for theme refresh");
+            LOG.debug("Recreating all message components for theme refresh");
             
             // Store current components and their order
             List<Component> components = new ArrayList<>();
@@ -418,9 +419,11 @@ public class TriagePanelView {
                 }
             }
             
-            LOG.info("Recreated " + components.size() + " message components");
+            if (LOG.isDebugEnabled()) {
+                LOG.debug("Recreated " + components.size() + " message components");
+            }
         } catch (Exception e) {
-            LOG.warn("Error recreating message components: " + e.getMessage(), e);
+            LOG.error("Error recreating message components: " + e.getMessage(), e);
         }
     }
 
@@ -481,7 +484,7 @@ public class TriagePanelView {
      * Creates the message container and scroll pane for displaying chat messages.
      */
     private void setupChatPanel() {
-        LOG.debug("TriagePanelView.setupChatPanel() - STARTING CHAT PANEL SETUP");
+        LOG.debug("Setting up chat panel");
         
         // Create message container with proper layout and viewport-width tracking
         messageContainer = new com.trace.chat.components.ViewportWidthTrackingPanel();
@@ -491,13 +494,11 @@ public class TriagePanelView {
         messageContainer.setBackground(panelBg);
         messageContainer.setBorder(BorderFactory.createEmptyBorder(8, 16, 8, 16));
         
-        LOG.debug("TriagePanelView.setupChatPanel() - MESSAGE CONTAINER CREATED");
-        LOG.debug("  - messageContainer: " + messageContainer);
-        LOG.debug("  - messageContainer size: " + messageContainer.getSize());
-        LOG.debug("  - messageContainer preferred size: " + messageContainer.getPreferredSize());
-        LOG.debug("  - messageContainer maximum size: " + messageContainer.getMaximumSize());
-        LOG.debug("  - messageContainer minimum size: " + messageContainer.getMinimumSize());
-        LOG.debug("  - messageContainer layout: " + messageContainer.getLayout().getClass().getSimpleName());
+        if (LOG.isDebugEnabled()) {
+            LOG.debug("Message container created - size: " + messageContainer.getSize() + 
+                     ", preferred size: " + messageContainer.getPreferredSize() + 
+                     ", layout: " + messageContainer.getLayout().getClass().getSimpleName());
+        }
         
         // Create scroll pane with proper configuration
         chatScrollPane = new JScrollPane(messageContainer);
@@ -510,15 +511,11 @@ public class TriagePanelView {
         // Allow horizontal scrolling when the content's minimum width exceeds the viewport
         chatScrollPane.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_AS_NEEDED);
         
-        LOG.debug("TriagePanelView.setupChatPanel() - SCROLL PANE CREATED");
-        LOG.debug("  - chatScrollPane: " + chatScrollPane);
-        LOG.debug("  - chatScrollPane size: " + chatScrollPane.getSize());
-        LOG.debug("  - chatScrollPane preferred size: " + chatScrollPane.getPreferredSize());
-        LOG.debug("  - chatScrollPane maximum size: " + chatScrollPane.getMaximumSize());
-        LOG.debug("  - chatScrollPane minimum size: " + chatScrollPane.getMinimumSize());
-        LOG.debug("  - viewport size: " + chatScrollPane.getViewport().getSize());
-        LOG.debug("  - viewport preferred size: " + chatScrollPane.getViewport().getPreferredSize());
-        LOG.debug("  - viewport extent size: " + chatScrollPane.getViewport().getExtentSize());
+        if (LOG.isDebugEnabled()) {
+            LOG.debug("Scroll pane created - size: " + chatScrollPane.getSize() + 
+                     ", preferred size: " + chatScrollPane.getPreferredSize() + 
+                     ", viewport size: " + chatScrollPane.getViewport().getSize());
+        }
 
         // Recompute spacer and possibly re-align on viewport size changes (e.g., window resize)
         chatScrollPane.getViewport().addComponentListener(new java.awt.event.ComponentAdapter() {
@@ -635,7 +632,7 @@ public class TriagePanelView {
      * Configures the text input area and send button with proper layout and styling.
      */
     private void setupInputPanel() {
-        LOG.info("=== SETUP INPUT PANEL - SIMPLE APPROACH ===");
+        LOG.debug("Setting up input panel");
         
         inputPanel.setBorder(BorderFactory.createEmptyBorder(8, 16, 16, 16));
         
@@ -702,15 +699,14 @@ public class TriagePanelView {
         sendButton.setVisible(false);
         
         // Add detailed logging to understand the layout hierarchy
-        LOG.info("=== LAYOUT INVESTIGATION ===");
-        LOG.info("Input panel border: " + inputPanel.getBorder());
-        LOG.info("Input panel insets: " + inputPanel.getInsets());
-        LOG.info("Toggle container preferred size: " + toggleContainer.getPreferredSize());
-        LOG.info("Input box container preferred size: " + inputBoxContainer.getPreferredSize());
-        LOG.info("Analysis mode button border: " + analysisModeButton.getBorder());
-        LOG.info("Input box container border: " + inputBoxContainer.getBorder());
+        if (LOG.isDebugEnabled()) {
+            LOG.debug("Layout investigation - Input panel border: " + inputPanel.getBorder() + 
+                     ", insets: " + inputPanel.getInsets() + 
+                     ", toggle container preferred size: " + toggleContainer.getPreferredSize() + 
+                     ", input box container preferred size: " + inputBoxContainer.getPreferredSize());
+        }
         
-        LOG.info("=== SIMPLE SETUP COMPLETE ===");
+        LOG.debug("Input panel setup completed");
     }
 
     /**
@@ -811,9 +807,9 @@ public class TriagePanelView {
                 }
             });
             
-            LOG.info("Theme change listeners registered successfully (MessageBus + backup)");
+            LOG.info("Theme change listeners registered successfully");
         } catch (Exception e) {
-            LOG.warn("Failed to register theme change listeners: " + e.getMessage(), e);
+            LOG.error("Failed to register theme change listeners: " + e.getMessage(), e);
         }
     }
 
@@ -854,8 +850,7 @@ public class TriagePanelView {
      * @param messageText The user's message text
      */
     private void handleUserMessageWithAI(String messageText) {
-        LOG.info("=== HANDLING USER MESSAGE WITH AI ===");
-        LOG.info("User Message: " + messageText);
+        LOG.info("Handling user message with AI: " + messageText.substring(0, Math.min(messageText.length(), 50)) + "...");
         
         AISettings aiSettings = AISettings.getInstance();
         
@@ -915,12 +910,13 @@ public class TriagePanelView {
             return;
         }
         
-        LOG.info("Failure Context Available:");
-        LOG.info("  - Scenario Name: " + currentFailureInfo.getScenarioName());
-        LOG.info("  - Failed Step: " + (currentFailureInfo.getFailedStepText() != null ? 
-            currentFailureInfo.getFailedStepText().substring(0, Math.min(currentFailureInfo.getFailedStepText().length(), 50)) + "..." : "null"));
-        LOG.info("  - Error Message: " + (currentFailureInfo.getErrorMessage() != null ? 
-            currentFailureInfo.getErrorMessage().substring(0, Math.min(currentFailureInfo.getErrorMessage().length(), 50)) + "..." : "null"));
+        if (LOG.isDebugEnabled()) {
+            LOG.debug("Failure Context Available - Scenario Name: " + currentFailureInfo.getScenarioName() + 
+                     ", Failed Step: " + (currentFailureInfo.getFailedStepText() != null ? 
+                         currentFailureInfo.getFailedStepText().substring(0, Math.min(currentFailureInfo.getFailedStepText().length(), 50)) + "..." : "null") + 
+                     ", Error Message: " + (currentFailureInfo.getErrorMessage() != null ? 
+                         currentFailureInfo.getErrorMessage().substring(0, Math.min(currentFailureInfo.getErrorMessage().length(), 50)) + "..." : "null"));
+        }
         
         // Check chat history service availability and log recent queries
         try {
@@ -928,18 +924,16 @@ public class TriagePanelView {
             if (chatHistoryService == null) {
                 LOG.warn("ChatHistoryService is null - proceeding without chat history");
             } else {
-                LOG.info("Chat History Service State:");
-                LOG.info("  - User Query Count: " + chatHistoryService.getUserQueryCount());
-                LOG.info("  - Has Failure Context: " + chatHistoryService.hasFailureContext());
-                LOG.info("  - Window Size: " + chatHistoryService.getUserMessageWindowSize());
+                if (LOG.isDebugEnabled()) {
+                    LOG.debug("Chat History Service State - User Query Count: " + chatHistoryService.getUserQueryCount() + 
+                             ", Has Failure Context: " + chatHistoryService.hasFailureContext() + 
+                             ", Window Size: " + chatHistoryService.getUserMessageWindowSize());
+                }
                 
                 // Log recent user queries for context verification
                 List<String> recentQueries = getLastThreeUserQueries();
-                if (!recentQueries.isEmpty()) {
-                    LOG.info("Recent User Queries Context:");
-                    for (String query : recentQueries) {
-                        LOG.info("  - " + query);
-                    }
+                if (!recentQueries.isEmpty() && LOG.isDebugEnabled()) {
+                    LOG.debug("Recent User Queries Context: " + String.join(", ", recentQueries));
                 }
             }
         } catch (Exception e) {
@@ -953,13 +947,14 @@ public class TriagePanelView {
         
         // Handle the analysis result
         analysisFuture.thenAccept(result -> {
-            LOG.info("=== USER QUERY ANALYSIS RESULT RECEIVED ===");
+            LOG.info("User query analysis result received");
             if (result != null) {
-                LOG.info("AI Analysis Result:");
-                LOG.info("  - Service Type: " + result.getServiceType());
-                LOG.info("  - Timestamp: " + result.getTimestamp());
-                LOG.info("  - Analysis Length: " + (result.getAnalysis() != null ? result.getAnalysis().length() : 0) + " characters");
-                LOG.info("  - Has Prompt: " + result.hasPrompt());
+                if (LOG.isDebugEnabled()) {
+                    LOG.debug("AI Analysis Result - Service Type: " + result.getServiceType() + 
+                             ", Timestamp: " + result.getTimestamp() + 
+                             ", Analysis Length: " + (result.getAnalysis() != null ? result.getAnalysis().length() : 0) + " characters" + 
+                             ", Has Prompt: " + result.hasPrompt());
+                }
                 
                 if (result.getAnalysis() != null && !result.getAnalysis().trim().isEmpty()) {
                     LOG.info("Adding AI response to chat");
@@ -979,15 +974,14 @@ public class TriagePanelView {
                     System.currentTimeMillis(), null, null));
             }
         }).exceptionally(throwable -> {
-            LOG.error("=== USER QUERY ANALYSIS FAILED ===");
-            LOG.error("Error during AI analysis: " + throwable.getMessage(), throwable);
+            LOG.error("User query analysis failed: " + throwable.getMessage(), throwable);
             String errorMessage = "AI analysis failed: " + throwable.getMessage();
             addMessage(new ChatMessage(ChatMessage.Role.AI, errorMessage, 
                                     System.currentTimeMillis(), null, null));
             return null;
         });
         
-        LOG.info("=== USER MESSAGE HANDLING COMPLETED ===");
+        LOG.info("User message handling completed");
     }
 
     /**
@@ -1040,8 +1034,10 @@ public class TriagePanelView {
             hideTypingIndicator();
         }
 
-        LOG.debug("Adding message to chat history: " + message.getRole() + " - " + 
-                 message.getText().substring(0, Math.min(message.getText().length(), 30)) + "...");
+        if (LOG.isDebugEnabled()) {
+            LOG.debug("Adding message to chat history: " + message.getRole() + " - " + 
+                     message.getText().substring(0, Math.min(message.getText().length(), 30)) + "...");
+        }
         chatHistory.add(message);
         addMessageToUI(message);
     }
@@ -1124,46 +1120,34 @@ public class TriagePanelView {
      * @param message The message to add to the UI
      */
     private void addMessageToUI(ChatMessage message) {
-        LOG.debug("TriagePanelView.addMessageToUI() - STARTING MESSAGE UI ADDITION");
-        LOG.debug("  - message role: " + message.getRole());
-        LOG.debug("  - message text length: " + (message.getText() != null ? message.getText().length() : 0));
-        LOG.debug("  - chatHistory size: " + chatHistory.size());
-        LOG.debug("  - messageContainer component count before: " + messageContainer.getComponentCount());
-        LOG.debug("  - messageContainer size before: " + messageContainer.getSize());
-        LOG.debug("  - messageContainer preferred size before: " + messageContainer.getPreferredSize());
+        if (LOG.isDebugEnabled()) {
+            LOG.debug("Starting message UI addition - message role: " + message.getRole() + 
+                     ", text length: " + (message.getText() != null ? message.getText().length() : 0) + 
+                     ", chatHistory size: " + chatHistory.size() + 
+                     ", messageContainer component count: " + messageContainer.getComponentCount() + 
+                     ", messageContainer size: " + messageContainer.getSize() + 
+                     ", messageContainer preferred size: " + messageContainer.getPreferredSize());
+        }
         
         // Remove the vertical glue temporarily
         messageContainer.removeAll();
         
-        LOG.debug("TriagePanelView.addMessageToUI() - CONTAINER CLEARED");
-        LOG.debug("  - messageContainer component count after clear: " + messageContainer.getComponentCount());
+        if (LOG.isDebugEnabled()) {
+            LOG.debug("Container cleared - component count after clear: " + messageContainer.getComponentCount());
+        }
         
         // Add all existing messages with proper spacing
         for (int i = 0; i < chatHistory.size(); i++) {
             ChatMessage existingMessage = chatHistory.get(i);
-            LOG.debug("TriagePanelView.addMessageToUI() - CREATING MESSAGE COMPONENT " + i);
-            LOG.debug("  - existing message role: " + existingMessage.getRole());
-            LOG.debug("  - existing message text length: " + (existingMessage.getText() != null ? existingMessage.getText().length() : 0));
             
             MessageComponent existingComponent = new MessageComponent(existingMessage);
             existingComponent.setAlignmentY(Component.TOP_ALIGNMENT);
             
-            LOG.debug("TriagePanelView.addMessageToUI() - MESSAGE COMPONENT CREATED");
-            LOG.debug("  - component size: " + existingComponent.getSize());
-            LOG.debug("  - component preferred size: " + existingComponent.getPreferredSize());
-            LOG.debug("  - component maximum size: " + existingComponent.getMaximumSize());
-            LOG.debug("  - component minimum size: " + existingComponent.getMinimumSize());
-            
             messageContainer.add(existingComponent);
-            
-            LOG.debug("TriagePanelView.addMessageToUI() - COMPONENT ADDED TO CONTAINER");
-            LOG.debug("  - messageContainer component count: " + messageContainer.getComponentCount());
-            LOG.debug("  - messageContainer preferred size: " + messageContainer.getPreferredSize());
             
             // Add spacing between messages, but not after the last one
             if (i < chatHistory.size() - 1) {
                 messageContainer.add(Box.createVerticalStrut(16));
-                LOG.debug("TriagePanelView.addMessageToUI() - SPACING ADDED");
             }
         }
 
@@ -1175,9 +1159,11 @@ public class TriagePanelView {
                 ChatMessage cm = ((MessageComponent) c).getMessage();
                 if (cm != null && cm.isFromUser()) {
                     latestUserMessageComponent = (JComponent) c;
-                    LOG.debug("latestUserMessage set: index=" + i + " y=" + latestUserMessageComponent.getY() +
-                        " prefH=" + latestUserMessageComponent.getPreferredSize().height +
-                        " count=" + messageContainer.getComponentCount());
+                    if (LOG.isDebugEnabled()) {
+                        LOG.debug("Latest user message set - index: " + i + ", y: " + latestUserMessageComponent.getY() +
+                            ", prefH: " + latestUserMessageComponent.getPreferredSize().height +
+                            ", count: " + messageContainer.getComponentCount());
+                    }
                     break;
                 }
             }
@@ -1199,22 +1185,19 @@ public class TriagePanelView {
         messageContainer.add(bottomSpacer);
         recomputeBottomSpacer();
         
-        LOG.debug("TriagePanelView.addMessageToUI() - FINAL CONTAINER STATE");
-        LOG.debug("  - messageContainer component count: " + messageContainer.getComponentCount());
-        LOG.debug("  - messageContainer size: " + messageContainer.getSize());
-        LOG.debug("  - messageContainer preferred size: " + messageContainer.getPreferredSize());
-        LOG.debug("  - messageContainer maximum size: " + messageContainer.getMaximumSize());
-        LOG.debug("  - messageContainer minimum size: " + messageContainer.getMinimumSize());
-        LOG.debug("  - chatScrollPane viewport extent size: " + chatScrollPane.getViewport().getExtentSize());
-        LOG.debug("  - chatScrollPane viewport view size: " + chatScrollPane.getViewport().getViewSize());
-        LOG.debug("  - chatScrollPane vertical scrollbar value: " + chatScrollPane.getVerticalScrollBar().getValue());
-        LOG.debug("  - chatScrollPane vertical scrollbar maximum: " + chatScrollPane.getVerticalScrollBar().getMaximum());
+        if (LOG.isDebugEnabled()) {
+            LOG.debug("Final container state - component count: " + messageContainer.getComponentCount() + 
+                     ", size: " + messageContainer.getSize() + 
+                     ", preferred size: " + messageContainer.getPreferredSize() + 
+                     ", viewport extent size: " + chatScrollPane.getViewport().getExtentSize() + 
+                     ", scrollbar value: " + chatScrollPane.getVerticalScrollBar().getValue());
+        }
         
         // Revalidate and repaint
         messageContainer.revalidate();
         messageContainer.repaint();
         
-        LOG.debug("TriagePanelView.addMessageToUI() - LAYOUT VALIDATION COMPLETED");
+        LOG.debug("Layout validation completed");
 
         // Track latest user message component and align newest to top if near
         if (!chatHistory.isEmpty()) {
@@ -1227,10 +1210,12 @@ public class TriagePanelView {
                     Component c = messageContainer.getComponent(i);
                     if (c instanceof MessageComponent) {
                         latestUserMessageComponent = (JComponent) c;
-                        LOG.debug("latestUserMessage set: index=" + i + " y=" +
-                            latestUserMessageComponent.getY() + " prefH=" +
-                            latestUserMessageComponent.getPreferredSize().height + " count=" +
-                            messageContainer.getComponentCount());
+                        if (LOG.isDebugEnabled()) {
+                            LOG.debug("Latest user message set - index: " + i + ", y: " +
+                                latestUserMessageComponent.getY() + ", prefH: " +
+                                latestUserMessageComponent.getPreferredSize().height + ", count: " +
+                                messageContainer.getComponentCount());
+                        }
                         break;
                     }
                 }
@@ -1248,11 +1233,11 @@ public class TriagePanelView {
                             int target = computeAlignTopTarget(chatScrollPane, latestUserMessageComponent);
                             boolean nearTarget = isNearTarget(chatScrollPane, target, NEAR_TARGET_THRESHOLD_PX);
                             boolean allowAlign = nearTarget || wasNearBottomBeforeUserSend;
-                            LOG.debug("userSend align? allow=" + allowAlign +
-                                " start=" + chatScrollPane.getVerticalScrollBar().getValue() +
-                                " target=" + target +
-                                " nearTarget=" + nearTarget +
-                                " wasNearBottom=" + wasNearBottomBeforeUserSend);
+                            if (LOG.isDebugEnabled()) {
+                                LOG.debug("User send align - allow: " + allowAlign + ", start: " + 
+                                         chatScrollPane.getVerticalScrollBar().getValue() + ", target: " + target + 
+                                         ", nearTarget: " + nearTarget + ", wasNearBottom: " + wasNearBottomBeforeUserSend);
+                            }
                             if (allowAlign) {
                                 // Smoothly scroll to align the latest user row at the top edge
                                 scrollToComponentTopSmooth(chatScrollPane, latestUserMessageComponent, SMOOTH_SCROLL_DURATION_MS);
@@ -1281,9 +1266,11 @@ public class TriagePanelView {
                             if (latestUserMessageComponent != null) {
                                 int target = computeAlignTopTarget(chatScrollPane, latestUserMessageComponent);
                                 boolean stillNear = isNearTarget(chatScrollPane, target, NEAR_TARGET_THRESHOLD_PX);
-                                LOG.debug("aiAppend: maintain=" + maintainAlignAfterAppend +
-                                    " value=" + chatScrollPane.getVerticalScrollBar().getValue() +
-                                    " target=" + target + " stillNear=" + stillNear);
+                                if (LOG.isDebugEnabled()) {
+                                    LOG.debug("AI append - maintain: " + maintainAlignAfterAppend + ", value: " + 
+                                             chatScrollPane.getVerticalScrollBar().getValue() + ", target: " + target + 
+                                             ", stillNear: " + stillNear);
+                                }
                                 if (maintainAlignAfterAppend || stillNear) {
                                     // Snap immediately to keep user's message top-aligned; no animation
                                     alignTopImmediate(chatScrollPane, latestUserMessageComponent);
@@ -1605,21 +1592,21 @@ public class TriagePanelView {
         // Check if we already have a failure in this test run
         if (currentTestRunId != null) {
             // Same test run - ignore silently
-            LOG.info("=== TRIAGE PANEL: IGNORING SUBSEQUENT FAILURE ===");
-            LOG.info("Current Test Run ID: " + currentTestRunId);
-            LOG.info("Failure: " + failureInfo.getScenarioName());
-            LOG.info("Failed Step: " + failureInfo.getFailedStepText());
-            LOG.info("=== END TRIAGE PANEL: IGNORING SUBSEQUENT FAILURE ===");
+            LOG.info("Ignoring subsequent failure in test run: " + currentTestRunId);
+            if (LOG.isDebugEnabled()) {
+                LOG.debug("Failure details - Scenario: " + failureInfo.getScenarioName() + 
+                         ", Failed Step: " + failureInfo.getFailedStepText());
+            }
             return false;
         }
         
         // First failure of this test run - analyze
         currentTestRunId = "test_run_" + System.currentTimeMillis();
-        LOG.info("=== TRIAGE PANEL: PROCESSING FIRST FAILURE ===");
-        LOG.info("New Test Run ID: " + currentTestRunId);
-        LOG.info("Failure: " + failureInfo.getScenarioName());
-        LOG.info("Failed Step: " + failureInfo.getFailedStepText());
-        LOG.info("=== END TRIAGE PANEL: PROCESSING FIRST FAILURE ===");
+        LOG.info("Processing first failure in new test run: " + currentTestRunId);
+        if (LOG.isDebugEnabled()) {
+            LOG.debug("Failure details - Scenario: " + failureInfo.getScenarioName() + 
+                     ", Failed Step: " + failureInfo.getFailedStepText());
+        }
         
         // Store failure context for future user queries
         this.currentFailureInfo = failureInfo;
@@ -1659,7 +1646,7 @@ public class TriagePanelView {
         // Check if TRACE is enabled (power button) - if not, do nothing at all
         AISettings aiSettings = AISettings.getInstance();
         if (!aiSettings.isTraceEnabled()) {
-            LOG.info("TRACE is disabled (power off) - skipping prompt generation");
+            LOG.info("TRACE is disabled - skipping prompt generation");
             return; // Complete silence - no messages from TRACE
         }
         
@@ -1668,7 +1655,7 @@ public class TriagePanelView {
             
             // Check if AI analysis is enabled
             if (aiSettings.isTraceEnabled()) {
-                LOG.info("=== DEBUG: Using enhanced analysis with RAG (AI enabled) ===");
+                LOG.info("Using enhanced analysis with RAG (AI enabled)");
                 
                 // Show the test failure context immediately (scenario name and failed step)
                 // Also attach a placeholder so the "Show AI Thinking" section is visible right away
@@ -1763,7 +1750,7 @@ public class TriagePanelView {
                 });
                 
             } else {
-                LOG.info("=== DEBUG: Using basic prompt generation (AI disabled) ===");
+                LOG.info("Using basic prompt generation (AI disabled)");
                 
                 // Show the test failure context immediately (scenario name and failed step)
                 addMessage(new ChatMessage(ChatMessage.Role.AI, "", System.currentTimeMillis(), null, failureInfo));
@@ -1822,7 +1809,7 @@ public class TriagePanelView {
         // Check if TRACE is enabled (power button) - if not, do nothing at all
         AISettings aiSettings = AISettings.getInstance();
         if (!aiSettings.isAIEnabled()) {
-            LOG.info("TRACE is disabled (power off) - skipping AI analysis result display");
+            LOG.info("TRACE is disabled - skipping AI analysis result display");
             return; // Complete silence - no messages from TRACE
         }
         
@@ -1864,7 +1851,7 @@ public class TriagePanelView {
         // Check if TRACE is enabled (power button) - if not, do nothing at all
         AISettings aiSettings = AISettings.getInstance();
         if (!aiSettings.isAIEnabled()) {
-            LOG.info("TRACE is disabled (power off) - skipping AI analysis error display");
+            LOG.info("TRACE is disabled - skipping AI analysis error display");
             return; // Complete silence - no messages from TRACE
         }
         
@@ -1942,7 +1929,7 @@ public class TriagePanelView {
      * This can be called programmatically to test theme change behavior.
      */
     public void manualThemeRefresh() {
-        LOG.info("=== MANUAL THEME REFRESH TRIGGERED ===");
+        LOG.info("Manual theme refresh triggered");
         ApplicationManager.getApplication().invokeLater(() -> {
             try {
                 // Store current scroll position
@@ -1957,12 +1944,12 @@ public class TriagePanelView {
                 // Restore scroll position to maintain user's view
                 if (chatScrollPane != null && chatScrollPane.getVerticalScrollBar() != null) {
                     chatScrollPane.getVerticalScrollBar().setValue(currentScrollValue);
-                    LOG.info("Restored scroll position to: " + currentScrollValue);
+                    LOG.debug("Restored scroll position to: " + currentScrollValue);
                 }
                 
-                LOG.info("=== MANUAL THEME REFRESH COMPLETED ===");
+                LOG.info("Manual theme refresh completed");
             } catch (Exception e) {
-                LOG.warn("Error during manual theme refresh: " + e.getMessage(), e);
+                LOG.error("Error during manual theme refresh: " + e.getMessage(), e);
             }
         });
     }
@@ -1977,7 +1964,7 @@ public class TriagePanelView {
     private JPanel createCustomHeaderPanel() {
         Color darkBg = ThemeUtils.panelBackground();
         
-        LOG.info("Creating custom header panel with ultra-compact layout");
+        LOG.debug("Creating custom header panel with ultra-compact layout");
         
         JPanel header = new JPanel();
         header.setLayout(new BoxLayout(header, BoxLayout.X_AXIS));
@@ -1994,7 +1981,7 @@ public class TriagePanelView {
         leftPanel.setLayout(new BoxLayout(leftPanel, BoxLayout.X_AXIS));
         leftPanel.setOpaque(false);
         
-        LOG.info("Creating AI toggle button for header");
+        LOG.debug("Creating AI toggle button for header");
         // Create AI toggle button
         JButton aiToggleButton = createAIToggleButton();
         aiToggleButton.setAlignmentX(Component.LEFT_ALIGNMENT);
@@ -2003,7 +1990,7 @@ public class TriagePanelView {
         // Add minimal spacing between button and text
         leftPanel.add(Box.createHorizontalStrut(2));
         
-        LOG.info("Creating TRACE title label");
+        LOG.debug("Creating TRACE title label");
         JLabel title = new JLabel("TRACE") {
             @Override
             public Dimension getMaximumSize() {
@@ -2025,14 +2012,14 @@ public class TriagePanelView {
         leftPanel.setMinimumSize(new Dimension(0, leftHeight));
         leftPanel.setMaximumSize(new Dimension(Integer.MAX_VALUE, leftHeight));
 
-        LOG.info("Adding left panel to header with " + leftPanel.getComponentCount() + " components");
+        if (LOG.isDebugEnabled()) {
+            LOG.debug("Adding left panel to header with " + leftPanel.getComponentCount() + " components");
+            LOG.debug("AI toggle button preferred size: " + aiToggleButton.getPreferredSize());
+            LOG.debug("TRACE label preferred size: " + title.getPreferredSize());
+            LOG.debug("Left panel preferred size: " + leftPanel.getPreferredSize());
+        }
         header.add(leftPanel);
         header.add(Box.createHorizontalGlue());
-        
-        // Log component details for debugging
-        LOG.info("AI toggle button preferred size: " + aiToggleButton.getPreferredSize());
-        LOG.info("TRACE label preferred size: " + title.getPreferredSize());
-        LOG.info("Left panel preferred size: " + leftPanel.getPreferredSize());
         
         // Create right panel with BoxLayout for tight packing
         JPanel rightPanel = new JPanel();
@@ -2079,7 +2066,9 @@ public class TriagePanelView {
             }
         });
 
-        LOG.info("Header panel created with dimensions: " + header.getPreferredSize());
+        if (LOG.isDebugEnabled()) {
+            LOG.debug("Header panel created with dimensions: " + header.getPreferredSize());
+        }
         return header;
     }
 
@@ -2159,7 +2148,7 @@ public class TriagePanelView {
         
         // Add action listener to clear chat
         clearChatButton.addActionListener(e -> {
-            LOG.info("Clear chat button clicked");
+            LOG.debug("Clear chat button clicked");
             clearChat();
         });
         
@@ -2192,7 +2181,7 @@ public class TriagePanelView {
         
         // Add action listener to toggle settings
         settingsButton.addActionListener(e -> {
-            LOG.info("Settings button clicked");
+            LOG.debug("Settings button clicked");
             showSettingsTab = !showSettingsTab;
             refreshMainPanel();
         });
@@ -2207,7 +2196,7 @@ public class TriagePanelView {
      * @return The configured analysis mode button
      */
     private JButton createAnalysisModeButton() {
-        LOG.info("=== CREATING ANALYSIS MODE BUTTON ===");
+        LOG.debug("Creating analysis mode button");
         
         JButton analysisModeButton = new JButton();
         
@@ -2228,11 +2217,9 @@ public class TriagePanelView {
         analysisModeButton.setMinimumSize(buttonSize);
         analysisModeButton.setPreferredSize(buttonSize);
         analysisModeButton.setMaximumSize(buttonSize);
-        LOG.info("Button size set to: " + buttonSize);
         
         // Update button text based on current mode
         updateAnalysisModeButtonText(analysisModeButton);
-        LOG.info("Button text set to: " + analysisModeButton.getText());
         
         // Add action listener to toggle between modes
         analysisModeButton.addActionListener(e -> {
@@ -2244,7 +2231,7 @@ public class TriagePanelView {
             updateAnalysisModeButtonText(analysisModeButton);
         });
         
-        LOG.info("Analysis mode button creation complete");
+        LOG.debug("Analysis mode button creation complete");
         return analysisModeButton;
     }
     
@@ -2274,18 +2261,20 @@ public class TriagePanelView {
         AISettings aiSettings = AISettings.getInstance();
         boolean aiEnabled = aiSettings.isTraceEnabled();
         
-        LOG.info("Updating TRACE toggle button appearance - TRACE enabled: " + aiEnabled);
+        if (LOG.isDebugEnabled()) {
+            LOG.debug("Updating TRACE toggle button appearance - TRACE enabled: " + aiEnabled);
+        }
         
         if (aiEnabled) {
             // TRACE is enabled - green color
             button.setForeground(new JBColor(new Color(76, 175, 80), new Color(76, 175, 80))); // Material Design Green
             button.setToolTipText("Disable TRACE");
-            LOG.info("TRACE toggle button set to enabled state (green)");
+            LOG.debug("TRACE toggle button set to enabled state (green)");
         } else {
             // TRACE is disabled - gray color
             button.setForeground(new JBColor(new Color(158, 158, 158), new Color(158, 158, 158))); // Material Design Gray
             button.setToolTipText("Enable TRACE - Parse test failures locally for AI analysis");
-            LOG.info("TRACE toggle button set to disabled state (gray)");
+            LOG.debug("TRACE toggle button set to disabled state (gray)");
         }
     }
 

@@ -7,19 +7,44 @@ import com.trace.common.constants.TriagePanelConstants;
 /**
  * A panel that tracks the width of its enclosing viewport, ensuring children
  * wrap to the visible width rather than expanding horizontally.
+ * 
+ * <p>This component implements the Scrollable interface to provide intelligent
+ * width tracking behavior. It monitors the viewport width and adjusts its
+ * preferred size accordingly to prevent horizontal scrolling when the viewport
+ * is wide enough, while allowing horizontal scrolling when the viewport is
+ * too narrow.</p>
+ * 
+ * <p>The panel is designed to work with JScrollPane components and provides
+ * smooth transitions between wrapping and scrolling behavior based on the
+ * available viewport width.</p>
+ * 
+ * @author Alex Ibasitas
+ * @version 1.0
+ * @since 1.0
  */
 public class ViewportWidthTrackingPanel extends JPanel implements Scrollable {
 
     private int minWidthBeforeHorizontalScroll = TriagePanelConstants.MIN_CHAT_WIDTH_BEFORE_SCROLL;
 
+    /**
+     * Creates a new viewport width tracking panel.
+     * 
+     * <p>The panel is initialized with a transparent background and uses the
+     * default minimum width before horizontal scrolling from the constants.</p>
+     */
     public ViewportWidthTrackingPanel() {
         super();
         setOpaque(false);
     }
 
     /**
-     * Allows callers to override the cutoff where the panel stops tracking the viewport width
-     * and allows horizontal scrolling.
+     * Sets the minimum width threshold before horizontal scrolling is enabled.
+     * 
+     * <p>When the viewport width is at or above this threshold, the panel will
+     * track the viewport width and wrap content. When below this threshold,
+     * horizontal scrolling will be allowed.</p>
+     * 
+     * @param minWidth The minimum width in pixels (must be at least 1)
      */
     public void setMinWidthBeforeHorizontalScroll(int minWidth) {
         this.minWidthBeforeHorizontalScroll = Math.max(1, minWidth);

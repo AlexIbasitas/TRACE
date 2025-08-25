@@ -11,11 +11,11 @@ import java.util.List;
  * 
  * <p>The model supports multiple use cases:</p>
  * <ul>
- *   <li><strong>Code Navigation:</strong> Precise file location and line number information</li>
- *   <li><strong>Method Analysis:</strong> Complete method signature and parameter details</li>
- *   <li><strong>Pattern Matching:</strong> Cucumber step patterns for step-to-method mapping</li>
- *   <li><strong>Implementation Review:</strong> Full method text for code analysis</li>
- *   <li><strong>Debugging Support:</strong> Package and class context for troubleshooting</li>
+ *   <li>Code Navigation: Precise file location and line number information</li>
+ *   <li>Method Analysis: Complete method signature and parameter details</li>
+ *   <li>Pattern Matching: Cucumber step patterns for step-to-method mapping</li>
+ *   <li>Implementation Review: Full method text for code analysis</li>
+ *   <li>Debugging Support: Package and class context for troubleshooting</li>
  * </ul>
  * 
  * <p>This model is designed to be immutable and thread-safe, making it suitable

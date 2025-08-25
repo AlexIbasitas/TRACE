@@ -1,23 +1,19 @@
 package com.trace.test.models;
 
 /**
- * Comprehensive domain model representing a failed Cucumber test with full context.
+ * Domain model representing a failed Cucumber test with full context.
  * 
  * <p>This class serves as the central data structure for test failure analysis in the
  * TRACE plugin. It encapsulates all information needed to understand, analyze,
  * and provide intelligent suggestions for test failures.</p>
  * 
- * <p>The model is designed to support multiple use cases:</p>
+ * <p>The model supports multiple use cases:</p>
  * <ul>
- *   <li><strong>Failure Analysis:</strong> Complete context for AI-powered failure diagnosis</li>
- *   <li><strong>UI Display:</strong> Rich information for the TriagePanel interface</li>
- *   <li><strong>Code Navigation:</strong> Precise source file and line number information</li>
- *   <li><strong>Debugging Support:</strong> Parsing metadata and performance metrics</li>
+ *   <li>Failure Analysis: Complete context for AI-powered failure diagnosis</li>
+ *   <li>UI Display: Rich information for the TriagePanel interface</li>
+ *   <li>Code Navigation: Precise source file and line number information</li>
+ *   <li>Debugging Support: Parsing metadata and performance metrics</li>
  * </ul>
- * 
- * <p>The class uses composition to maintain rich structured data while providing
- * a cohesive domain concept. It prioritizes data integrity, extensibility, and
- * comprehensive failure context over simplicity.</p>
  * 
  * @author Alex Ibasitas
  * @since 1.0.0
@@ -227,9 +223,6 @@ public class FailureInfo {
     /**
      * Gets the time taken to parse the test output.
      * 
-     * <p>This metric is useful for performance monitoring and debugging
-     * parsing efficiency.</p>
-     * 
      * @return the parsing time in milliseconds
      */
     public long getParsingTime() {
@@ -244,8 +237,7 @@ public class FailureInfo {
      * Fluent builder for creating FailureInfo instances.
      * 
      * <p>This builder provides a clean, readable API for constructing FailureInfo
-     * objects with optional fields. It automatically handles backward compatibility
-     * by populating legacy string fields when structured objects are provided.</p>
+     * objects with optional fields.</p>
      * 
      * <p>Example usage:</p>
      * <pre>{@code

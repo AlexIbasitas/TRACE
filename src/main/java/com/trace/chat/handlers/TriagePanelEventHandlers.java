@@ -65,7 +65,10 @@ public final class TriagePanelEventHandlers {
     private static final Map<Component, ColorState> componentColorStates = new WeakHashMap<>();
     
     /**
-     * Color state tracking for components
+     * Color state tracking for components.
+     * 
+     * <p>This class maintains the current visual state of components including
+     * original colors, current colors, and interaction states (hovered, pressed).</p>
      */
     private static class ColorState {
         private final Color originalBackground;
@@ -75,6 +78,11 @@ public final class TriagePanelEventHandlers {
         private boolean isHovered;
         private boolean isPressed;
         
+        /**
+         * Creates a new color state for a component.
+         * 
+         * @param component The component to track
+         */
         public ColorState(Component component) {
             this.originalBackground = component.getBackground();
             this.originalForeground = component.getForeground();
@@ -268,7 +276,9 @@ public final class TriagePanelEventHandlers {
             }
         }
         
-        LOG.debug("TriagePanelEventHandlers: Theme change handled for " + componentColorStates.size() + " components");
+        if (LOG.isDebugEnabled()) {
+            LOG.debug("TriagePanelEventHandlers: Theme change handled for " + componentColorStates.size() + " components");
+        }
     }
     
     /**

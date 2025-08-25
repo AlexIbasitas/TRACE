@@ -1,10 +1,9 @@
 package com.trace.chat.components;
 
+import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.ui.JBColor;
 import com.trace.common.constants.TriagePanelConstants;
 import com.trace.common.utils.ThemeUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import javax.swing.*;
 import java.awt.*;
@@ -14,14 +13,21 @@ import java.awt.event.HierarchyListener;
 /**
  * Lightweight row that displays an animated "assistant is typing" indicator.
  *
- * - Styled like an assistant message row
- * - Uses javax.swing.Timer for low-cost animation
- * - Respects theme colors via UIManager
- * - Starts/stops based on visibility and lifecycle events
+ * <p>This component provides visual feedback to users when the AI assistant is processing
+ * a response. It displays an animated row with dots that cycle through to indicate
+ * ongoing activity.</p>
+ *
+ * <p>The component is styled like an assistant message row and uses javax.swing.Timer
+ * for low-cost animation. It respects theme colors and starts/stops based on visibility
+ * and lifecycle events.</p>
+ *
+ * @author Alex Ibasitas
+ * @version 1.0
+ * @since 1.0
  */
 public class TypingIndicatorRow extends JPanel {
 
-    private static final Logger LOG = LoggerFactory.getLogger(TypingIndicatorRow.class);
+    private static final Logger LOG = Logger.getInstance(TypingIndicatorRow.class);
 
     private static final int DOT_COUNT = 3;
     private static final int TICK_MS = 80; // ~12.5 FPS; low CPU
@@ -32,6 +38,9 @@ public class TypingIndicatorRow extends JPanel {
     private Timer animationTimer;
     private int tickCounter = 0;
 
+    /**
+     * Creates a new typing indicator row with animation capabilities.
+     */
     public TypingIndicatorRow() {
         setOpaque(true);
         setBackground(ThemeUtils.panelBackground());
@@ -87,6 +96,9 @@ public class TypingIndicatorRow extends JPanel {
         super.removeNotify();
     }
 
+    /**
+     * Starts the typing animation if it's not already running.
+     */
     public void startAnimation() {
         try {
             if (!animationTimer.isRunning()) {
@@ -94,19 +106,27 @@ public class TypingIndicatorRow extends JPanel {
                 LOG.debug("TypingIndicator: animation started");
             }
         } catch (Exception ignore) {
+            // Ignore timer start errors
         }
     }
 
+    /**
+     * Pauses the typing animation if it's currently running.
+     */
     public void pauseAnimation() {
         try {
             if (animationTimer.isRunning()) {
                 animationTimer.stop();
-                LOG.debug("TypingIndicator: animation paused (not showing)");
+                LOG.debug("TypingIndicator: animation paused");
             }
         } catch (Exception ignore) {
+            // Ignore timer stop errors
         }
     }
 
+    /**
+     * Stops the typing animation and resets the counter.
+     */
     public void stopAnimation() {
         try {
             if (animationTimer != null && animationTimer.isRunning()) {
@@ -114,6 +134,7 @@ public class TypingIndicatorRow extends JPanel {
                 LOG.debug("TypingIndicator: animation stopped");
             }
         } catch (Exception ignore) {
+            // Ignore timer stop errors
         }
     }
 

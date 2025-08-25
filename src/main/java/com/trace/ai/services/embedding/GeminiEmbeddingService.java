@@ -4,8 +4,7 @@ import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import com.intellij.openapi.diagnostic.Logger;
 import org.jetbrains.annotations.NotNull;
 
 import java.net.URI;
@@ -35,7 +34,7 @@ import java.util.concurrent.CompletableFuture;
  */
 public class GeminiEmbeddingService {
     
-    private static final Logger LOG = LoggerFactory.getLogger(GeminiEmbeddingService.class);
+    private static final Logger LOG = Logger.getInstance(GeminiEmbeddingService.class);
     
     // Google Gemini Embedding API Configuration
     private static final String EMBEDDING_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-embedding-001:embedContent";
@@ -129,7 +128,7 @@ public class GeminiEmbeddingService {
         JsonObject request = buildEmbeddingRequest(text);
         String requestBody = GSON.toJson(request);
         
-        LOG.debug("Gemini embedding request (attempt " + (attempt + 1) + "): " + requestBody);
+        // Request body logging removed for security
         
         // Execute the request
         String response = executeEmbeddingRequest(requestBody);
@@ -138,7 +137,7 @@ public class GeminiEmbeddingService {
         float[] embedding = parseEmbeddingResponse(response);
         
         long processingTime = System.currentTimeMillis() - startTime;
-        LOG.info("Gemini embedding generated successfully in " + processingTime + "ms (attempt " + (attempt + 1) + ")");
+        LOG.info("Gemini embedding generated in " + processingTime + "ms");
         
         return embedding;
     }
@@ -207,8 +206,7 @@ public class GeminiEmbeddingService {
         try {
             JsonObject jsonResponse = JsonParser.parseString(response).getAsJsonObject();
             
-            // Log the response structure for debugging
-            LOG.debug("Gemini response structure: " + jsonResponse.keySet());
+            // Response structure logging removed for security
             
             // Try different possible response structures
             var embeddings = jsonResponse.getAsJsonArray("embeddings");
@@ -265,7 +263,7 @@ public class GeminiEmbeddingService {
         
         // Validate embedding dimensions
         if (embeddingArray.length != EMBEDDING_DIMENSIONS) {
-            LOG.warn("Expected " + EMBEDDING_DIMENSIONS + " dimensions, got " + embeddingArray.length);
+            LOG.warn("Embedding dimensions mismatch: expected " + EMBEDDING_DIMENSIONS + ", got " + embeddingArray.length);
         }
         
         return embeddingArray;

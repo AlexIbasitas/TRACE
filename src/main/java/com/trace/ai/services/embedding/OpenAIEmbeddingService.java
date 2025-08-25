@@ -3,8 +3,7 @@ package com.trace.ai.services.embedding;
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import com.intellij.openapi.diagnostic.Logger;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -35,7 +34,7 @@ import java.util.concurrent.CompletableFuture;
  */
 public class OpenAIEmbeddingService {
     
-    private static final Logger LOG = LoggerFactory.getLogger(OpenAIEmbeddingService.class);
+    private static final Logger LOG = Logger.getInstance(OpenAIEmbeddingService.class);
     
     // OpenAI Embedding API Configuration
     private static final String EMBEDDING_URL = "https://api.openai.com/v1/embeddings";
@@ -129,7 +128,7 @@ public class OpenAIEmbeddingService {
         JsonObject request = buildEmbeddingRequest(text);
         String requestBody = GSON.toJson(request);
         
-        LOG.debug("OpenAI embedding request (attempt " + (attempt + 1) + "): " + requestBody);
+        // Request body logging removed for security
         
         // Execute the request
         String response = executeEmbeddingRequest(requestBody);
@@ -138,7 +137,7 @@ public class OpenAIEmbeddingService {
         float[] embedding = parseEmbeddingResponse(response);
         
         long processingTime = System.currentTimeMillis() - startTime;
-        LOG.info("OpenAI embedding generated successfully in " + processingTime + "ms (attempt " + (attempt + 1) + ")");
+        LOG.info("OpenAI embedding generated in " + processingTime + "ms");
         
         return embedding;
     }
@@ -215,7 +214,7 @@ public class OpenAIEmbeddingService {
             
             // Validate embedding dimensions
             if (embeddingArray.length != EMBEDDING_DIMENSIONS) {
-                LOG.warn("Expected " + EMBEDDING_DIMENSIONS + " dimensions, got " + embeddingArray.length);
+                LOG.warn("Embedding dimensions mismatch: expected " + EMBEDDING_DIMENSIONS + ", got " + embeddingArray.length);
             }
             
             return embeddingArray;

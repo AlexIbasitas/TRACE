@@ -1,6 +1,5 @@
 package com.trace.ai.models;
 
-import com.intellij.openapi.diagnostic.Logger;
 import com.trace.ai.configuration.AIServiceType;
 import org.jetbrains.annotations.NotNull;
 
@@ -26,7 +25,7 @@ import java.util.UUID;
  */
 public class AIModel {
     
-    private static final Logger LOG = Logger.getInstance(AIModel.class);
+    // No logging needed for data model class
     
     // Unique identifier for this model configuration
     private final String id;
@@ -68,10 +67,6 @@ public class AIModel {
         this.notes = "";
         this.createdAt = System.currentTimeMillis();
         this.lastModified = this.createdAt;
-        
-        LOG.info("Created new AIModel: " + getFullDisplayName() + 
-                " (Service: " + this.serviceType + 
-                ", ID: " + this.modelId + ")");
     }
     
     /**
@@ -97,10 +92,6 @@ public class AIModel {
         this.notes = notes;
         this.createdAt = createdAt;
         this.lastModified = lastModified;
-        
-        LOG.info("Created AIModel from existing data: " + getFullDisplayName() + 
-                " (Service: " + this.serviceType + 
-                ", ID: " + this.modelId + ")");
     }
     
     // ============================================================================

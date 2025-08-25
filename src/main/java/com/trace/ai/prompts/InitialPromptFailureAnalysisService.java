@@ -8,8 +8,7 @@ import com.trace.ai.configuration.AISettings;
 
 import java.util.List;
 import org.jetbrains.annotations.NotNull;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import com.intellij.openapi.diagnostic.Logger;
 
 /**
  * Service for generating AI prompts for initial test failure analysis.
@@ -30,7 +29,7 @@ import org.slf4j.LoggerFactory;
 @Service
 public final class InitialPromptFailureAnalysisService {
     
-    private static final Logger LOG = LoggerFactory.getLogger(InitialPromptFailureAnalysisService.class);
+    private static final Logger LOG = Logger.getInstance(InitialPromptFailureAnalysisService.class);
     
     /**
      * Generates a concise summary prompt for quick analysis.
@@ -55,7 +54,7 @@ public final class InitialPromptFailureAnalysisService {
         // Check if AI is enabled
         AISettings aiSettings = AISettings.getInstance();
         if (!aiSettings.isTraceEnabled()) {
-            LOG.info("Skipping prompt generation - AI is disabled");
+            LOG.info("Summary prompt generation skipped - AI disabled");
             return "AI Analysis is currently disabled. Enable AI in the header to use AI-powered features.";
         }
         
@@ -111,6 +110,7 @@ public final class InitialPromptFailureAnalysisService {
         prompt.append("### Recommended Actions\n");
         prompt.append("- **Immediate Steps:** [Specific, actionable steps to resolve this issue]\n");
         
+        LOG.info("Summary prompt generated for: " + failureInfo.getScenarioName());
         return prompt.toString();
     }
     
@@ -134,22 +134,11 @@ public final class InitialPromptFailureAnalysisService {
         // Check if TRACE is enabled (power button) - if not, return early
         AISettings aiSettings = AISettings.getInstance();
         if (!aiSettings.isTraceEnabled()) {
-            LOG.info("TRACE is disabled (power off) - skipping prompt generation");
+            LOG.info("Detailed prompt generation skipped - AI disabled");
             return "TRACE is currently disabled. Enable TRACE to generate analysis prompts.";
         }
         
-        LOG.info("Generating detailed prompt for failure: " + failureInfo.getScenarioName());
         StepDefinitionInfo stepDefInfo = failureInfo.getStepDefinitionInfo();
-        if (stepDefInfo == null) {
-            LOG.warn("InitialPromptFailureAnalysisService: StepDefinitionInfo is null");
-        } else {
-            LOG.info("InitialPromptFailureAnalysisService: StepDefinitionInfo present. Method: " + stepDefInfo.getMethodName() + ", Class: " + stepDefInfo.getClassName());
-            if (stepDefInfo.getMethodText() == null) {
-                LOG.warn("InitialPromptFailureAnalysisService: StepDefinitionInfo.methodText is null");
-            } else {
-                LOG.info("InitialPromptFailureAnalysisService: StepDefinitionInfo.methodText length: " + stepDefInfo.getMethodText().length());
-            }
-        }
         StringBuilder prompt = new StringBuilder();
         
         // Enhanced instruction with specific role, expertise, and step-by-step guidance
@@ -192,11 +181,8 @@ public final class InitialPromptFailureAnalysisService {
         
         // Add step definition context only if available
         if (stepDefInfo != null && stepDefInfo.getMethodText() != null) {
-            LOG.info("InitialPromptFailureAnalysisService: Including step definition in prompt");
             prompt.append("### Step Definition ###\n");
             appendStepDefinition(prompt, failureInfo);
-        } else {
-            LOG.warn("InitialPromptFailureAnalysisService: Step definition not included in prompt - missing method text");
         }
         
         prompt.append("### Code Context ###\n");
@@ -222,7 +208,7 @@ public final class InitialPromptFailureAnalysisService {
         
         prompt.append("**Important:** Base your analysis on the evidence provided. If you need more information, specify what additional context would help.\n");
         
-        LOG.info("InitialPromptFailureAnalysisService: Final generated prompt:\n" + prompt.toString());
+        LOG.info("Detailed prompt generated for: " + failureInfo.getScenarioName());
         return prompt.toString();
     }
     

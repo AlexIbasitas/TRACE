@@ -1,5 +1,6 @@
 package com.trace.ai.ui;
 
+import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.openapi.ui.DialogWrapper;
 import com.intellij.openapi.ui.Messages;
 import com.intellij.ide.BrowserUtil;
@@ -44,6 +45,8 @@ import java.awt.event.ActionListener;
  * @since 1.0.0
  */
 public class PrivacyConsentPanel extends JBPanel<PrivacyConsentPanel> implements Disposable {
+    
+    private static final Logger LOG = Logger.getInstance(PrivacyConsentPanel.class);
     
     // UI Components
     private final JBCheckBox aiEnabledCheckBox;
@@ -313,6 +316,8 @@ public class PrivacyConsentPanel extends JBPanel<PrivacyConsentPanel> implements
             aiSettings.setAIAnalysisEnabled(true);
             updateExplanationText();
             
+            LOG.info("AI analysis enabled with user consent");
+            
             // Notify callback if provided
             if (onAIStateChanged != null) {
                 onAIStateChanged.run();
@@ -320,6 +325,7 @@ public class PrivacyConsentPanel extends JBPanel<PrivacyConsentPanel> implements
         } else {
             // User declined consent - revert checkbox
             aiEnabledCheckBox.setSelected(false);
+            LOG.info("AI analysis consent declined by user");
         }
     }
     
@@ -344,6 +350,8 @@ public class PrivacyConsentPanel extends JBPanel<PrivacyConsentPanel> implements
             aiSettings.setUserConsentGiven(false);
             updateExplanationText();
             
+            LOG.info("AI analysis disabled by user");
+            
             // Notify callback if provided
             if (onAIStateChanged != null) {
                 onAIStateChanged.run();
@@ -351,6 +359,7 @@ public class PrivacyConsentPanel extends JBPanel<PrivacyConsentPanel> implements
         } else {
             // User cancelled - revert checkbox
             aiEnabledCheckBox.setSelected(true);
+            LOG.info("AI analysis disable cancelled by user");
         }
     }
     

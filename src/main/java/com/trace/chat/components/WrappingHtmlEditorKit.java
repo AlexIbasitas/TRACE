@@ -11,7 +11,19 @@ import javax.swing.text.Segment;
  * HTMLEditorKit that enables soft-wrapping for all inline text, including content inside
  * <pre> and <code> blocks. This prevents horizontal overflow in Swing's HTML renderer.
  *
- * Scope: ONLY wrapping behavior. No styling, no business logic changes.
+ * <p>This class extends HTMLEditorKit to provide intelligent text wrapping behavior
+ * while preserving the formatting of preformatted content. It implements a custom
+ * ViewFactory that creates wrappable views for inline content while maintaining
+ * the original behavior for PRE and CODE blocks.</p>
+ *
+ * <p>The wrapping behavior is designed to prevent horizontal scrolling in chat
+ * interfaces while maintaining readability and proper formatting.</p>
+ *
+ * <p>Scope: ONLY wrapping behavior. No styling, no business logic changes.</p>
+ *
+ * @author Alex Ibasitas
+ * @version 1.0
+ * @since 1.0
  */
 public class WrappingHtmlEditorKit extends HTMLEditorKit {
 
@@ -25,6 +37,10 @@ public class WrappingHtmlEditorKit extends HTMLEditorKit {
     /**
      * Factory that returns wrappable views for inline/label content, and ensures
      * content under PRE/CODE can break lines as needed.
+     * 
+     * <p>This factory creates appropriate view implementations based on the HTML
+     * element type, ensuring that text content can wrap while preserving
+     * preformatted behavior for PRE and CODE blocks.</p>
      */
     private static class WrappingHTMLFactory extends HTMLEditorKit.HTMLFactory {
         @Override
@@ -52,6 +68,16 @@ public class WrappingHtmlEditorKit extends HTMLEditorKit {
             return super.create(elem);
         }
 
+        /**
+         * Checks if an element is inside a specific ancestor tag.
+         * 
+         * <p>This method traverses up the element hierarchy to determine if
+         * the given element is contained within an element of the specified tag type.</p>
+         * 
+         * @param elem The element to check
+         * @param ancestor The ancestor tag to look for
+         * @return true if the element is inside the specified ancestor tag
+         */
         private static boolean isInside(Element elem, HTML.Tag ancestor) {
             Element e = elem;
             while (e != null) {
@@ -70,6 +96,9 @@ public class WrappingHtmlEditorKit extends HTMLEditorKit {
 
     /**
      * Wrappable label view for plain text content nodes.
+     * 
+     * <p>This view implementation provides word-aware text wrapping for plain
+     * text content while maintaining proper text rendering and selection behavior.</p>
      */
     private static class WrappingLabelView extends LabelView {
         WrappingLabelView(Element elem) { super(elem); }
@@ -110,6 +139,9 @@ public class WrappingHtmlEditorKit extends HTMLEditorKit {
 
     /**
      * Wrappable inline view for inline elements like SPAN.
+     * 
+     * <p>This view implementation provides word-aware text wrapping for inline
+     * HTML elements while maintaining proper styling and layout behavior.</p>
      */
     private static class WrappingInlineView extends InlineView {
         WrappingInlineView(Element elem) { super(elem); }
@@ -148,6 +180,15 @@ public class WrappingHtmlEditorKit extends HTMLEditorKit {
     /**
      * Returns a position at or before 'end' to break the line, preferring whitespace
      * and common delimiters. Falls back to the provided end position if no boundary exists.
+     * 
+     * <p>This method implements intelligent word breaking by looking for natural
+     * break points such as whitespace, hyphens, slashes, underscores, and periods.
+     * It scans backwards from the end position to find the best break point.</p>
+     * 
+     * @param doc The document containing the text
+     * @param start The starting position in the document
+     * @param end The ending position in the document
+     * @return The best position to break the line at
      */
     private static int findWordBreak(Document doc, int start, int end) {
         if (end <= start) {

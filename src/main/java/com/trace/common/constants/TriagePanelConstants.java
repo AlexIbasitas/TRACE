@@ -16,7 +16,7 @@ import java.awt.*;
  * makes it easier to maintain and modify the visual appearance.</p>
  * 
  * <p>All colors are now theme-aware using JBColor and UIUtil to ensure
- * compatibility with IntelliJ 2024.2.3+ and future versions.</p>
+ * compatibility with IntelliJ 2025.2.+ and future versions.</p>
  * 
  * @author Alex Ibasitas
  * @version 2.0
@@ -33,7 +33,15 @@ public final class TriagePanelConstants {
     // THEME-AWARE COLOR CONSTANTS
     // ============================================================================
     
-    /** Theme-aware panel background color using dynamic resolution */
+    /**
+     * Gets the theme-aware panel background color using dynamic resolution.
+     * 
+     * <p>This method returns a JBColor that automatically adapts to the current
+     * IDE theme. It first attempts to use the UIManager's Panel.background color,
+     * falling back to appropriate light/dark theme defaults if not available.</p>
+     * 
+     * @return The theme-aware panel background color
+     */
     public static JBColor getPanelBackground() {
         return JBColor.lazy(() -> {
             Color uiColor = UIManager.getColor("Panel.background");
@@ -41,7 +49,15 @@ public final class TriagePanelConstants {
         });
     }
     
-    /** Theme-aware input container background color using dynamic resolution */
+    /**
+     * Gets the theme-aware input container background color using dynamic resolution.
+     * 
+     * <p>This method returns a JBColor that automatically adapts to the current
+     * IDE theme. It first attempts to use the UIManager's TextField.background color,
+     * falling back to appropriate light/dark theme defaults if not available.</p>
+     * 
+     * @return The theme-aware input container background color
+     */
     public static JBColor getInputContainerBackground() {
         return JBColor.lazy(() -> {
             Color uiColor = UIManager.getColor("TextField.background");
@@ -56,7 +72,15 @@ public final class TriagePanelConstants {
         });
     }
     
-    /** Theme-aware input container border color using dynamic resolution */
+    /**
+     * Gets the theme-aware input container border color using dynamic resolution.
+     * 
+     * <p>This method returns a JBColor that automatically adapts to the current
+     * IDE theme. It first attempts to use the UIManager's Component.borderColor,
+     * falling back to appropriate light/dark theme defaults if not available.</p>
+     * 
+     * @return The theme-aware input container border color
+     */
     public static JBColor getInputContainerBorder() {
         return JBColor.lazy(() -> {
             Color uiColor = UIManager.getColor("Component.borderColor");
@@ -71,7 +95,15 @@ public final class TriagePanelConstants {
         });
     }
     
-    /** Theme-aware header border color using dynamic resolution */
+    /**
+     * Gets the theme-aware header border color using dynamic resolution.
+     * 
+     * <p>This method returns a JBColor that automatically adapts to the current
+     * IDE theme. It first attempts to use the UIManager's Component.borderColor,
+     * falling back to appropriate light/dark theme defaults if not available.</p>
+     * 
+     * @return The theme-aware header border color
+     */
     public static JBColor getHeaderBorder() {
         return JBColor.lazy(() -> {
             Color uiColor = UIManager.getColor("Component.borderColor");
@@ -79,19 +111,40 @@ public final class TriagePanelConstants {
         });
     }
     
-    /** Theme-aware header text color using dynamic resolution */
+    /**
+     * Gets the theme-aware header text color using dynamic resolution.
+     * 
+     * <p>This method returns a JBColor that automatically adapts to the current
+     * IDE theme using the Label.foreground color with appropriate fallbacks.</p>
+     * 
+     * @return The theme-aware header text color
+     */
     public static JBColor getHeaderText() {
         return JBColor.namedColor("Label.foreground", 
             new JBColor(new Color(31, 31, 31), new Color(255, 255, 255)));
     }
     
-    /** Theme-aware white color for text - use getTextForeground() instead */
+    /**
+     * Gets the theme-aware white color for text.
+     * 
+     * <p>Note: Use getTextForeground() instead for general text color needs.
+     * This method is provided for specific cases requiring white text.</p>
+     * 
+     * @return The theme-aware white color
+     */
     public static JBColor getWhite() {
         return JBColor.namedColor("Label.foreground", 
             new JBColor(new Color(255, 255, 255), new Color(255, 255, 255)));
     }
     
-    /** Theme-aware timestamp text color using dynamic resolution */
+    /**
+     * Gets the theme-aware timestamp text color using dynamic resolution.
+     * 
+     * <p>This method returns a JBColor that automatically adapts to the current
+     * IDE theme using the Label.infoForeground color with appropriate fallbacks.</p>
+     * 
+     * @return The theme-aware timestamp text color
+     */
     public static JBColor getTimestampColor() {
         return JBColor.namedColor("Label.infoForeground", 
             new JBColor(new Color(150, 150, 150), new Color(150, 150, 150)));
@@ -164,67 +217,115 @@ public final class TriagePanelConstants {
     /** Default font family */
     public static final String FONT_FAMILY = "Segoe UI";
     
-    /** Input area font - uses IDE's default font size for consistency */
+    /**
+     * Gets the input area font using IDE's default font size for consistency.
+     * 
+     * @return The input area font
+     */
     public static Font getInputFont() {
         return UIUtil.getLabelFont();
     }
     
-    /** Header title font - uses IDE's default font size for consistency */
+    /**
+     * Gets the header title font using IDE's default font size for consistency.
+     * 
+     * @return The header title font
+     */
     public static Font getHeaderTitleFont() {
         return UIUtil.getLabelFont();
     }
     
-    /** Header button font - uses IDE's default font size for consistency */
+    /**
+     * Gets the header button font using IDE's default font size for consistency.
+     * 
+     * @return The header button font
+     */
     public static Font getHeaderButtonFont() {
         return UIUtil.getLabelFont();
     }
     
-    /** Settings placeholder font - uses IDE's default font size for consistency */
+    /**
+     * Gets the settings placeholder font using IDE's default font size for consistency.
+     * 
+     * @return The settings placeholder font
+     */
     public static Font getSettingsPlaceholderFont() {
         return UIUtil.getLabelFont();
     }
     
-    /** Settings button font - uses IDE's default font size for consistency */
+    /**
+     * Gets the settings button font using IDE's default font size for consistency.
+     * 
+     * @return The settings button font
+     */
     public static Font getSettingsButtonFont() {
         return UIUtil.getLabelFont();
     }
     
-    /** Send button font - uses IDE's default font size for consistency */
+    /**
+     * Gets the send button font using IDE's default font size for consistency.
+     * 
+     * @return The send button font in bold
+     */
     public static Font getSendButtonFont() {
         Font baseFont = UIUtil.getLabelFont();
         return baseFont.deriveFont(Font.BOLD);
     }
     
-    /** Message sender font - uses IDE's default font size for consistency */
+    /**
+     * Gets the message sender font using IDE's default font size for consistency.
+     * 
+     * @return The message sender font in bold
+     */
     public static Font getSenderFont() {
         Font baseFont = UIUtil.getLabelFont();
         return baseFont.deriveFont(Font.BOLD);
     }
     
-    /** Message timestamp font - uses IDE's default font size for consistency */
+    /**
+     * Gets the message timestamp font using IDE's default font size for consistency.
+     * 
+     * @return The message timestamp font (slightly smaller than base)
+     */
     public static Font getTimestampFont() {
         Font baseFont = UIUtil.getLabelFont();
         return baseFont.deriveFont(baseFont.getSize() - 1f); // Slightly smaller than base
     }
     
-    /** Scenario label font - uses IDE's default font size for consistency */
+    /**
+     * Gets the scenario label font using IDE's default font size for consistency.
+     * 
+     * @return The scenario label font in bold
+     */
     public static Font getScenarioFont() {
         Font baseFont = UIUtil.getLabelFont();
         return baseFont.deriveFont(Font.BOLD);
     }
     
-    /** Message text font - uses IDE's default font size for consistency */
+    /**
+     * Gets the message text font using IDE's default font size for consistency.
+     * 
+     * @return The message text font
+     */
     public static Font getMessageFont() {
         return UIUtil.getLabelFont();
     }
     
-    /** Collapsible toggle font - uses IDE's default font size for consistency */
+    /**
+     * Gets the collapsible toggle font using IDE's default font size for consistency.
+     * 
+     * @return The collapsible toggle font in bold
+     */
     public static Font getCollapsibleToggleFont() {
         Font baseFont = UIUtil.getLabelFont();
         return baseFont.deriveFont(Font.BOLD);
     }
     
-    /** Collapsible content font - uses IDE's default font size for consistency */
+    /**
+     * Gets the collapsible content font using IDE's default font size for consistency.
+     * 
+     * @return The collapsible content font (slightly smaller than base)
+     */
     public static Font getCollapsibleContentFont() {
         Font baseFont = UIUtil.getLabelFont();
         return baseFont.deriveFont(baseFont.getSize() - 1f); // Slightly smaller than base
@@ -437,7 +538,11 @@ public final class TriagePanelConstants {
     
     /**
      * Gets the default panel background color using dynamic theme resolution.
-     *
+     * 
+     * <p>This method provides a fallback mechanism for panel background color
+     * resolution. It first attempts to get the color from UIManager, then
+     * falls back to the theme-aware getPanelBackground() method.</p>
+     * 
      * @return The panel background color
      */
     public static Color getPanelBackgroundFallback() {
@@ -447,7 +552,7 @@ public final class TriagePanelConstants {
     
     /**
      * Creates a compound border with the specified outer and inner borders.
-     *
+     * 
      * @param outerBorder The outer border
      * @param innerBorder The inner border
      * @return The compound border
@@ -458,7 +563,7 @@ public final class TriagePanelConstants {
     
     /**
      * Creates an empty border with the specified insets.
-     *
+     * 
      * @param top The top inset
      * @param left The left inset
      * @param bottom The bottom inset
@@ -471,7 +576,7 @@ public final class TriagePanelConstants {
     
     /**
      * Creates a line border with the specified color and thickness.
-     *
+     * 
      * @param color The border color
      * @param thickness The border thickness
      * @param rounded Whether the border should be rounded
@@ -483,7 +588,7 @@ public final class TriagePanelConstants {
     
     /**
      * Creates a matte border with the specified insets and color.
-     *
+     * 
      * @param top The top inset
      * @param left The left inset
      * @param bottom The bottom inset

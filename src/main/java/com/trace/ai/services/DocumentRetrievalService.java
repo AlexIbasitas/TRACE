@@ -1,7 +1,6 @@
 package com.trace.ai.services;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import com.intellij.openapi.diagnostic.Logger;
 import com.trace.ai.services.embedding.GeminiEmbeddingService;
 import com.trace.ai.services.embedding.OpenAIEmbeddingService;
 import com.trace.ai.configuration.AISettings;
@@ -39,7 +38,7 @@ import java.util.concurrent.TimeUnit;
  */
 public class DocumentRetrievalService {
     
-    private static final Logger LOG = LoggerFactory.getLogger(DocumentRetrievalService.class);
+    private static final Logger LOG = Logger.getInstance(DocumentRetrievalService.class);
     
     // Configuration constants
     private static final double DEFAULT_SIMILARITY_THRESHOLD = 0.7;

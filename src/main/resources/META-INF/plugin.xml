@@ -2,17 +2,42 @@
 <idea-plugin>
     <id>com.trace</id>
     <name>TRACE</name>
-    <vendor>TRACE</vendor>
+    <vendor>Alex Ibasitas</vendor>
     <description><![CDATA[
-        IntelliJ plugin to assist SDETs with triaging Cucumber Java test failures.
-        Automatically extracts failure information and formats it for analysis.
+        <p>TRACE is an intelligent test failure analysis assistant for Cucumber Java tests in IntelliJ IDEA.</p>
+        
+        <h3>Key Features:</h3>
+        <ul>
+            <li><b>Automatic Failure Detection</b> - Automatically captures and analyzes Cucumber test failures</li>
+            <li><b>AI-Powered Analysis</b> - Get intelligent suggestions for fixing test failures using OpenAI or Google Gemini</li>
+            <li><b>Context Extraction</b> - Extracts step definitions, Gherkin scenarios, and stack traces automatically</li>
+            <li><b>Chat Interface</b> - Interactive chat interface for asking follow-up questions about failures</li>
+            <li><b>Secure API Management</b> - Secure storage of API keys using IntelliJ's PasswordSafe</li>
+        </ul>
+        
+        <h3>How It Works:</h3>
+        <p>When a Cucumber test fails, TRACE automatically:</p>
+        <ol>
+            <li>Extracts the failure information and stack trace</li>
+            <li>Finds the corresponding step definition and Gherkin scenario</li>
+            <li>Generates an AI prompt with all relevant context</li>
+            <li>Displays the analysis in an easy-to-read chat interface</li>
+        </ol>
+        
+        <h3>Perfect For:</h3>
+        <ul>
+            <li>SDETs and QA Engineers working with Cucumber tests</li>
+            <li>Teams using Behavior-Driven Development (BDD)</li>
+            <li>Developers who want faster test failure triage</li>
+        </ul>
+        
+        <p><b>Note:</b> Requires OpenAI API key or Google Gemini API key for AI analysis features.</p>
     ]]></description>
 
     <idea-version since-build="252" until-build="252.*"/>
 
     <depends>com.intellij.modules.platform</depends>
     <depends>com.intellij.modules.java</depends>
-    <!-- <depends>org.jetbrains.plugins.cucumber.java</depends> -->
 
     <extensions defaultExtensionNs="com.intellij">
         <!-- Custom Icon -->
@@ -20,7 +45,7 @@
         
         <!-- Tool Window -->
         <toolWindow id="AI Assistant"
-                   name=""
+                   name="TRACE"
                    secondary="false" 
                    icon="icons/logo_13.png" 
                    anchor="right" 

@@ -7,9 +7,6 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
-
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -18,483 +15,217 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 class SecureAPIKeyManagerUnitTest {
     
     @Nested
-    @DisplayName("API Key Validation")
-    class ApiKeyValidation {
+    @DisplayName("API Key Storage")
+    class ApiKeyStorage {
         
         @Test
-        @DisplayName("should validate OpenAI API key with correct format")
-        void shouldValidateOpenAiApiKeyWithCorrectFormat() throws ExecutionException, InterruptedException {
+        @DisplayName("should store OpenAI API key successfully")
+        void shouldStoreOpenAiApiKeySuccessfully() {
             // Arrange
-            String validOpenAIKey = "sk-1234567890abcdef1234567890abcdef1234567890abcdef";
+            String apiKey = "sk-1234567890abcdef1234567890abcdef1234567890abcdef";
             AIServiceType serviceType = AIServiceType.OPENAI;
             
             // Act
-            CompletableFuture<Boolean> future = SecureAPIKeyManager.validateAPIKey(serviceType, validOpenAIKey);
-            Boolean result = future.get();
+            boolean result = SecureAPIKeyManager.storeAPIKey(serviceType, apiKey);
             
             // Assert
             assertThat(result).isTrue();
+            
+            // Verify retrieval
+            String retrievedKey = SecureAPIKeyManager.getAPIKey(serviceType);
+            assertThat(retrievedKey).isEqualTo(apiKey);
         }
         
         @Test
-        @DisplayName("should reject OpenAI API key with incorrect format")
-        void shouldRejectOpenAiApiKeyWithIncorrectFormat() throws ExecutionException, InterruptedException {
+        @DisplayName("should store Gemini API key successfully")
+        void shouldStoreGeminiApiKeySuccessfully() {
             // Arrange
-            String invalidOpenAIKey = "invalid-key-format";
-            AIServiceType serviceType = AIServiceType.OPENAI;
-            
-            // Act
-            CompletableFuture<Boolean> future = SecureAPIKeyManager.validateAPIKey(serviceType, invalidOpenAIKey);
-            Boolean result = future.get();
-            
-            // Assert
-            assertThat(result).isFalse();
-        }
-        
-        @Test
-        @DisplayName("should reject OpenAI API key that is too short")
-        void shouldRejectOpenAiApiKeyThatIsTooShort() throws ExecutionException, InterruptedException {
-            // Arrange
-            String shortOpenAIKey = "sk-123";
-            AIServiceType serviceType = AIServiceType.OPENAI;
-            
-            // Act
-            CompletableFuture<Boolean> future = SecureAPIKeyManager.validateAPIKey(serviceType, shortOpenAIKey);
-            Boolean result = future.get();
-            
-            // Assert
-            assertThat(result).isFalse();
-        }
-        
-        @Test
-        @DisplayName("should validate Gemini API key with correct format")
-        void shouldValidateGeminiApiKeyWithCorrectFormat() throws ExecutionException, InterruptedException {
-            // Arrange
-            String validGeminiKey = "AIzaSyC1234567890abcdef1234567890abcdef1234567890abcdef";
+            String apiKey = "AIzaSyC1234567890abcdef1234567890abcdef1234567890abcdef";
             AIServiceType serviceType = AIServiceType.GEMINI;
             
             // Act
-            CompletableFuture<Boolean> future = SecureAPIKeyManager.validateAPIKey(serviceType, validGeminiKey);
-            Boolean result = future.get();
+            boolean result = SecureAPIKeyManager.storeAPIKey(serviceType, apiKey);
             
             // Assert
             assertThat(result).isTrue();
+            
+            // Verify retrieval
+            String retrievedKey = SecureAPIKeyManager.getAPIKey(serviceType);
+            assertThat(retrievedKey).isEqualTo(apiKey);
         }
         
         @Test
-        @DisplayName("should reject Gemini API key with spaces")
-        void shouldRejectGeminiApiKeyWithSpaces() throws ExecutionException, InterruptedException {
+        @DisplayName("should reject empty API key")
+        void shouldRejectEmptyApiKey() {
             // Arrange
-            String invalidGeminiKey = "AIzaSyC 1234567890abcdef1234567890abcdef1234567890abcdef";
-            AIServiceType serviceType = AIServiceType.GEMINI;
+            String emptyKey = "";
+            AIServiceType serviceType = AIServiceType.OPENAI;
             
             // Act
-            CompletableFuture<Boolean> future = SecureAPIKeyManager.validateAPIKey(serviceType, invalidGeminiKey);
-            Boolean result = future.get();
+            boolean result = SecureAPIKeyManager.storeAPIKey(serviceType, emptyKey);
             
             // Assert
             assertThat(result).isFalse();
         }
         
         @Test
-        @DisplayName("should reject Gemini API key that is too short")
-        void shouldRejectGeminiApiKeyThatIsTooShort() throws ExecutionException, InterruptedException {
+        @DisplayName("should reject null API key")
+        void shouldRejectNullApiKey() {
             // Arrange
-            String shortGeminiKey = "short";
-            AIServiceType serviceType = AIServiceType.GEMINI;
-            
-            // Act
-            CompletableFuture<Boolean> future = SecureAPIKeyManager.validateAPIKey(serviceType, shortGeminiKey);
-            Boolean result = future.get();
-            
-            // Assert
-            assertThat(result).isFalse();
-        }
-        
-        @Test
-        @DisplayName("should handle validation timeout correctly")
-        void shouldHandleValidationTimeoutCorrectly() throws ExecutionException, InterruptedException {
-            // Arrange
-            String validApiKey = "sk-1234567890abcdef1234567890abcdef1234567890abcdef";
-            AIServiceType serviceType = AIServiceType.OPENAI;
-            
-            // Act
-            CompletableFuture<Boolean> future = SecureAPIKeyManager.validateAPIKey(serviceType, validApiKey);
-            Boolean result = future.get();
-            
-            // Assert - validation should complete within reasonable time
-            assertThat(result).isNotNull();
-        }
-        
-        @Test
-        @DisplayName("should handle network errors during validation")
-        void shouldHandleNetworkErrorsDuringValidation() throws ExecutionException, InterruptedException {
-            // Arrange
-            String validApiKey = "sk-1234567890abcdef1234567890abcdef1234567890abcdef";
-            AIServiceType serviceType = AIServiceType.OPENAI;
-            
-            // Act
-            CompletableFuture<Boolean> future = SecureAPIKeyManager.validateAPIKey(serviceType, validApiKey);
-            Boolean result = future.get();
-            
-            // Assert - should handle errors gracefully and return false
-            assertThat(result).isNotNull();
-        }
-        
-        @Test
-        @DisplayName("should handle null API key during validation")
-        void shouldHandleNullApiKeyDuringValidation() throws ExecutionException, InterruptedException {
-            // Arrange
-            String nullApiKey = null;
             AIServiceType serviceType = AIServiceType.OPENAI;
             
             // Act & Assert
-            assertThatThrownBy(() -> SecureAPIKeyManager.validateAPIKey(serviceType, nullApiKey))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("@NotNull parameter 'apiKey'");
+            assertThatThrownBy(() -> SecureAPIKeyManager.storeAPIKey(serviceType, null))
+                .isInstanceOf(IllegalArgumentException.class);
         }
         
         @Test
-        @DisplayName("should handle null service type during validation")
-        void shouldHandleNullServiceTypeDuringValidation() throws ExecutionException, InterruptedException {
+        @DisplayName("should reject null service type")
+        void shouldRejectNullServiceType() {
             // Arrange
-            String validApiKey = "sk-1234567890abcdef1234567890abcdef1234567890abcdef";
-            AIServiceType serviceType = null;
-            
-            // Act & Assert
-            assertThatThrownBy(() -> SecureAPIKeyManager.validateAPIKey(serviceType, validApiKey))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("@NotNull parameter 'serviceType'");
-        }
-    }
-    
-    @Nested
-    @DisplayName("Service Type Handling")
-    class ServiceTypeHandling {
-        
-        @Test
-        @DisplayName("should handle OpenAI service type correctly")
-        void shouldHandleOpenAiServiceTypeCorrectly() throws ExecutionException, InterruptedException {
-            // Arrange
-            AIServiceType serviceType = AIServiceType.OPENAI;
             String apiKey = "sk-1234567890abcdef1234567890abcdef1234567890abcdef";
             
-            // Act
-            CompletableFuture<Boolean> future = SecureAPIKeyManager.validateAPIKey(serviceType, apiKey);
-            Boolean result = future.get();
-            
-            // Assert
-            assertThat(result).isTrue();
-        }
-        
-        @Test
-        @DisplayName("should handle Gemini service type correctly")
-        void shouldHandleGeminiServiceTypeCorrectly() throws ExecutionException, InterruptedException {
-            // Arrange
-            AIServiceType serviceType = AIServiceType.GEMINI;
-            String apiKey = "AIzaSyC1234567890abcdef1234567890abcdef1234567890abcdef";
-            
-            // Act
-            CompletableFuture<Boolean> future = SecureAPIKeyManager.validateAPIKey(serviceType, apiKey);
-            Boolean result = future.get();
-            
-            // Assert
-            assertThat(result).isTrue();
-        }
-        
-        @Test
-        @DisplayName("should handle null service type")
-        void shouldHandleNullServiceType() {
-            // Arrange
-            AIServiceType serviceType = null;
-            String apiKey = "test-key";
-            
             // Act & Assert
-            assertThatThrownBy(() -> SecureAPIKeyManager.validateAPIKey(serviceType, apiKey))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("@NotNull parameter 'serviceType'");
+            assertThatThrownBy(() -> SecureAPIKeyManager.storeAPIKey(null, apiKey))
+                .isInstanceOf(IllegalArgumentException.class);
         }
     }
     
     @Nested
-    @DisplayName("API Key Format Validation")
-    class ApiKeyFormatValidation {
+    @DisplayName("API Key Retrieval")
+    class ApiKeyRetrieval {
         
         @Test
-        @DisplayName("should validate OpenAI key format with sk- prefix")
-        void shouldValidateOpenAiKeyFormatWithSkPrefix() throws ExecutionException, InterruptedException {
+        @DisplayName("should retrieve stored OpenAI API key")
+        void shouldRetrieveStoredOpenAiApiKey() {
             // Arrange
-            String[] validOpenAIKeys = {
-                "sk-1234567890abcdef1234567890abcdef1234567890abcdef",
-                "sk-abcdefghijklmnopqrstuvwxyz1234567890abcdefghijklmnop",
-                "sk-1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef"
-            };
+            String apiKey = "sk-1234567890abcdef1234567890abcdef1234567890abcdef";
+            AIServiceType serviceType = AIServiceType.OPENAI;
+            SecureAPIKeyManager.storeAPIKey(serviceType, apiKey);
             
-            for (String apiKey : validOpenAIKeys) {
-                // Act
-                CompletableFuture<Boolean> future = SecureAPIKeyManager.validateAPIKey(AIServiceType.OPENAI, apiKey);
-                Boolean result = future.get();
-                
-                // Assert
-                assertThat(result).as("API key: " + apiKey).isTrue();
-            }
+            // Act
+            String retrievedKey = SecureAPIKeyManager.getAPIKey(serviceType);
+            
+            // Assert
+            assertThat(retrievedKey).isEqualTo(apiKey);
         }
         
         @Test
-        @DisplayName("should reject OpenAI key without sk- prefix")
-        void shouldRejectOpenAiKeyWithoutSkPrefix() throws ExecutionException, InterruptedException {
+        @DisplayName("should retrieve stored Gemini API key")
+        void shouldRetrieveStoredGeminiApiKey() {
             // Arrange
-            String[] invalidOpenAIKeys = {
-                "1234567890abcdef1234567890abcdef1234567890abcdef",
-                "openai-1234567890abcdef1234567890abcdef1234567890abcdef",
-                "sk1234567890abcdef1234567890abcdef1234567890abcdef",
-                "SK-1234567890abcdef1234567890abcdef1234567890abcdef"
-            };
+            String apiKey = "AIzaSyC1234567890abcdef1234567890abcdef1234567890abcdef";
+            AIServiceType serviceType = AIServiceType.GEMINI;
+            SecureAPIKeyManager.storeAPIKey(serviceType, apiKey);
             
-            for (String apiKey : invalidOpenAIKeys) {
-                // Act
-                CompletableFuture<Boolean> future = SecureAPIKeyManager.validateAPIKey(AIServiceType.OPENAI, apiKey);
-                Boolean result = future.get();
-                
-                // Assert
-                assertThat(result).as("API key: " + apiKey).isFalse();
-            }
+            // Act
+            String retrievedKey = SecureAPIKeyManager.getAPIKey(serviceType);
+            
+            // Assert
+            assertThat(retrievedKey).isEqualTo(apiKey);
         }
         
         @Test
-        @DisplayName("should validate Gemini key format without spaces")
-        void shouldValidateGeminiKeyFormatWithoutSpaces() throws ExecutionException, InterruptedException {
+        @DisplayName("should return null for non-existent key")
+        void shouldReturnNullForNonExistentKey() {
             // Arrange
-            String[] validGeminiKeys = {
-                "AIzaSyC1234567890abcdef1234567890abcdef1234567890abcdef",
-                "AIzaSyDabcdefghijklmnopqrstuvwxyz1234567890abcdefghijklmnop",
-                "AIzaSyE1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef"
-            };
-            
-            for (String apiKey : validGeminiKeys) {
-                // Act
-                CompletableFuture<Boolean> future = SecureAPIKeyManager.validateAPIKey(AIServiceType.GEMINI, apiKey);
-                Boolean result = future.get();
-                
-                // Assert
-                assertThat(result).as("API key: " + apiKey).isTrue();
-            }
-        }
-        
-        @Test
-        @DisplayName("should reject Gemini key with spaces")
-        void shouldRejectGeminiKeyWithSpaces() throws ExecutionException, InterruptedException {
-            // Arrange
-            String[] invalidGeminiKeys = {
-                "AIzaSyC 1234567890abcdef1234567890abcdef1234567890abcdef",
-                "AIzaSyC1234567890abcdef1234567890abcdef1234567890abcdef ",
-                " AIzaSyC1234567890abcdef1234567890abcdef1234567890abcdef"
-            };
-            
-            for (String apiKey : invalidGeminiKeys) {
-                // Act
-                CompletableFuture<Boolean> future = SecureAPIKeyManager.validateAPIKey(AIServiceType.GEMINI, apiKey);
-                Boolean result = future.get();
-                
-                // Assert
-                assertThat(result).as("API key: " + apiKey).isFalse();
-            }
-        }
-        
-        @Test
-        @DisplayName("should accept Gemini key with newlines and tabs (current validation logic)")
-        void shouldAcceptGeminiKeyWithNewlinesAndTabs() throws ExecutionException, InterruptedException {
-            // Arrange - Current validation only checks for spaces, not other whitespace
-            String[] validGeminiKeysWithWhitespace = {
-                "AIzaSyC1234567890abcdef1234567890abcdef1234567890abcdef\n",
-                "AIzaSyC1234567890abcdef1234567890abcdef1234567890abcdef\t"
-            };
-            
-            for (String apiKey : validGeminiKeysWithWhitespace) {
-                // Act
-                CompletableFuture<Boolean> future = SecureAPIKeyManager.validateAPIKey(AIServiceType.GEMINI, apiKey);
-                Boolean result = future.get();
-                
-                // Assert - Current validation logic accepts these
-                assertThat(result).as("API key: " + apiKey).isTrue();
-            }
-        }
-        
-        @Test
-        @DisplayName("should reject very short API keys")
-        void shouldRejectVeryShortApiKeys() throws ExecutionException, InterruptedException {
-            // Arrange
-            String[] shortKeys = {
-                "sk-",
-                "sk-123",
-                "sk-1234567890",
-                "short",
-                "tiny",
-                "a",
-                ""
-            };
-            
-            for (String apiKey : shortKeys) {
-                // Act
-                CompletableFuture<Boolean> openAIFuture = SecureAPIKeyManager.validateAPIKey(AIServiceType.OPENAI, apiKey);
-                CompletableFuture<Boolean> geminiFuture = SecureAPIKeyManager.validateAPIKey(AIServiceType.GEMINI, apiKey);
-                Boolean openAIResult = openAIFuture.get();
-                Boolean geminiResult = geminiFuture.get();
-                
-                // Assert
-                assertThat(openAIResult).as("OpenAI API key: " + apiKey).isFalse();
-                assertThat(geminiResult).as("Gemini API key: " + apiKey).isFalse();
-            }
-        }
-    }
-    
-    @Nested
-    @DisplayName("Edge Cases and Error Handling")
-    class EdgeCasesAndErrorHandling {
-        
-        @Test
-        @DisplayName("should handle empty string API key")
-        void shouldHandleEmptyStringApiKey() throws ExecutionException, InterruptedException {
-            // Arrange
-            String emptyApiKey = "";
             AIServiceType serviceType = AIServiceType.OPENAI;
             
             // Act
-            CompletableFuture<Boolean> future = SecureAPIKeyManager.validateAPIKey(serviceType, emptyApiKey);
-            Boolean result = future.get();
+            String retrievedKey = SecureAPIKeyManager.getAPIKey(serviceType);
             
             // Assert
-            assertThat(result).isFalse();
+            assertThat(retrievedKey).isNull();
         }
         
         @Test
-        @DisplayName("should handle whitespace-only API key")
-        void shouldHandleWhitespaceOnlyApiKey() throws ExecutionException, InterruptedException {
-            // Arrange
-            String whitespaceApiKey = "   \t\n  ";
-            AIServiceType serviceType = AIServiceType.GEMINI;
-            
-            // Act
-            CompletableFuture<Boolean> future = SecureAPIKeyManager.validateAPIKey(serviceType, whitespaceApiKey);
-            Boolean result = future.get();
-            
-            // Assert
-            assertThat(result).isFalse();
-        }
-        
-        @Test
-        @DisplayName("should handle very long API keys")
-        void shouldHandleVeryLongApiKeys() throws ExecutionException, InterruptedException {
-            // Arrange
-            String longOpenAIKey = "sk-" + "a".repeat(1000);
-            String longGeminiKey = "AIzaSyC" + "b".repeat(1000);
-            AIServiceType openAIServiceType = AIServiceType.OPENAI;
-            AIServiceType geminiServiceType = AIServiceType.GEMINI;
-            
-            // Act
-            CompletableFuture<Boolean> openAIFuture = SecureAPIKeyManager.validateAPIKey(openAIServiceType, longOpenAIKey);
-            CompletableFuture<Boolean> geminiFuture = SecureAPIKeyManager.validateAPIKey(geminiServiceType, longGeminiKey);
-            Boolean openAIResult = openAIFuture.get();
-            Boolean geminiResult = geminiFuture.get();
-            
-            // Assert
-            assertThat(openAIResult).isTrue();
-            assertThat(geminiResult).isTrue();
-        }
-        
-        @Test
-        @DisplayName("should handle special characters in API keys")
-        void shouldHandleSpecialCharactersInApiKeys() throws ExecutionException, InterruptedException {
-            // Arrange
-            String specialCharOpenAIKey = "sk-1234567890abcdef1234567890abcdef1234567890abcdef!@#$%^&*()";
-            String specialCharGeminiKey = "AIzaSyC1234567890abcdef1234567890abcdef1234567890abcdef!@#$%^&*()";
-            AIServiceType openAIServiceType = AIServiceType.OPENAI;
-            AIServiceType geminiServiceType = AIServiceType.GEMINI;
-            
-            // Act
-            CompletableFuture<Boolean> openAIFuture = SecureAPIKeyManager.validateAPIKey(openAIServiceType, specialCharOpenAIKey);
-            CompletableFuture<Boolean> geminiFuture = SecureAPIKeyManager.validateAPIKey(geminiServiceType, specialCharGeminiKey);
-            Boolean openAIResult = openAIFuture.get();
-            Boolean geminiResult = geminiFuture.get();
-            
-            // Assert
-            assertThat(openAIResult).isTrue();
-            assertThat(geminiResult).isTrue();
-        }
-        
-        @Test
-        @DisplayName("should handle concurrent validation requests")
-        void shouldHandleConcurrentValidationRequests() throws ExecutionException, InterruptedException {
-            // Arrange
-            String validOpenAIKey = "sk-1234567890abcdef1234567890abcdef1234567890abcdef";
-            String validGeminiKey = "AIzaSyC1234567890abcdef1234567890abcdef1234567890abcdef";
-            AIServiceType openAIServiceType = AIServiceType.OPENAI;
-            AIServiceType geminiServiceType = AIServiceType.GEMINI;
-            
-            // Act - Create multiple concurrent validation requests
-            CompletableFuture<Boolean>[] openAIFutures = new CompletableFuture[5];
-            CompletableFuture<Boolean>[] geminiFutures = new CompletableFuture[5];
-            
-            for (int i = 0; i < 5; i++) {
-                openAIFutures[i] = SecureAPIKeyManager.validateAPIKey(openAIServiceType, validOpenAIKey);
-                geminiFutures[i] = SecureAPIKeyManager.validateAPIKey(geminiServiceType, validGeminiKey);
-            }
-            
-            // Wait for all futures to complete
-            CompletableFuture.allOf(openAIFutures).get();
-            CompletableFuture.allOf(geminiFutures).get();
-            
-            // Assert - All should return true
-            for (CompletableFuture<Boolean> future : openAIFutures) {
-                assertThat(future.get()).isTrue();
-            }
-            for (CompletableFuture<Boolean> future : geminiFutures) {
-                assertThat(future.get()).isTrue();
-            }
+        @DisplayName("should throw exception for null service type")
+        void shouldThrowExceptionForNullServiceType() {
+            // Act & Assert
+            assertThatThrownBy(() -> SecureAPIKeyManager.getAPIKey(null))
+                .isInstanceOf(IllegalArgumentException.class);
         }
     }
     
     @Nested
-    @DisplayName("AIServiceType Integration")
-    class AIServiceTypeIntegration {
+    @DisplayName("API Key Management")
+    class ApiKeyManagement {
         
         @Test
-        @DisplayName("should work with all AIServiceType values")
-        void shouldWorkWithAllAIServiceTypeValues() throws ExecutionException, InterruptedException {
+        @DisplayName("should check if API key exists")
+        void shouldCheckIfApiKeyExists() {
             // Arrange
-            String validOpenAIKey = "sk-1234567890abcdef1234567890abcdef1234567890abcdef";
-            String validGeminiKey = "AIzaSyC1234567890abcdef1234567890abcdef1234567890abcdef";
+            String apiKey = "sk-1234567890abcdef1234567890abcdef1234567890abcdef";
+            AIServiceType serviceType = AIServiceType.OPENAI;
             
-            // Act & Assert for each service type
-            CompletableFuture<Boolean> openAIFuture = SecureAPIKeyManager.validateAPIKey(AIServiceType.OPENAI, validOpenAIKey);
-            CompletableFuture<Boolean> geminiFuture = SecureAPIKeyManager.validateAPIKey(AIServiceType.GEMINI, validGeminiKey);
+            // Act & Assert - Initially no key
+            assertThat(SecureAPIKeyManager.hasAPIKey(serviceType)).isFalse();
             
-            assertThat(openAIFuture.get()).isTrue();
-            assertThat(geminiFuture.get()).isTrue();
+            // Store key
+            SecureAPIKeyManager.storeAPIKey(serviceType, apiKey);
+            
+            // Act & Assert - Now key exists
+            assertThat(SecureAPIKeyManager.hasAPIKey(serviceType)).isTrue();
         }
         
         @Test
-        @DisplayName("should handle service type display names")
-        void shouldHandleServiceTypeDisplayNames() {
+        @DisplayName("should clear API key successfully")
+        void shouldClearApiKeySuccessfully() {
             // Arrange
-            AIServiceType openAI = AIServiceType.OPENAI;
-            AIServiceType gemini = AIServiceType.GEMINI;
+            String apiKey = "sk-1234567890abcdef1234567890abcdef1234567890abcdef";
+            AIServiceType serviceType = AIServiceType.OPENAI;
+            SecureAPIKeyManager.storeAPIKey(serviceType, apiKey);
             
-            // Act & Assert
-            assertThat(openAI.getDisplayName()).isEqualTo("OpenAI");
-            assertThat(gemini.getDisplayName()).isEqualTo("Google Gemini");
+            // Verify key exists
+            assertThat(SecureAPIKeyManager.hasAPIKey(serviceType)).isTrue();
+            
+            // Act
+            boolean result = SecureAPIKeyManager.clearAPIKey(serviceType);
+            
+            // Assert
+            assertThat(result).isTrue();
+            assertThat(SecureAPIKeyManager.hasAPIKey(serviceType)).isFalse();
+            assertThat(SecureAPIKeyManager.getAPIKey(serviceType)).isNull();
         }
         
         @Test
-        @DisplayName("should handle service type IDs")
-        void shouldHandleServiceTypeIds() {
+        @DisplayName("should handle clearing non-existent key")
+        void shouldHandleClearingNonExistentKey() {
             // Arrange
-            AIServiceType openAI = AIServiceType.OPENAI;
-            AIServiceType gemini = AIServiceType.GEMINI;
+            AIServiceType serviceType = AIServiceType.OPENAI;
             
-            // Act & Assert
-            assertThat(openAI.getId()).isEqualTo("openai");
-            assertThat(gemini.getId()).isEqualTo("gemini");
+            // Act
+            boolean result = SecureAPIKeyManager.clearAPIKey(serviceType);
+            
+            // Assert
+            assertThat(result).isTrue(); // Should succeed even if no key exists
+        }
+        
+        @Test
+        @DisplayName("should handle multiple service types independently")
+        void shouldHandleMultipleServiceTypesIndependently() {
+            // Arrange
+            String openaiKey = "sk-1234567890abcdef1234567890abcdef1234567890abcdef";
+            String geminiKey = "AIzaSyC1234567890abcdef1234567890abcdef1234567890abcdef";
+            
+            // Act - Store both keys
+            SecureAPIKeyManager.storeAPIKey(AIServiceType.OPENAI, openaiKey);
+            SecureAPIKeyManager.storeAPIKey(AIServiceType.GEMINI, geminiKey);
+            
+            // Assert - Both keys exist
+            assertThat(SecureAPIKeyManager.hasAPIKey(AIServiceType.OPENAI)).isTrue();
+            assertThat(SecureAPIKeyManager.hasAPIKey(AIServiceType.GEMINI)).isTrue();
+            assertThat(SecureAPIKeyManager.getAPIKey(AIServiceType.OPENAI)).isEqualTo(openaiKey);
+            assertThat(SecureAPIKeyManager.getAPIKey(AIServiceType.GEMINI)).isEqualTo(geminiKey);
+            
+            // Act - Clear one key
+            SecureAPIKeyManager.clearAPIKey(AIServiceType.OPENAI);
+            
+            // Assert - Only one key remains
+            assertThat(SecureAPIKeyManager.hasAPIKey(AIServiceType.OPENAI)).isFalse();
+            assertThat(SecureAPIKeyManager.hasAPIKey(AIServiceType.GEMINI)).isTrue();
+            assertThat(SecureAPIKeyManager.getAPIKey(AIServiceType.OPENAI)).isNull();
+            assertThat(SecureAPIKeyManager.getAPIKey(AIServiceType.GEMINI)).isEqualTo(geminiKey);
         }
     }
 }

@@ -17,14 +17,6 @@ import java.util.concurrent.ConcurrentMap;
  * <p>The class maintains a concurrent map of test output by test proxy, allowing
  * efficient storage and retrieval of output data across multiple test executions.</p>
  * 
- * <p>Key features:</p>
- * <ul>
- *   <li>Thread-safe output capture using ConcurrentHashMap</li>
- *   <li>Comprehensive error output collection</li>
- *   <li>Hierarchical output retrieval (including child tests)</li>
- *   <li>Memory management through output clearing</li>
- * </ul>
- * 
  * @author Alex Ibasitas
  * @since 1.0.0
  */
@@ -94,7 +86,9 @@ public class TestOutputCaptureListener {
                     output.append("\n");
                 }
                 output.append("=== END ERROR OUTPUT ===\n\n");
-                LOG.debug("Captured error output for test: " + testProxy.getName());
+                if (LOG.isDebugEnabled()) {
+                    LOG.debug("Captured error output for test: " + testProxy.getName());
+                }
             }
             
         } catch (Exception e) {
@@ -171,7 +165,9 @@ public class TestOutputCaptureListener {
             // Store the comprehensive output
             if (comprehensiveOutput.length() > 0) {
                 testOutputMap.put(testProxy, new StringBuilder(comprehensiveOutput.toString()));
-                LOG.debug("Captured comprehensive output for test: " + testProxy.getName());
+                if (LOG.isDebugEnabled()) {
+                    LOG.debug("Captured comprehensive output for test: " + testProxy.getName());
+                }
             }
             
         } catch (Exception e) {
@@ -246,7 +242,9 @@ public class TestOutputCaptureListener {
     public static void clearCapturedOutput(SMTestProxy testProxy) {
         if (testProxy != null) {
             testOutputMap.remove(testProxy);
-            LOG.debug("Cleared captured output for test: " + testProxy.getName());
+            if (LOG.isDebugEnabled()) {
+                LOG.debug("Cleared captured output for test: " + testProxy.getName());
+            }
         }
     }
     

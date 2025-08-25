@@ -15,16 +15,15 @@ import java.util.regex.Matcher;
  * Extracts Gherkin scenario information using IntelliJ's PSI.
  * 
  * <p>This class uses PSI-based analysis to find and parse Gherkin feature files
- * to extract scenario context, including:</p>
- * <ul>
- *   <li>Scenario name and description</li>
- *   <li>Given/When/Then steps</li>
- *   <li>Scenario outline examples</li>
- *   <li>Tags and metadata</li>
- *   <li>Feature file context</li>
- * </ul>
+ * to extract scenario context, including scenario names, steps, examples tables,
+ * tags, and metadata. It follows JetBrains best practices for PSI-based file
+ * parsing and thread safety.</p>
  * 
- * <p>Follows JetBrains best practices for PSI-based file parsing and thread safety.</p>
+ * <p>The extractor supports both regular scenarios and scenario outlines with
+ * examples tables, providing comprehensive context for test failure analysis.</p>
+ * 
+ * @author Alex Ibasitas
+ * @since 1.0.0
  */
 public class GherkinScenarioExtractor {
     private static final Logger LOG = Logger.getInstance(GherkinScenarioExtractor.class);
@@ -111,7 +110,7 @@ public class GherkinScenarioExtractor {
     }
 
     /**
-     * Constructor for GherkinScenarioExtractor
+     * Constructor for GherkinScenarioExtractor.
      *
      * @param project The current IntelliJ project
      */
@@ -123,7 +122,7 @@ public class GherkinScenarioExtractor {
      * Extracts Gherkin scenario information for a failed step.
      * 
      * <p>This method searches for the scenario containing the failed step
-     * and extracts comprehensive context information.</p>
+     * and extracts comprehensive context information using PSI-based analysis.</p>
      *
      * @param failedStepText The text of the failed step
      * @param scenarioName The name of the scenario (if known)
@@ -235,17 +234,10 @@ public class GherkinScenarioExtractor {
     /**
      * Parses a feature file to find the scenario containing the failed step.
      * 
-     * <p>This method performs comprehensive parsing of a Gherkin feature file, handling:</p>
-     * <ul>
-     *   <li>Background sections and their steps</li>
-     *   <li>Regular scenarios and scenario outlines</li>
-     *   <li>Examples tables for scenario outlines</li>
-     *   <li>Data tables within scenarios</li>
-     *   <li>Tags and metadata</li>
-     * </ul>
-     * 
-     * <p>The parsing is done line-by-line, maintaining state to properly handle
-     * nested structures and complex Gherkin syntax.</p>
+     * <p>This method performs comprehensive parsing of a Gherkin feature file, handling
+     * background sections, regular scenarios, scenario outlines, examples tables,
+     * data tables, and tags. The parsing is done line-by-line, maintaining state
+     * to properly handle nested structures and complex Gherkin syntax.</p>
      * 
      * @param featureFile The PSI file representing the feature file to parse
      * @param failedStepText The failed step text to search for within scenarios
@@ -436,15 +428,9 @@ public class GherkinScenarioExtractor {
     /**
      * Checks if a scenario contains the failed step by examining all its components.
      * 
-     * <p>This method performs a comprehensive search through all parts of a scenario:</p>
-     * <ul>
-     *   <li>Background steps (if any)</li>
-     *   <li>Scenario steps</li>
-     *   <li>Data tables within the scenario</li>
-     *   <li>Examples table rows (for scenario outlines)</li>
-     * </ul>
-     * 
-     * <p>For scenario outlines, it uses flexible name matching since Cucumber generates
+     * <p>This method performs a comprehensive search through all parts of a scenario:
+     * background steps, scenario steps, data tables, and examples table rows.
+     * For scenario outlines, it uses flexible name matching since Cucumber generates
      * different names for example executions.</p>
      * 
      * @param scenarioName The name of the scenario being checked
@@ -507,12 +493,9 @@ public class GherkinScenarioExtractor {
     /**
      * Checks if a step matches the failed step text, handling both regular and parameterized steps.
      * 
-     * <p>This method performs step matching by:</p>
-     * <ul>
-     *   <li>Removing Gherkin keywords (Given/When/Then/And/But) for comparison</li>
-     *   <li>Performing direct string matching</li>
-     *   <li>Handling parameterized steps for scenario outlines</li>
-     * </ul>
+     * <p>This method performs step matching by removing Gherkin keywords (Given/When/Then/And/But)
+     * for comparison, performing direct string matching, and handling parameterized steps
+     * for scenario outlines.</p>
      * 
      * @param step The step text to check against
      * @param failedStepText The failed step text to match
@@ -537,14 +520,10 @@ public class GherkinScenarioExtractor {
     /**
      * Creates an enhanced GherkinScenarioInfo with comprehensive scenario context.
      * 
-     * <p>This method constructs a complete GherkinScenarioInfo object that includes:</p>
-     * <ul>
-     *   <li>Combined background and scenario steps</li>
-     *   <li>Full scenario text with proper Gherkin formatting</li>
-     *   <li>Examples table for scenario outlines</li>
-     *   <li>Data tables and metadata</li>
-     *   <li>File location and content information</li>
-     * </ul>
+     * <p>This method constructs a complete GherkinScenarioInfo object that includes
+     * combined background and scenario steps, full scenario text with proper Gherkin
+     * formatting, examples tables for scenario outlines, data tables, metadata,
+     * and file location information.</p>
      * 
      * @param featureFile The PSI file containing the scenario
      * @param featureName The name of the feature
@@ -738,8 +717,6 @@ public class GherkinScenarioExtractor {
         }
     }
 
-
-    
     /**
      * Removes the Gherkin keyword prefix from a step line.
      * 

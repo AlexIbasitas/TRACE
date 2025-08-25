@@ -74,6 +74,10 @@ public class CollapsiblePanel extends JPanel {
         this.parentMessageComponent = parent;
         this.contentText = content;
         
+        if (LOG.isDebugEnabled()) {
+            LOG.debug("Creating CollapsiblePanel - content length: " + (content != null ? content.length() : 0));
+        }
+        
         initializeComponent();
         createToggleLabel();
         createContentPanel(content);
@@ -241,8 +245,10 @@ public class CollapsiblePanel extends JPanel {
         // Notify parent containers
         notifyParentContainers();
         
-        LOG.debug("CollapsiblePanel: Toggled to " + 
-                 (isExpanded ? "expanded" : "collapsed") + " state");
+        if (LOG.isDebugEnabled()) {
+            LOG.debug("CollapsiblePanel: Toggled to " + 
+                     (isExpanded ? "expanded" : "collapsed") + " state");
+        }
     }
     
     /**
@@ -261,8 +267,10 @@ public class CollapsiblePanel extends JPanel {
             revalidate();
             repaint();
             
-            LOG.debug("CollapsiblePanel: Layout update completed for " + 
-                     (isExpanded ? "expanded" : "collapsed") + " state");
+            if (LOG.isDebugEnabled()) {
+                LOG.debug("CollapsiblePanel: Layout update completed for " + 
+                         (isExpanded ? "expanded" : "collapsed") + " state");
+            }
             
         } catch (Exception e) {
             LOG.warn("CollapsiblePanel: Error during layout update", e);
@@ -516,8 +524,7 @@ public class CollapsiblePanel extends JPanel {
             revalidate();
             repaint();
         } catch (Exception e) {
-            // Log error but don't fail
-            System.err.println("Error refreshing theme in CollapsiblePanel: " + e.getMessage());
+            LOG.warn("Error refreshing theme in CollapsiblePanel: " + e.getMessage(), e);
         }
     }
 } 

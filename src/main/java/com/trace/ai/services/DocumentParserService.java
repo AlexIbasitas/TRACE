@@ -1,7 +1,6 @@
 package com.trace.ai.services;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import com.intellij.openapi.diagnostic.Logger;
 import com.trace.ai.models.DocumentEntry;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -34,7 +33,7 @@ import java.util.regex.Pattern;
  */
 public class DocumentParserService {
     
-    private static final Logger LOG = LoggerFactory.getLogger(DocumentParserService.class);
+    private static final Logger LOG = Logger.getInstance(DocumentParserService.class);
     
     // Regex patterns for extracting metadata from the new format
     private static final Pattern TITLE_PATTERN = Pattern.compile("^### Title:\\s*(.+)$", Pattern.MULTILINE);

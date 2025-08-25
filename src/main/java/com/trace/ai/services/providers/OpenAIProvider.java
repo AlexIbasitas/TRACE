@@ -110,8 +110,7 @@ public class OpenAIProvider implements AIServiceProvider {
                 // Parse OpenAI-specific response
                 AIAnalysisResult result = parseOpenAIResponse(response, modelId, startTime);
                 
-                LOG.info("OpenAI analysis completed successfully in " + 
-                        (System.currentTimeMillis() - startTime) + "ms");
+                LOG.info("OpenAI analysis completed in " + (System.currentTimeMillis() - startTime) + "ms");
                 
                 return result;
                 

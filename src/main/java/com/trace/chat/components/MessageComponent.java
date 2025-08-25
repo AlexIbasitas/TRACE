@@ -125,7 +125,7 @@ public class MessageComponent extends JPanel {
         Icon logoIcon = null;
         try {
             logoIcon = IconLoader.getIcon(iconPath, getClass());
-                } catch (Throwable ignore) {
+        } catch (Throwable ignore) {
             // In tests, IconLoader may not resolve; ignore
         }
         if (logoIcon != null) {
@@ -343,9 +343,12 @@ public class MessageComponent extends JPanel {
         }
     }
 
-
-
-    /** Simple HTML escape for text content. */
+    /**
+     * Simple HTML escape for text content.
+     *
+     * @param s The string to escape
+     * @return The escaped string
+     */
     private static String escapeHtml(String s) {
         StringBuilder out = new StringBuilder();
         for (int i = 0; i < s.length(); i++) {
@@ -361,8 +364,6 @@ public class MessageComponent extends JPanel {
         }
         return out.toString();
     }
-    
-    // Removed legacy JLabel-based scenario/failed step renderers in favor of a single HTML pane
     
     /**
      * Adds the message text to the content panel.
@@ -385,20 +386,13 @@ public class MessageComponent extends JPanel {
      * @param contentPanel The panel to add the AI message text to
      */
     private void addAiMessageText(JPanel contentPanel) {
-        LOG.debug("MessageComponent.addAiMessageText() - STARTING AI MESSAGE TEXT CREATION");
-        LOG.debug("  - message text length: " + (message.getText() != null ? message.getText().length() : 0));
-        LOG.debug("  - contentPanel size: " + contentPanel.getSize());
-        LOG.debug("  - contentPanel preferred size: " + contentPanel.getPreferredSize());
+        if (LOG.isDebugEnabled()) {
+            LOG.debug("Adding AI message text - length: " + (message.getText() != null ? message.getText().length() : 0));
+        }
         
         // Use the new markdown component that supports scrollable code blocks
         JComponent messageText = MarkdownRenderer.createMarkdownComponent(message.getText());
         messageText.setName("aiMessageText");
-
-        LOG.debug("MessageComponent.addAiMessageText() - MARKDOWN PANE CREATED");
-        LOG.debug("  - messageText size: " + messageText.getSize());
-        LOG.debug("  - messageText preferred size: " + messageText.getPreferredSize());
-        LOG.debug("  - messageText maximum size: " + messageText.getMaximumSize());
-        LOG.debug("  - messageText minimum size: " + messageText.getMinimumSize());
 
         // Maintain sizing compatibility with the rest of the chat UI
         messageText.setAlignmentX(Component.LEFT_ALIGNMENT);
@@ -407,26 +401,13 @@ public class MessageComponent extends JPanel {
         messageText.setMaximumSize(new Dimension(Integer.MAX_VALUE, Integer.MAX_VALUE));
         messageText.setMinimumSize(new Dimension(TriagePanelConstants.MIN_CHAT_WIDTH_BEFORE_SCROLL, 50));
 
-        LOG.debug("MessageComponent.addAiMessageText() - BEFORE ADDING TO CONTENT PANEL");
-        LOG.debug("  - contentPanel component count: " + contentPanel.getComponentCount());
-        LOG.debug("  - contentPanel layout: " + contentPanel.getLayout().getClass().getSimpleName());
-
         contentPanel.add(messageText);
         
         // Remove height constraints only from content panels, not scroll containers
         ContainerHeightConstraintRemover.removeHeightConstraintsFromContentPanels(messageText);
         
-        LOG.debug("MessageComponent.addAiMessageText() - AFTER ADDING TO CONTENT PANEL");
-        LOG.debug("  - contentPanel component count: " + contentPanel.getComponentCount());
-        LOG.debug("  - contentPanel preferred size: " + contentPanel.getPreferredSize());
-        LOG.debug("  - messageText preferred size after add: " + messageText.getPreferredSize());
-        
         contentPanel.revalidate();
-        
-        LOG.debug("MessageComponent.addAiMessageText() - COMPLETED");
     }
-    
-
     
     /**
      * Adds user message text with standard JTextArea rendering.
@@ -434,10 +415,9 @@ public class MessageComponent extends JPanel {
      * @param contentPanel The panel to add the user message text to
      */
     private void addUserMessageText(JPanel contentPanel) {
-        LOG.debug("MessageComponent.addUserMessageText() - STARTING USER MESSAGE TEXT CREATION");
-        LOG.debug("  - message text length: " + (message.getText() != null ? message.getText().length() : 0));
-        LOG.debug("  - contentPanel size: " + contentPanel.getSize());
-        LOG.debug("  - contentPanel preferred size: " + contentPanel.getPreferredSize());
+        if (LOG.isDebugEnabled()) {
+            LOG.debug("Adding user message text - length: " + (message.getText() != null ? message.getText().length() : 0));
+        }
         
         // Use JEditorPane with HTML content for uniform font sizing with AI messages
         JEditorPane messageText = new MarkdownRenderer.ResponsiveHtmlPane();
@@ -447,18 +427,10 @@ public class MessageComponent extends JPanel {
         messageText.setBackground(ThemeUtils.panelBackground());
         messageText.putClientProperty("JEditorPane.honorDisplayProperties", Boolean.TRUE);
         
-        LOG.debug("MessageComponent.addUserMessageText() - RESPONSIVE HTML PANE CREATED");
-        LOG.debug("  - messageText size: " + messageText.getSize());
-        LOG.debug("  - messageText preferred size: " + messageText.getPreferredSize());
-        
         // Use the same dynamic font as AI messages for uniform sizing
         Font dynamicFont = UIUtil.getLabelFont();
         messageText.setFont(dynamicFont);
         messageText.setForeground(ThemeUtils.textForeground());
-        
-        LOG.debug("MessageComponent.addUserMessageText() - FONT CONFIGURED");
-        LOG.debug("  - dynamic font: " + dynamicFont);
-        LOG.debug("  - font size: " + dynamicFont.getSize());
         
         // Apply the same HTMLEditorKit configuration as AI messages for consistent styling
         try {
@@ -473,11 +445,8 @@ public class MessageComponent extends JPanel {
             // Add slightly larger bottom padding to avoid last-line clipping during dynamic wrap
             docSheet.addRule("body { padding-bottom:12px; }");
             messageText.setDocument(doc);
-            
-            LOG.debug("MessageComponent.addUserMessageText() - HTMLEditorKit CONFIGURED");
-            LOG.debug("  - baseFontSize: " + baseFontSize);
         } catch (Exception ex) {
-            LOG.warn("MessageComponent.addUserMessageText() - HTMLEditorKit configuration failed: " + ex.getMessage());
+            LOG.warn("HTMLEditorKit configuration failed: " + ex.getMessage());
             // Fallback to simple configuration if custom kit fails
         }
         
@@ -493,11 +462,6 @@ public class MessageComponent extends JPanel {
         
         messageText.setText(html);
         
-        LOG.debug("MessageComponent.addUserMessageText() - HTML CONTENT SET");
-        LOG.debug("  - safeText length: " + safeText.length());
-        LOG.debug("  - html length: " + html.length());
-        LOG.debug("  - messageText preferred size after setText: " + messageText.getPreferredSize());
-        
         // Match AI message styling and sizing
         messageText.setAlignmentX(Component.LEFT_ALIGNMENT);
         messageText.setAlignmentY(Component.TOP_ALIGNMENT);
@@ -508,22 +472,9 @@ public class MessageComponent extends JPanel {
         // Add component name for testing identification
         messageText.setName("userMessageText");
         
-        LOG.debug("MessageComponent.addUserMessageText() - BEFORE ADDING TO CONTENT PANEL");
-        LOG.debug("  - contentPanel component count: " + contentPanel.getComponentCount());
-        LOG.debug("  - messageText preferred size: " + messageText.getPreferredSize());
-        LOG.debug("  - messageText maximum size: " + messageText.getMaximumSize());
-        LOG.debug("  - messageText minimum size: " + messageText.getMinimumSize());
-        
         contentPanel.add(messageText);
         
-        LOG.debug("MessageComponent.addUserMessageText() - AFTER ADDING TO CONTENT PANEL");
-        LOG.debug("  - contentPanel component count: " + contentPanel.getComponentCount());
-        LOG.debug("  - contentPanel preferred size: " + contentPanel.getPreferredSize());
-        LOG.debug("  - messageText preferred size after add: " + messageText.getPreferredSize());
-        
         contentPanel.revalidate();
-        
-        LOG.debug("MessageComponent.addUserMessageText() - COMPLETED");
     }
     
     /**
@@ -536,8 +487,6 @@ public class MessageComponent extends JPanel {
         collapsiblePanel.setAlignmentX(Component.LEFT_ALIGNMENT);
         contentPanel.add(collapsiblePanel);
     }
-    
-    // Removed old manual height estimations; layout is handled by HTML pane and BoxLayout
     
     /**
      * Formats a timestamp into a human-readable string.
@@ -580,6 +529,12 @@ public class MessageComponent extends JPanel {
     // Copy helpers
     // =========================================================================
 
+    /**
+     * Checks if the message is an initial failure analysis message.
+     *
+     * @param msg The message to check
+     * @return true if it's an initial failure analysis message
+     */
     private boolean isInitialFailureAnalysisMessage(ChatMessage msg) {
         boolean ai = msg != null && msg.isFromAI();
         boolean hasFailure = msg != null && msg.hasFailureInfo();
@@ -587,6 +542,12 @@ public class MessageComponent extends JPanel {
         return ai && hasFailure && textBlank;
     }
 
+    /**
+     * Resolves the appropriate text source for copying based on message type.
+     *
+     * @param msg The message to get copy source from
+     * @return The text to copy, or null if not available
+     */
     private String resolveCopySource(ChatMessage msg) {
         if (msg == null) {
             return null;
@@ -600,11 +561,21 @@ public class MessageComponent extends JPanel {
         return msg.getText();
     }
 
+    /**
+     * Checks if a string is blank (null or empty after trimming).
+     *
+     * @param s The string to check
+     * @return true if the string is blank
+     */
     private boolean isBlank(String s) {
         return s == null || s.trim().isEmpty();
     }
 
-    // Test-only adjustment to make feedback deterministic in unit tests
+    /**
+     * Test-only adjustment to make feedback deterministic in unit tests.
+     *
+     * @param milliseconds The feedback duration in milliseconds
+     */
     void setCopyFeedbackMs(int milliseconds) {
         this.copyFeedbackMs = milliseconds > 0 ? milliseconds : 1;
     }
@@ -615,12 +586,10 @@ public class MessageComponent extends JPanel {
      */
     public void refreshTheme() {
         try {
-            System.out.println("=== MessageComponent.refreshTheme() called ===");
-            System.out.println("Message role: " + (message != null ? message.getRole() : "null"));
-            System.out.println("Current theme colors:");
-            System.out.println("  - Panel background: " + ThemeUtils.panelBackground());
-            System.out.println("  - Text foreground: " + ThemeUtils.textForeground());
-            System.out.println("  - Text field background: " + ThemeUtils.textFieldBackground());
+            if (LOG.isDebugEnabled()) {
+                LOG.debug("Refreshing theme for message component - role: " + 
+                    (message != null ? message.getRole() : "null"));
+            }
             
             // Update main component background
             setBackground(ThemeUtils.panelBackground());
@@ -635,32 +604,30 @@ public class MessageComponent extends JPanel {
             
             revalidate();
             repaint();
-            System.out.println("=== MessageComponent.refreshTheme() completed ===");
         } catch (Exception e) {
-            // Log error but don't fail
-            System.err.println("Error refreshing theme in MessageComponent: " + e.getMessage());
-            e.printStackTrace();
+            LOG.warn("Error refreshing theme in MessageComponent: " + e.getMessage(), e);
         }
     }
     
     /**
      * Recursively refreshes theme colors in a container and its children.
+     *
+     * @param container The container to refresh
      */
     private void refreshThemeInContainer(Container container) {
         for (Component child : container.getComponents()) {
-            System.out.println("  - Updating component: " + child.getClass().getSimpleName() + 
-                " (name: " + child.getName() + ")");
+            if (LOG.isDebugEnabled()) {
+                LOG.debug("Updating component: " + child.getClass().getSimpleName() + " (name: " + child.getName() + ")");
+            }
             
             // Update JEditorPanes (HTML content like scenario/failed step)
             if (child instanceof javax.swing.JEditorPane) {
-                System.out.println("    -> Updating JEditorPane");
                 com.trace.chat.components.MarkdownRenderer.reapplyThemeStyles((javax.swing.JEditorPane) child);
             }
             
             // Update JLabels
             if (child instanceof JLabel) {
                 JLabel label = (JLabel) child;
-                System.out.println("    -> Updating JLabel foreground to: " + ThemeUtils.textForeground());
                 label.setForeground(ThemeUtils.textForeground());
                 label.revalidate();
                 label.repaint();
@@ -669,8 +636,6 @@ public class MessageComponent extends JPanel {
             // Update JTextAreas
             if (child instanceof JTextArea) {
                 JTextArea textArea = (JTextArea) child;
-                System.out.println("    -> Updating JTextArea - background: " + ThemeUtils.panelBackground() + 
-                    ", foreground: " + ThemeUtils.textForeground());
                 textArea.setBackground(ThemeUtils.panelBackground());
                 textArea.setForeground(ThemeUtils.textForeground());
                 textArea.setCaretColor(ThemeUtils.textForeground());
@@ -682,7 +647,6 @@ public class MessageComponent extends JPanel {
             if (child instanceof JPanel) {
                 JPanel panel = (JPanel) child;
                 if (panel.isOpaque()) {
-                    System.out.println("    -> Updating JPanel background to: " + ThemeUtils.panelBackground());
                     panel.setBackground(ThemeUtils.panelBackground());
                     panel.revalidate();
                     panel.repaint();
@@ -695,5 +659,4 @@ public class MessageComponent extends JPanel {
             }
         }
     }
-    
 } 

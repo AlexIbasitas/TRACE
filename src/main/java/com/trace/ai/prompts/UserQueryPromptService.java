@@ -7,8 +7,7 @@ import com.trace.ai.configuration.AISettings;
 
 
 import org.jetbrains.annotations.NotNull;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import com.intellij.openapi.diagnostic.Logger;
 
 /**
  * Service for generating AI prompts for user queries in test failure analysis.
@@ -32,7 +31,7 @@ import org.slf4j.LoggerFactory;
 @Service
 public final class UserQueryPromptService {
     
-    private static final Logger LOG = LoggerFactory.getLogger(UserQueryPromptService.class);
+    private static final Logger LOG = Logger.getInstance(UserQueryPromptService.class);
     
     /**
      * Generates a comprehensive prompt for user query analysis.
@@ -63,11 +62,9 @@ public final class UserQueryPromptService {
         // Check if AI is enabled
         AISettings aiSettings = AISettings.getInstance();
         if (!aiSettings.isTraceEnabled()) {
-            LOG.info("Skipping user query prompt generation - AI is disabled");
+            LOG.info("User query prompt generation skipped - AI disabled");
             return "AI Analysis is currently disabled. Enable AI in the header to use AI-powered features.";
         }
-        
-        LOG.info("Generating user query prompt for: " + userQuery);
         
         StringBuilder prompt = new StringBuilder();
         
@@ -89,14 +86,7 @@ public final class UserQueryPromptService {
             prompt.append(chatHistoryContext).append("\n");
         }
         
-        // RAG documents context (placeholder for future implementation)
-        // TODO: Integrate with RAG service when available
-        // When RAG service is implemented, uncomment and replace with:
-        // String ragContext = ragService.getRelevantDocuments(userQuery);
-        // if (ragContext != null && !ragContext.trim().isEmpty()) {
-        //     prompt.append("### Relevant Documentation ###\n");
-        //     prompt.append(ragContext).append("\n");
-        // }
+
         
         // User's specific query (placed at the end per Gemini best practices)
         prompt.append("### Current Query ###\n");
@@ -113,7 +103,7 @@ public final class UserQueryPromptService {
             prompt.append(customRule.trim()).append("\n");
         }
         
-        LOG.info("UserQueryPromptService: Generated prompt for user query: " + userQuery);
+        LOG.info("User query prompt generated for: " + userQuery);
         return prompt.toString();
     }
     
