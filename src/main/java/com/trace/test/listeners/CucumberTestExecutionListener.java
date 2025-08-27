@@ -178,7 +178,7 @@ public class CucumberTestExecutionListener implements SMTRunnerEventsListener {
             }
             
         } catch (Exception e) {
-            LOG.warn("Error setting up output capture: " + e.getMessage(), e);
+            LOG.error("Error setting up output capture: " + e.getMessage(), e);
         }
     }
 
@@ -222,7 +222,7 @@ public class CucumberTestExecutionListener implements SMTRunnerEventsListener {
             testErrorStreams.remove(test);
             
         } catch (Exception e) {
-            LOG.warn("Error capturing test streams: " + e.getMessage(), e);
+            LOG.error("Error capturing test streams: " + e.getMessage(), e);
         }
     }
 
@@ -249,7 +249,7 @@ public class CucumberTestExecutionListener implements SMTRunnerEventsListener {
                 }
             });
         } else {
-            LOG.warn("Project is null, cannot notify TriagePanel");
+            LOG.info("Project is null, cannot notify TriagePanel");
         }
     }
 
@@ -422,7 +422,7 @@ public class CucumberTestExecutionListener implements SMTRunnerEventsListener {
         try {
             // Check if we have a valid project for extraction
             if (currentProject == null) {
-                LOG.warn("Project is null, cannot process test failure");
+                LOG.info("Project is null, cannot process test failure");
                 return;
             }
             
@@ -437,7 +437,7 @@ public class CucumberTestExecutionListener implements SMTRunnerEventsListener {
             
             // Defensive programming: check if extractors are available
             if (localStackTraceExtractor == null) {
-                LOG.warn("StackTraceExtractor is null, cannot process");
+                LOG.error("StackTraceExtractor is null, cannot process");
                 return;
             }
             
@@ -545,7 +545,7 @@ public class CucumberTestExecutionListener implements SMTRunnerEventsListener {
      */
     private boolean notifyTriagePanel(FailureInfo failureInfo, Project currentProject) {
         if (currentProject == null) {
-            LOG.warn("Project is null, cannot notify panel");
+            LOG.info("Project is null, cannot notify panel");
             return false;
         }
         
@@ -608,7 +608,7 @@ public class CucumberTestExecutionListener implements SMTRunnerEventsListener {
         }
         
         if (currentProject == null) {
-            LOG.warn("Project is null, cannot trigger AI analysis");
+            LOG.info("Project is null, cannot trigger AI analysis");
             return;
         }
         
@@ -742,7 +742,7 @@ public class CucumberTestExecutionListener implements SMTRunnerEventsListener {
         try {
             return com.intellij.openapi.project.ProjectManager.getInstance().getOpenProjects()[0];
         } catch (Exception e) {
-            LOG.warn("Could not get current project: " + e.getMessage(), e);
+            LOG.error("Could not get current project: " + e.getMessage(), e);
             return null;
         }
     }

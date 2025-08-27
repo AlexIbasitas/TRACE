@@ -444,8 +444,8 @@ public class DocumentDatabaseService {
                         
                         documents.add(doc);
                         
-                        LOG.info("Found relevant document: " + doc.getTitle() + " (similarity: " + 
-                                String.format("%.3f", similarity) + ")");
+                                    LOG.debug("Found relevant document: " + doc.getTitle() + " (similarity: " +
+                    String.format("%.3f", similarity) + ")");
                     }
                 }
             }

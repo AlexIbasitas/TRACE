@@ -115,7 +115,7 @@ public class DocumentRetrievalService {
         return generateQueryEmbedding(queryText)
             .thenCompose(queryEmbedding -> {
                 if (queryEmbedding == null) {
-                    LOG.warn("Failed to generate query embedding, proceeding without documents");
+                    LOG.info("Failed to generate query embedding, proceeding without documents");
                     return CompletableFuture.completedFuture(formatNoDocumentsFound());
                 }
                 
@@ -123,7 +123,7 @@ public class DocumentRetrievalService {
                     .thenApply(this::formatDocumentContext);
             })
             .exceptionally(throwable -> {
-                LOG.warn("Document retrieval failed", throwable);
+                LOG.info("Document retrieval failed", throwable);
                 return formatNoDocumentsFound();
             });
     }
@@ -155,7 +155,7 @@ public class DocumentRetrievalService {
         
         CompletableFuture<float[]> embeddingFuture;
         if (serviceType == null) {
-            LOG.warn("No embedding provider available (no default model and no API key). Skipping embeddings.");
+            LOG.info("No embedding provider available (no default model and no API key). Skipping embeddings.");
             return CompletableFuture.completedFuture(null);
         }
 
@@ -169,7 +169,7 @@ public class DocumentRetrievalService {
                 embeddingFuture = geminiEmbeddingService.generateEmbedding(queryText);
                 break;
             default:
-                LOG.warn("Unknown service type: " + serviceType + ". Skipping embeddings.");
+                LOG.info("Unknown service type: " + serviceType + ". Skipping embeddings.");
                 embeddingFuture = CompletableFuture.completedFuture(null);
                 break;
         }
@@ -181,7 +181,7 @@ public class DocumentRetrievalService {
                 return embedding;
             })
             .exceptionally(throwable -> {
-                LOG.warn("Failed to generate query embedding", throwable);
+                LOG.info("Failed to generate query embedding", throwable);
                 return null;
             });
     }
@@ -199,39 +199,39 @@ public class DocumentRetrievalService {
                 AIModel defaultModel = AIModelService.getInstance().getDefaultModel();
                 AIServiceType serviceType = defaultModel != null ? defaultModel.getServiceType() : null;
                 if (serviceType == null) {
-                    LOG.warn("No embedding provider available (no default model). Skipping retrieval.");
+                    LOG.info("No embedding provider available (no default model). Skipping retrieval.");
                     return java.util.Collections.emptyList();
                 }
                 DocumentDatabaseService.EmbeddingType embeddingType = getEmbeddingType(serviceType);
                 int expectedDims = (serviceType == AIServiceType.OPENAI) ? 1536 : 3072;
                 if (queryEmbedding == null || queryEmbedding.length != expectedDims) {
-                    LOG.warn("Embedding dimension mismatch (got " + (queryEmbedding == null ? -1 : queryEmbedding.length) + ", expected " + expectedDims + "). Skipping retrieval.");
+                    LOG.info("Embedding dimension mismatch (got " + (queryEmbedding == null ? -1 : queryEmbedding.length) + ", expected " + expectedDims + "). Skipping retrieval.");
                     return java.util.Collections.emptyList();
                 }
                 
-                LOG.info("Searching for relevant documents with similarity threshold: " + DEFAULT_SIMILARITY_THRESHOLD);
+                LOG.debug("Searching for relevant documents with similarity threshold: " + DEFAULT_SIMILARITY_THRESHOLD);
                 LOG.info("Using embedding type: " + embeddingType + " for service: " + serviceType);
                 
                 List<DocumentDatabaseService.DocumentWithSimilarity> documents = 
                     databaseService.findRelevantDocuments(queryEmbedding, embeddingType, DEFAULT_MAX_RESULTS, DEFAULT_SIMILARITY_THRESHOLD);
                 
-                LOG.info("Found " + documents.size() + " relevant documents above threshold " + DEFAULT_SIMILARITY_THRESHOLD);
+                LOG.debug("Found " + documents.size() + " relevant documents above threshold " + DEFAULT_SIMILARITY_THRESHOLD);
                 
                 if (!documents.isEmpty()) {
-                    LOG.info("Top document similarity scores:");
+                    LOG.debug("Top document similarity scores:");
                     for (int i = 0; i < Math.min(3, documents.size()); i++) {
                         DocumentDatabaseService.DocumentWithSimilarity doc = documents.get(i);
                         LOG.info("  " + (i + 1) + ". " + doc.getTitle() + " - " + 
                                 String.format("%.3f", doc.getSimilarityScore()));
                     }
                 } else {
-                    LOG.info("No documents found above similarity threshold");
+                    LOG.debug("No documents found above similarity threshold");
                 }
                 
                 return documents;
                 
             } catch (SQLException e) {
-                LOG.warn("Database error during document search", e);
+                LOG.error("Database error during document search", e);
                 throw new RuntimeException("Failed to search documents", e);
             }
         });
@@ -250,7 +250,7 @@ public class DocumentRetrievalService {
             case GEMINI:
                 return DocumentDatabaseService.EmbeddingType.GEMINI;
             default:
-                LOG.warn("Unknown service type: " + serviceType + ", using OpenAI as fallback");
+                LOG.info("Unknown service type: " + serviceType + ", using OpenAI as fallback");
                 return DocumentDatabaseService.EmbeddingType.OPENAI;
         }
     }
@@ -275,7 +275,7 @@ public class DocumentRetrievalService {
         for (int i = 0; i < documents.size(); i++) {
             DocumentDatabaseService.DocumentWithSimilarity doc = documents.get(i);
             
-            LOG.info("Document " + (i + 1) + ": " + doc.getTitle() + " (similarity: " + 
+                        LOG.debug("Document " + (i + 1) + ": " + doc.getTitle() + " (similarity: " +
                     String.format("%.3f", doc.getSimilarityScore()) + ")");
             
             context.append("**Document ").append(i + 1).append(":** ")
@@ -331,7 +331,7 @@ public class DocumentRetrievalService {
             DocumentDatabaseService.EmbeddingType embeddingType = getEmbeddingType(serviceType);
             return databaseService.getDocumentCountWithEmbeddings(embeddingType);
         } catch (SQLException e) {
-            LOG.warn("Failed to get document count", e);
+            LOG.error("Failed to get document count", e);
             return 0;
         }
     }
@@ -347,7 +347,7 @@ public class DocumentRetrievalService {
             LOG.info("Document database contains " + documentCount + " documents with embeddings");
             return documentCount > 0;
         } catch (Exception e) {
-            LOG.warn("Database validation failed", e);
+            LOG.error("Database validation failed", e);
             return false;
         }
     }

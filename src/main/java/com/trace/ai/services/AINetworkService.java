@@ -137,7 +137,7 @@ public final class AINetworkService {
             // Validate that the model's service type matches the preferred service type
             AIServiceType preferredServiceType = aiSettings.getPreferredAIService();
             if (preferredServiceType != null && preferredServiceType != serviceType) {
-                LOG.warn("Default model service type (" + serviceType + 
+                LOG.info("Default model service type (" + serviceType + 
                         ") doesn't match preferred service type (" + preferredServiceType + ")");
             }
             

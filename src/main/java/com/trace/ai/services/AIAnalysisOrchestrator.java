@@ -214,8 +214,8 @@ public final class AIAnalysisOrchestrator {
      * @throws IllegalArgumentException if failureInfo is null
      */
     public CompletableFuture<AIAnalysisResult> analyzeInitialFailureWithDocuments(@NotNull FailureInfo failureInfo, @NotNull AnalysisMode mode) {
-        LOG.info("=== DEBUG: analyzeInitialFailureWithDocuments called ===");
-        LOG.info("=== DEBUG: Document retrieval service available: " + (documentRetrievalService != null) + " ===");
+        LOG.debug("=== DEBUG: analyzeInitialFailureWithDocuments called ===");
+        LOG.debug("=== DEBUG: Document retrieval service available: " + (documentRetrievalService != null) + " ===");
         
         if (failureInfo == null) {
             throw new IllegalArgumentException("FailureInfo cannot be null");
@@ -755,7 +755,7 @@ public final class AIAnalysisOrchestrator {
             return beforeAnalysisRequest + "\n" + docSection + "\n\n" + afterAnalysisRequest;
         } else {
             // Fallback: append document context at the end
-            LOG.warn("Analysis Request section not found in prompt, appending document context at the end");
+            LOG.debug("Analysis Request section not found in prompt, appending document context at the end");
             return prompt + "\n\n" + docSection;
         }
     }

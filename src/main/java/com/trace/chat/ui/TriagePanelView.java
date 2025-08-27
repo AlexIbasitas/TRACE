@@ -197,7 +197,7 @@ public class TriagePanelView {
                 LOG.info("Chat history cleared for new test run");
             }
         } catch (Exception e) {
-            LOG.warn("Error clearing chat history: " + e.getMessage());
+            LOG.error("Error clearing chat history: " + e.getMessage());
         }
         
         LOG.info("=== END TRIAGE PANEL: TEST RUN STARTED ===");
@@ -772,7 +772,7 @@ public class TriagePanelView {
                             
                             LOG.info("=== THEME CHANGE COMPLETED ===");
                         } catch (Exception ex) {
-                            LOG.warn("Error during theme change refresh: " + ex.getMessage(), ex);
+                            LOG.error("Error during theme change refresh: " + ex.getMessage(), ex);
                         }
                     });
             });
@@ -786,7 +786,7 @@ public class TriagePanelView {
                         refreshTheme();
                         LOG.info("=== THEME CHANGE COMPLETED ===");
                     } catch (Exception ex) {
-                        LOG.warn("Error during theme change refresh: " + ex.getMessage(), ex);
+                        LOG.error("Error during theme change refresh: " + ex.getMessage(), ex);
                     }
                 });
             });
@@ -801,7 +801,7 @@ public class TriagePanelView {
                             refreshTheme();
                             LOG.info("=== FONT CHANGE COMPLETED ===");
                         } catch (Exception ex) {
-                            LOG.warn("Error during font change refresh: " + ex.getMessage(), ex);
+                            LOG.error("Error during font change refresh: " + ex.getMessage(), ex);
                         }
                     });
                 }
@@ -903,7 +903,7 @@ public class TriagePanelView {
         
         // Check if we have failure context for user queries
         if (currentFailureInfo == null) {
-            LOG.warn("No failure context available for user query");
+            LOG.info("No failure context available for user query");
             addMessage(new ChatMessage(ChatMessage.Role.AI, 
                 "No test failure context available. Please run a test first to establish context for AI analysis.", 
                 System.currentTimeMillis(), null, null));
@@ -922,7 +922,7 @@ public class TriagePanelView {
         try {
             ChatHistoryService chatHistoryService = project.getService(ChatHistoryService.class);
             if (chatHistoryService == null) {
-                LOG.warn("ChatHistoryService is null - proceeding without chat history");
+                LOG.info("ChatHistoryService is null - proceeding without chat history");
             } else {
                 if (LOG.isDebugEnabled()) {
                     LOG.debug("Chat History Service State - User Query Count: " + chatHistoryService.getUserQueryCount() + 
@@ -937,7 +937,7 @@ public class TriagePanelView {
                 }
             }
         } catch (Exception e) {
-            LOG.warn("Error accessing ChatHistoryService: " + e.getMessage());
+            LOG.error("Error accessing ChatHistoryService: " + e.getMessage());
         }
         
         // Process the user query with enhanced analysis and RAG
@@ -962,13 +962,13 @@ public class TriagePanelView {
                     addMessage(new ChatMessage(ChatMessage.Role.AI, result.getAnalysis(), 
                                             System.currentTimeMillis(), null, null));
                 } else {
-                    LOG.warn("AI analysis returned empty content");
+                    LOG.info("AI analysis returned empty content");
                     addMessage(new ChatMessage(ChatMessage.Role.AI, 
                         "AI analysis completed but returned no content.", 
                         System.currentTimeMillis(), null, null));
                 }
             } else {
-                LOG.warn("AI analysis returned null result");
+                LOG.info("AI analysis returned null result");
                 addMessage(new ChatMessage(ChatMessage.Role.AI, 
                     "AI analysis returned no result.", 
                     System.currentTimeMillis(), null, null));
@@ -1692,7 +1692,7 @@ public class TriagePanelView {
                         ApplicationManager.getApplication().invokeLater(() -> requestAlignNewestIfNear(chatScrollPane));
                     }
                 } catch (Exception promptBuildError) {
-                    LOG.warn("Failed to build base prompt prior to document retrieval: " + promptBuildError.getMessage());
+                    LOG.error("Failed to build base prompt prior to document retrieval: " + promptBuildError.getMessage());
                 }
                 
                 // Show typing indicator while waiting for AI analysis
@@ -1814,7 +1814,7 @@ public class TriagePanelView {
         }
         
         if (result == null) {
-            LOG.warn("AI analysis result is null, cannot display");
+            LOG.info("AI analysis result is null, cannot display");
             return;
         }
         
@@ -1832,7 +1832,7 @@ public class TriagePanelView {
             if (analysisText != null && !analysisText.trim().isEmpty()) {
                 addMessage(new ChatMessage(ChatMessage.Role.AI, analysisText, System.currentTimeMillis(), null, null));
             } else {
-                LOG.warn("AI analysis result is empty");
+                LOG.info("AI analysis result is empty");
                 addMessage(new ChatMessage(ChatMessage.Role.AI, "AI analysis completed but returned no content.", System.currentTimeMillis(), null, null));
             }
         } catch (Exception e) {
@@ -1856,7 +1856,7 @@ public class TriagePanelView {
         }
         
         if (errorMessage == null || errorMessage.trim().isEmpty()) {
-            LOG.warn("AI analysis error message is null or empty");
+            LOG.info("AI analysis error message is null or empty");
             return;
         }
         
@@ -1907,7 +1907,7 @@ public class TriagePanelView {
                 }
             }
         } catch (Exception e) {
-            LOG.warn("Error accessing chat history for recent queries: " + e.getMessage());
+            LOG.error("Error accessing chat history for recent queries: " + e.getMessage());
         }
         return recentQueries;
     }
@@ -2392,7 +2392,7 @@ public class TriagePanelView {
                     messageBusConnection = null;
                     LOG.info("Disconnected MessageBus connection");
                 } catch (Exception e) {
-                    LOG.warn("Error disconnecting MessageBus connection: " + e.getMessage());
+                    LOG.error("Error disconnecting MessageBus connection: " + e.getMessage());
                 }
             }
             
@@ -2416,7 +2416,7 @@ public class TriagePanelView {
             
             LOG.info("TriagePanelView disposal completed");
         } catch (Exception e) {
-            LOG.warn("Error during TriagePanelView disposal: " + e.getMessage(), e);
+            LOG.error("Error during TriagePanelView disposal: " + e.getMessage(), e);
         }
     }
 }
