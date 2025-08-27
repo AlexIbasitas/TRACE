@@ -123,7 +123,7 @@ public class DocumentRetrievalService {
                     .thenApply(this::formatDocumentContext);
             })
             .exceptionally(throwable -> {
-                LOG.error("Document retrieval failed", throwable);
+                LOG.warn("Document retrieval failed", throwable);
                 return formatNoDocumentsFound();
             });
     }
@@ -181,7 +181,7 @@ public class DocumentRetrievalService {
                 return embedding;
             })
             .exceptionally(throwable -> {
-                LOG.error("Failed to generate query embedding", throwable);
+                LOG.warn("Failed to generate query embedding", throwable);
                 return null;
             });
     }
@@ -231,7 +231,7 @@ public class DocumentRetrievalService {
                 return documents;
                 
             } catch (SQLException e) {
-                LOG.error("Database error during document search", e);
+                LOG.warn("Database error during document search", e);
                 throw new RuntimeException("Failed to search documents", e);
             }
         });
@@ -331,7 +331,7 @@ public class DocumentRetrievalService {
             DocumentDatabaseService.EmbeddingType embeddingType = getEmbeddingType(serviceType);
             return databaseService.getDocumentCountWithEmbeddings(embeddingType);
         } catch (SQLException e) {
-            LOG.error("Failed to get document count", e);
+            LOG.warn("Failed to get document count", e);
             return 0;
         }
     }
@@ -347,7 +347,7 @@ public class DocumentRetrievalService {
             LOG.info("Document database contains " + documentCount + " documents with embeddings");
             return documentCount > 0;
         } catch (Exception e) {
-            LOG.error("Database validation failed", e);
+            LOG.warn("Database validation failed", e);
             return false;
         }
     }

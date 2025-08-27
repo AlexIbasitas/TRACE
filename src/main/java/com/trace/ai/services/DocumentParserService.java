@@ -61,10 +61,10 @@ public class DocumentParserService {
             return parseDocumentContent(content, file.getName());
             
         } catch (IOException e) {
-            LOG.error("Failed to read file: " + file.getName(), e);
+            LOG.warn("Failed to read file: " + file.getName(), e);
             return null;
         } catch (Exception e) {
-            LOG.error("Failed to parse document: " + file.getName(), e);
+            LOG.warn("Failed to parse document: " + file.getName(), e);
             return null;
         }
     }
@@ -133,9 +133,9 @@ public class DocumentParserService {
             }
             
         } catch (IOException e) {
-            LOG.error("Failed to read file: " + file.getName(), e);
+            LOG.warn("Failed to read file: " + file.getName(), e);
         } catch (Exception e) {
-            LOG.error("Failed to parse document: " + file.getName(), e);
+            LOG.warn("Failed to parse document: " + file.getName(), e);
         }
         
         return documents;

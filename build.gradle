@@ -38,14 +38,16 @@ dependencies {
     implementation 'com.vladsch.flexmark:flexmark-all:0.64.8'
 
     // SQLite JDBC driver for frozen vector store
-    implementation 'org.xerial:sqlite-jdbc:3.44.1.0'
+    implementation('org.xerial:sqlite-jdbc:3.44.1.0') {
+        exclude group: 'org.slf4j', module: 'slf4j-api'
+    }
 
     // For Gradle task execution
     implementation 'org.jetbrains:annotations:24.0.1'
 
-    // SLF4J for logging (industry standard)
-    implementation 'org.slf4j:slf4j-api:2.0.9'
-    runtimeOnly 'org.slf4j:slf4j-simple:2.0.9'
+    // SLF4J for logging (industry standard) - Commented out to use IntelliJ Platform logger
+    // implementation 'org.slf4j:slf4j-api:2.0.9'
+    // runtimeOnly 'org.slf4j:slf4j-simple:2.0.9'
     
     // IntelliJ Platform Test Framework dependencies are automatically included
     
@@ -132,13 +134,16 @@ patchPluginXml {
     """
 }
 
-// Ensure debug logs from our package are visible when running the sandbox IDE
+// Configure IDE runtime for professional logging
 tasks.named('runIde') {
-    // Show DEBUG level logs for our plugin code
-    jvmArgs '-Didea.log.debug.categories=com.trace'
+    // Set logging level to INFO for cleaner output
+    jvmArgs '-Didea.log.level=INFO'
     
     // Ensure proper Java version handling
     jvmArgs '-Djava.version=17'
+    
+    // Configure URL schemes for external links (required for privacy policy links)
+    jvmArgs '-Didea.url.schemes=https'
     
     // Lock runtime to JBR 17 to prevent Java version compatibility issues
     // This ensures the sandbox IDE runs on a consistent Java 17 runtime

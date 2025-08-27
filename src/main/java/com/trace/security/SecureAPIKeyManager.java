@@ -76,7 +76,7 @@ public final class SecureAPIKeyManager {
             return true;
             
         } catch (Exception e) {
-            LOG.error("Failed to store API key for service: " + serviceType.getDisplayName(), e);
+            LOG.warn("Failed to store API key for service: " + serviceType.getDisplayName(), e);
             return false;
         }
     }
@@ -116,7 +116,7 @@ public final class SecureAPIKeyManager {
             return apiKey;
             
         } catch (Exception e) {
-            LOG.error("Failed to retrieve API key for service: " + serviceType.getDisplayName(), e);
+            LOG.warn("Failed to retrieve API key for service: " + serviceType.getDisplayName(), e);
             return null;
         }
     }
@@ -141,7 +141,7 @@ public final class SecureAPIKeyManager {
             return true;
             
         } catch (Exception e) {
-            LOG.error("Failed to clear API key for service: " + serviceType.getDisplayName(), e);
+            LOG.warn("Failed to clear API key for service: " + serviceType.getDisplayName(), e);
             return false;
         }
     }

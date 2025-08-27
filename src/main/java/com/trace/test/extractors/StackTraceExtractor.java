@@ -3,6 +3,7 @@ package com.trace.test.extractors;
 import com.intellij.execution.testframework.sm.runner.SMTestProxy;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.diagnostic.Logger;
+import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.openapi.vfs.LocalFileSystem;
 import com.intellij.openapi.editor.Document;
@@ -158,7 +159,19 @@ public class StackTraceExtractor {
                 
                 // Handle file:// URLs
                 if (locationUrl.startsWith("file://")) {
-                    return locationUrl.substring(7); // Remove "file://" prefix
+                    String path = locationUrl.substring(7); // Remove "file://" prefix
+                    
+                    // Remove line number if present (everything after the last ":")
+                    if (path.contains(":")) {
+                        int lastColonIndex = path.lastIndexOf(":");
+                        String originalPath = path;
+                        path = path.substring(0, lastColonIndex);
+                        if (LOG.isDebugEnabled()) {
+                            LOG.debug("Parsed file path: " + originalPath + " -> " + path);
+                        }
+                    }
+                    
+                    return path;
                 }
                 
                 // Handle other URL formats
@@ -228,53 +241,56 @@ public class StackTraceExtractor {
      * @return The extracted step text, or null if not found
      */
     private String extractStepTextFromPSI(String sourceFilePath, int lineNumber) {
-        try {
-            // Get the virtual file
-            VirtualFile virtualFile = LocalFileSystem.getInstance().findFileByPath(sourceFilePath);
-            if (virtualFile == null) {
-                LOG.debug("Virtual file not found: " + sourceFilePath);
+        // Use read action for PSI operations (JetBrains best practice)
+        return ApplicationManager.getApplication().<String>runReadAction(() -> {
+            try {
+                // Get the virtual file
+                VirtualFile virtualFile = LocalFileSystem.getInstance().findFileByPath(sourceFilePath);
+                if (virtualFile == null) {
+                    LOG.debug("Virtual file not found: " + sourceFilePath);
+                    return null;
+                }
+                
+                // Get PSI file
+                PsiFile psiFile = PsiManager.getInstance(project).findFile(virtualFile);
+                if (psiFile == null) {
+                    LOG.debug("PSI file not found for: " + sourceFilePath);
+                    return null;
+                }
+                
+                // Navigate to the specific line
+                Document document = PsiDocumentManager.getInstance(project).getDocument(psiFile);
+                if (document == null) {
+                    LOG.debug("Document not found for PSI file");
+                    return null;
+                }
+                
+                // Get the line start offset
+                int lineStartOffset = document.getLineStartOffset(lineNumber - 1); // Convert to 0-based
+                int lineEndOffset = document.getLineEndOffset(lineNumber - 1);
+                
+                // Get the element at that position
+                PsiElement element = psiFile.findElementAt(lineStartOffset);
+                if (element == null) {
+                    LOG.debug("No PSI element found at line " + lineNumber);
+                    return null;
+                }
+                
+                // Extract step text based on the type of element
+                String stepText = extractStepTextFromElement(element, document, lineStartOffset, lineEndOffset);
+                
+                if (stepText != null) {
+                    return stepText;
+                }
+                
+                // If direct extraction failed, try to find the step definition method
+                return findStepDefinitionMethod(element);
+                
+            } catch (Exception e) {
+                LOG.warn("Error during PSI navigation for file: " + sourceFilePath, e);
                 return null;
             }
-            
-            // Get PSI file
-            PsiFile psiFile = PsiManager.getInstance(project).findFile(virtualFile);
-            if (psiFile == null) {
-                LOG.debug("PSI file not found for: " + sourceFilePath);
-                return null;
-            }
-            
-            // Navigate to the specific line
-            Document document = PsiDocumentManager.getInstance(project).getDocument(psiFile);
-            if (document == null) {
-                LOG.debug("Document not found for PSI file");
-                return null;
-            }
-            
-            // Get the line start offset
-            int lineStartOffset = document.getLineStartOffset(lineNumber - 1); // Convert to 0-based
-            int lineEndOffset = document.getLineEndOffset(lineNumber - 1);
-            
-            // Get the element at that position
-            PsiElement element = psiFile.findElementAt(lineStartOffset);
-            if (element == null) {
-                LOG.debug("No PSI element found at line " + lineNumber);
-                return null;
-            }
-            
-            // Extract step text based on the type of element
-            String stepText = extractStepTextFromElement(element, document, lineStartOffset, lineEndOffset);
-            
-            if (stepText != null) {
-                return stepText;
-            }
-            
-            // If direct extraction failed, try to find the step definition method
-            return findStepDefinitionMethod(element);
-            
-        } catch (Exception e) {
-            LOG.warn("Error during PSI navigation for file: " + sourceFilePath, e);
-            return null;
-        }
+        });
     }
     
     /**

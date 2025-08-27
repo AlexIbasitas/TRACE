@@ -163,7 +163,9 @@ public final class MarkdownRenderer {
                 docSheet.addRule("body { padding-bottom:12px; }");
                 editorPane.setDocument(doc);
             } catch (Exception ex) {
-                LOG.warn("Failed to set custom HTMLEditorKit stylesheet: " + ex.getMessage());
+                if (LOG.isDebugEnabled()) {
+                    LOG.debug("HTMLEditorKit stylesheet initialization issue (non-critical): " + ex.getMessage());
+                }
             }
 
             // Set the styled HTML content (with safe post-processing)
@@ -988,7 +990,7 @@ public final class MarkdownRenderer {
                             (Component) parent,
                             e.getID(),
                             e.getWhen(),
-                            e.getModifiers(),
+                            e.getModifiersEx(), // Updated from deprecated getModifiers() to getModifiersEx()
                             e.getX(),
                             e.getY(),
                             e.getXOnScreen(),

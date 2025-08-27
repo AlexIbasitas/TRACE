@@ -335,16 +335,8 @@ public class PrivacyConsentPanel extends JBPanel<PrivacyConsentPanel> implements
      * Shows warning dialog when user tries to disable AI analysis.
      */
     private void showDisableWarningDialog() {
-        int result = Messages.showYesNoDialog(
-            "You will lose access to AI-powered debugging suggestions for test failures. Are you sure you want to disable AI analysis?",
-            "Disable AI Analysis?",
-            "Disable",
-            "Cancel",
-            Messages.getQuestionIcon(),
-            null
-        );
-        
-        if (result == Messages.YES) {
+        DisableAIWarningDialog dialog = new DisableAIWarningDialog();
+        if (dialog.showAndGet()) {
             // User confirmed - disable AI analysis features
             aiSettings.setAIAnalysisEnabled(false);
             aiSettings.setUserConsentGiven(false);
@@ -568,6 +560,65 @@ public class PrivacyConsentPanel extends JBPanel<PrivacyConsentPanel> implements
             scrollPane.setBorder(JBUI.Borders.empty());
             
             panel.add(scrollPane, BorderLayout.CENTER);
+            
+            return panel;
+        }
+        
+        @Override
+        protected Action[] createActions() {
+            return new Action[]{
+                getOKAction(),
+                getCancelAction()
+            };
+        }
+        
+        @Override
+        protected void doOKAction() {
+            super.doOKAction();
+        }
+        
+        @Override
+        public void doCancelAction() {
+            super.doCancelAction();
+        }
+    }
+    
+    /**
+     * Warning dialog when user tries to disable AI analysis.
+     * 
+     * <p>This dialog explains what features will be lost and confirms
+     * the user's intent to disable AI analysis.</p>
+     */
+    private static class DisableAIWarningDialog extends DialogWrapper {
+        
+        public DisableAIWarningDialog() {
+            super(true);
+            setTitle("Disable AI Analysis?");
+            setResizable(false);
+            init();
+        }
+        
+        @Override
+        protected @Nullable JComponent createCenterPanel() {
+            JPanel panel = new JBPanel<>(new BorderLayout());
+            panel.setBorder(JBUI.Borders.empty(20));
+            
+            // Create content with proper text wrapping
+            JTextArea contentArea = new JTextArea();
+            contentArea.setEditable(false);
+            contentArea.setLineWrap(true);
+            contentArea.setWrapStyleWord(true);
+            contentArea.setBackground(panel.getBackground());
+            contentArea.setFont(panel.getFont());
+            contentArea.setText(
+                "You will lose access to AI-powered debugging suggestions for test failures. Are you sure you want to disable AI analysis?"
+            );
+            
+            // Set a reasonable width and let height adjust naturally
+            contentArea.setPreferredSize(new Dimension(350, 60));
+            contentArea.setMinimumSize(new Dimension(350, 60));
+            
+            panel.add(contentArea, BorderLayout.CENTER);
             
             return panel;
         }

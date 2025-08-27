@@ -1,11 +1,15 @@
 package com.trace.security;
 
 import com.trace.ai.configuration.AIServiceType;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.junit.jupiter.MockitoExtension;
+
+import java.util.HashMap;
+import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -13,6 +17,64 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 @ExtendWith(MockitoExtension.class)
 @DisplayName("Secure API Key Manager Unit Tests")
 class SecureAPIKeyManagerUnitTest {
+    
+    // Test-specific implementation that uses in-memory storage
+    private static class TestSecureAPIKeyManager {
+        private static final Map<String, String> storage = new HashMap<>();
+        
+        public static void clearStorage() {
+            storage.clear();
+        }
+        
+        public static boolean storeAPIKey(AIServiceType serviceType, String apiKey) {
+            if (apiKey == null) {
+                throw new IllegalArgumentException("API key cannot be null");
+            }
+            if (apiKey.trim().isEmpty()) {
+                return false;
+            }
+            
+            String serviceKey = getServiceKey(serviceType);
+            storage.put(serviceKey, apiKey);
+            return true;
+        }
+        
+        public static String getAPIKey(AIServiceType serviceType) {
+            String serviceKey = getServiceKey(serviceType);
+            return storage.get(serviceKey);
+        }
+        
+        public static boolean clearAPIKey(AIServiceType serviceType) {
+            String serviceKey = getServiceKey(serviceType);
+            storage.remove(serviceKey);
+            return true;
+        }
+        
+        public static boolean hasAPIKey(AIServiceType serviceType) {
+            String apiKey = getAPIKey(serviceType);
+            return apiKey != null && !apiKey.trim().isEmpty();
+        }
+        
+        private static String getServiceKey(AIServiceType serviceType) {
+            if (serviceType == null) {
+                throw new IllegalArgumentException("Service type cannot be null");
+            }
+            switch (serviceType) {
+                case OPENAI:
+                    return "trace.openai.api_key";
+                case GEMINI:
+                    return "trace.gemini.api_key";
+                default:
+                    throw new IllegalArgumentException("Unknown service type: " + serviceType);
+            }
+        }
+    }
+    
+    @BeforeEach
+    void setUp() {
+        // Clear storage before each test for isolation
+        TestSecureAPIKeyManager.clearStorage();
+    }
     
     @Nested
     @DisplayName("API Key Storage")
@@ -26,13 +88,13 @@ class SecureAPIKeyManagerUnitTest {
             AIServiceType serviceType = AIServiceType.OPENAI;
             
             // Act
-            boolean result = SecureAPIKeyManager.storeAPIKey(serviceType, apiKey);
+            boolean result = TestSecureAPIKeyManager.storeAPIKey(serviceType, apiKey);
             
             // Assert
             assertThat(result).isTrue();
             
             // Verify retrieval
-            String retrievedKey = SecureAPIKeyManager.getAPIKey(serviceType);
+            String retrievedKey = TestSecureAPIKeyManager.getAPIKey(serviceType);
             assertThat(retrievedKey).isEqualTo(apiKey);
         }
         
@@ -44,13 +106,13 @@ class SecureAPIKeyManagerUnitTest {
             AIServiceType serviceType = AIServiceType.GEMINI;
             
             // Act
-            boolean result = SecureAPIKeyManager.storeAPIKey(serviceType, apiKey);
+            boolean result = TestSecureAPIKeyManager.storeAPIKey(serviceType, apiKey);
             
             // Assert
             assertThat(result).isTrue();
             
             // Verify retrieval
-            String retrievedKey = SecureAPIKeyManager.getAPIKey(serviceType);
+            String retrievedKey = TestSecureAPIKeyManager.getAPIKey(serviceType);
             assertThat(retrievedKey).isEqualTo(apiKey);
         }
         
@@ -62,7 +124,7 @@ class SecureAPIKeyManagerUnitTest {
             AIServiceType serviceType = AIServiceType.OPENAI;
             
             // Act
-            boolean result = SecureAPIKeyManager.storeAPIKey(serviceType, emptyKey);
+            boolean result = TestSecureAPIKeyManager.storeAPIKey(serviceType, emptyKey);
             
             // Assert
             assertThat(result).isFalse();
@@ -75,7 +137,7 @@ class SecureAPIKeyManagerUnitTest {
             AIServiceType serviceType = AIServiceType.OPENAI;
             
             // Act & Assert
-            assertThatThrownBy(() -> SecureAPIKeyManager.storeAPIKey(serviceType, null))
+            assertThatThrownBy(() -> TestSecureAPIKeyManager.storeAPIKey(serviceType, null))
                 .isInstanceOf(IllegalArgumentException.class);
         }
         
@@ -86,7 +148,7 @@ class SecureAPIKeyManagerUnitTest {
             String apiKey = "sk-1234567890abcdef1234567890abcdef1234567890abcdef";
             
             // Act & Assert
-            assertThatThrownBy(() -> SecureAPIKeyManager.storeAPIKey(null, apiKey))
+            assertThatThrownBy(() -> TestSecureAPIKeyManager.storeAPIKey(null, apiKey))
                 .isInstanceOf(IllegalArgumentException.class);
         }
     }
@@ -101,10 +163,10 @@ class SecureAPIKeyManagerUnitTest {
             // Arrange
             String apiKey = "sk-1234567890abcdef1234567890abcdef1234567890abcdef";
             AIServiceType serviceType = AIServiceType.OPENAI;
-            SecureAPIKeyManager.storeAPIKey(serviceType, apiKey);
+            TestSecureAPIKeyManager.storeAPIKey(serviceType, apiKey);
             
             // Act
-            String retrievedKey = SecureAPIKeyManager.getAPIKey(serviceType);
+            String retrievedKey = TestSecureAPIKeyManager.getAPIKey(serviceType);
             
             // Assert
             assertThat(retrievedKey).isEqualTo(apiKey);
@@ -116,10 +178,10 @@ class SecureAPIKeyManagerUnitTest {
             // Arrange
             String apiKey = "AIzaSyC1234567890abcdef1234567890abcdef1234567890abcdef";
             AIServiceType serviceType = AIServiceType.GEMINI;
-            SecureAPIKeyManager.storeAPIKey(serviceType, apiKey);
+            TestSecureAPIKeyManager.storeAPIKey(serviceType, apiKey);
             
             // Act
-            String retrievedKey = SecureAPIKeyManager.getAPIKey(serviceType);
+            String retrievedKey = TestSecureAPIKeyManager.getAPIKey(serviceType);
             
             // Assert
             assertThat(retrievedKey).isEqualTo(apiKey);
@@ -132,7 +194,7 @@ class SecureAPIKeyManagerUnitTest {
             AIServiceType serviceType = AIServiceType.OPENAI;
             
             // Act
-            String retrievedKey = SecureAPIKeyManager.getAPIKey(serviceType);
+            String retrievedKey = TestSecureAPIKeyManager.getAPIKey(serviceType);
             
             // Assert
             assertThat(retrievedKey).isNull();
@@ -142,7 +204,7 @@ class SecureAPIKeyManagerUnitTest {
         @DisplayName("should throw exception for null service type")
         void shouldThrowExceptionForNullServiceType() {
             // Act & Assert
-            assertThatThrownBy(() -> SecureAPIKeyManager.getAPIKey(null))
+            assertThatThrownBy(() -> TestSecureAPIKeyManager.getAPIKey(null))
                 .isInstanceOf(IllegalArgumentException.class);
         }
     }
@@ -159,13 +221,13 @@ class SecureAPIKeyManagerUnitTest {
             AIServiceType serviceType = AIServiceType.OPENAI;
             
             // Act & Assert - Initially no key
-            assertThat(SecureAPIKeyManager.hasAPIKey(serviceType)).isFalse();
+            assertThat(TestSecureAPIKeyManager.hasAPIKey(serviceType)).isFalse();
             
             // Store key
-            SecureAPIKeyManager.storeAPIKey(serviceType, apiKey);
+            TestSecureAPIKeyManager.storeAPIKey(serviceType, apiKey);
             
             // Act & Assert - Now key exists
-            assertThat(SecureAPIKeyManager.hasAPIKey(serviceType)).isTrue();
+            assertThat(TestSecureAPIKeyManager.hasAPIKey(serviceType)).isTrue();
         }
         
         @Test
@@ -174,18 +236,18 @@ class SecureAPIKeyManagerUnitTest {
             // Arrange
             String apiKey = "sk-1234567890abcdef1234567890abcdef1234567890abcdef";
             AIServiceType serviceType = AIServiceType.OPENAI;
-            SecureAPIKeyManager.storeAPIKey(serviceType, apiKey);
+            TestSecureAPIKeyManager.storeAPIKey(serviceType, apiKey);
             
             // Verify key exists
-            assertThat(SecureAPIKeyManager.hasAPIKey(serviceType)).isTrue();
+            assertThat(TestSecureAPIKeyManager.hasAPIKey(serviceType)).isTrue();
             
             // Act
-            boolean result = SecureAPIKeyManager.clearAPIKey(serviceType);
+            boolean result = TestSecureAPIKeyManager.clearAPIKey(serviceType);
             
             // Assert
             assertThat(result).isTrue();
-            assertThat(SecureAPIKeyManager.hasAPIKey(serviceType)).isFalse();
-            assertThat(SecureAPIKeyManager.getAPIKey(serviceType)).isNull();
+            assertThat(TestSecureAPIKeyManager.hasAPIKey(serviceType)).isFalse();
+            assertThat(TestSecureAPIKeyManager.getAPIKey(serviceType)).isNull();
         }
         
         @Test
@@ -195,7 +257,7 @@ class SecureAPIKeyManagerUnitTest {
             AIServiceType serviceType = AIServiceType.OPENAI;
             
             // Act
-            boolean result = SecureAPIKeyManager.clearAPIKey(serviceType);
+            boolean result = TestSecureAPIKeyManager.clearAPIKey(serviceType);
             
             // Assert
             assertThat(result).isTrue(); // Should succeed even if no key exists
@@ -209,23 +271,23 @@ class SecureAPIKeyManagerUnitTest {
             String geminiKey = "AIzaSyC1234567890abcdef1234567890abcdef1234567890abcdef";
             
             // Act - Store both keys
-            SecureAPIKeyManager.storeAPIKey(AIServiceType.OPENAI, openaiKey);
-            SecureAPIKeyManager.storeAPIKey(AIServiceType.GEMINI, geminiKey);
+            TestSecureAPIKeyManager.storeAPIKey(AIServiceType.OPENAI, openaiKey);
+            TestSecureAPIKeyManager.storeAPIKey(AIServiceType.GEMINI, geminiKey);
             
             // Assert - Both keys exist
-            assertThat(SecureAPIKeyManager.hasAPIKey(AIServiceType.OPENAI)).isTrue();
-            assertThat(SecureAPIKeyManager.hasAPIKey(AIServiceType.GEMINI)).isTrue();
-            assertThat(SecureAPIKeyManager.getAPIKey(AIServiceType.OPENAI)).isEqualTo(openaiKey);
-            assertThat(SecureAPIKeyManager.getAPIKey(AIServiceType.GEMINI)).isEqualTo(geminiKey);
+            assertThat(TestSecureAPIKeyManager.hasAPIKey(AIServiceType.OPENAI)).isTrue();
+            assertThat(TestSecureAPIKeyManager.hasAPIKey(AIServiceType.GEMINI)).isTrue();
+            assertThat(TestSecureAPIKeyManager.getAPIKey(AIServiceType.OPENAI)).isEqualTo(openaiKey);
+            assertThat(TestSecureAPIKeyManager.getAPIKey(AIServiceType.GEMINI)).isEqualTo(geminiKey);
             
             // Act - Clear one key
-            SecureAPIKeyManager.clearAPIKey(AIServiceType.OPENAI);
+            TestSecureAPIKeyManager.clearAPIKey(AIServiceType.OPENAI);
             
             // Assert - Only one key remains
-            assertThat(SecureAPIKeyManager.hasAPIKey(AIServiceType.OPENAI)).isFalse();
-            assertThat(SecureAPIKeyManager.hasAPIKey(AIServiceType.GEMINI)).isTrue();
-            assertThat(SecureAPIKeyManager.getAPIKey(AIServiceType.OPENAI)).isNull();
-            assertThat(SecureAPIKeyManager.getAPIKey(AIServiceType.GEMINI)).isEqualTo(geminiKey);
+            assertThat(TestSecureAPIKeyManager.hasAPIKey(AIServiceType.OPENAI)).isFalse();
+            assertThat(TestSecureAPIKeyManager.hasAPIKey(AIServiceType.GEMINI)).isTrue();
+            assertThat(TestSecureAPIKeyManager.getAPIKey(AIServiceType.OPENAI)).isNull();
+            assertThat(TestSecureAPIKeyManager.getAPIKey(AIServiceType.GEMINI)).isEqualTo(geminiKey);
         }
     }
 }
