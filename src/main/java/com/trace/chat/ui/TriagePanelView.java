@@ -75,35 +75,19 @@ public class TriagePanelView {
     private final List<ChatMessage> chatHistory;
     private final AIAnalysisOrchestrator aiAnalysisOrchestrator;
     private FailureInfo currentFailureInfo;
-     private JScrollPane chatScrollPane;
-     private JPanel messageContainer;
-     private JPanel chatOverlayPanel;
-     private JButton newMessagesChip;
-     private javax.swing.Timer smoothScrollTimer;
-     private boolean isSmoothScrolling = false;
-     private boolean isProgrammaticScroll = false;
-     private javax.swing.Timer rescrollDebounceTimer;
-     private JComponent latestUserMessageComponent;
-     private JPanel bottomSpacer;
+    private JScrollPane chatScrollPane;
+    private JPanel messageContainer;
+    private JPanel chatOverlayPanel;
+    private JButton newMessagesChip;
+    private JComponent latestUserMessageComponent;
+    private JPanel bottomSpacer;
     private boolean showSettingsTab = false;
     // Typing indicator state
     private TypingIndicatorRow typingIndicatorRow;
     private boolean typingIndicatorVisible = false;
-    // Tracks if viewport was near bottom before appending a user message
-    private boolean wasNearBottomBeforeUserSend = false;
-     // Small delay to allow layout/HTML wrap to settle before computing scroll target
-     private static final int LAYOUT_SETTLE_DELAY_MS = 40;
-     // If true, maintain alignment to latest user after next append (AI response)
-     private boolean maintainAlignAfterAppend = false;
-     // Anchor to keep latest user row fixed at the same viewport position across AI appends
-     private boolean anchorActiveForAppend = false;
-     private int anchorUserTopYBeforeAppend = 0;
-     private int anchorScrollValueBeforeAppend = 0;
     
-     // Scroll/align tuning constants
-     private static final int NEAR_TARGET_THRESHOLD_PX = 120; // widen near-window
-     private static final int RESCROLL_DEBOUNCE_MS = 80;      // 60–100 ms debounce
-     private static final int SMOOTH_SCROLL_DURATION_MS = 220; // slightly longer ease-out
+    // Scroll helper for managing scroll-related functionality
+    private final ScrollHelper scrollHelper;
  
     // Analysis mode state management
     private String currentAnalysisMode = "Quick Overview";
@@ -130,6 +114,7 @@ public class TriagePanelView {
         this.chatHistory = new ArrayList<>();
         this.aiAnalysisOrchestrator = new AIAnalysisOrchestrator(project);
         this.currentFailureInfo = null;
+        this.scrollHelper = new ScrollHelper();
         
         // Initialize UI components
         this.mainPanel = new JPanel(new BorderLayout());
@@ -511,6 +496,10 @@ public class TriagePanelView {
         // Allow horizontal scrolling when the content's minimum width exceeds the viewport
         chatScrollPane.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_AS_NEEDED);
         
+        // Set up ScrollHelper references
+        scrollHelper.setChatScrollPane(chatScrollPane);
+        scrollHelper.setMessageContainer(messageContainer);
+        
         if (LOG.isDebugEnabled()) {
             LOG.debug("Scroll pane created - size: " + chatScrollPane.getSize() + 
                      ", preferred size: " + chatScrollPane.getPreferredSize() + 
@@ -522,13 +511,13 @@ public class TriagePanelView {
             @Override
             public void componentResized(java.awt.event.ComponentEvent e) {
                 if (chatScrollPane != null) {
-                    recomputeBottomSpacer();
+                    scrollHelper.recomputeBottomSpacer();
                     if (latestUserMessageComponent != null) {
-                        int target = computeAlignTopTarget(chatScrollPane, latestUserMessageComponent);
-                        if (isNearTarget(chatScrollPane, target, NEAR_TARGET_THRESHOLD_PX)) {
-                            scheduleDebouncedReScroll();
+                        int target = scrollHelper.computeAlignTopTarget(chatScrollPane, latestUserMessageComponent);
+                        if (scrollHelper.isNearTarget(chatScrollPane, target, scrollHelper.getNearTargetThresholdPx())) {
+                            scrollHelper.scheduleDebouncedReScroll();
                         } else {
-                            showNewMessagesChip();
+                            scrollHelper.showNewMessagesChip();
                         }
                     }
                 }
@@ -547,6 +536,9 @@ public class TriagePanelView {
         bottomSpacer.setBackground(panelBg);
         bottomSpacer.setPreferredSize(new Dimension(1, 0));
         messageContainer.add(bottomSpacer);
+        
+        // Set up ScrollHelper bottom spacer reference
+        scrollHelper.setBottomSpacer(bottomSpacer);
 
         // Add a component listener to handle post-layout re-scroll when content grows
         messageContainer.addComponentListener(new java.awt.event.ComponentAdapter() {
@@ -554,20 +546,20 @@ public class TriagePanelView {
             public void componentResized(java.awt.event.ComponentEvent e) {
                 // If user is near the latest target during content growth, gently keep alignment
                 if (chatScrollPane != null && latestUserMessageComponent != null) {
-                    recomputeBottomSpacer();
-                    int target = computeAlignTopTarget(chatScrollPane, latestUserMessageComponent);
+                    scrollHelper.recomputeBottomSpacer();
+                    int target = scrollHelper.computeAlignTopTarget(chatScrollPane, latestUserMessageComponent);
                     LOG.debug(String.format(
                         "componentResized: prefH=%d viewportH=%d target=%d value=%d near=%s",
                         messageContainer.getPreferredSize().height,
                         chatScrollPane.getViewport().getExtentSize().height,
                         target,
                         chatScrollPane.getVerticalScrollBar().getValue(),
-                        Boolean.toString(isNearTarget(chatScrollPane, target, NEAR_TARGET_THRESHOLD_PX))));
-                    if (isNearTarget(chatScrollPane, target, NEAR_TARGET_THRESHOLD_PX)) {
-                        scheduleDebouncedReScroll();
+                        Boolean.toString(scrollHelper.isNearTarget(chatScrollPane, target, scrollHelper.getNearTargetThresholdPx()))));
+                    if (scrollHelper.isNearTarget(chatScrollPane, target, scrollHelper.getNearTargetThresholdPx())) {
+                        scrollHelper.scheduleDebouncedReScroll();
                     } else {
                         // Content grew but user is away; do not yank, show chip
-                        showNewMessagesChip();
+                        scrollHelper.showNewMessagesChip();
                     }
                 }
             }
@@ -596,32 +588,38 @@ public class TriagePanelView {
         newMessagesChip.setFocusable(false);
         newMessagesChip.setVisible(false);
         newMessagesChip.addActionListener(e -> {
-            hideNewMessagesChip();
+            scrollHelper.hideNewMessagesChip();
             if (latestUserMessageComponent != null) {
                 LOG.debug("chip: click → align latest");
-                scrollToComponentTopSmooth(chatScrollPane, latestUserMessageComponent, 200);
+                scrollHelper.scrollToComponentTopSmooth(chatScrollPane, latestUserMessageComponent, 200);
             }
         });
         chipHost.add(newMessagesChip, gbc);
+        
+        // Set up ScrollHelper newMessagesChip reference
+        scrollHelper.setNewMessagesChip(newMessagesChip);
 
         // Add scroll pane first, then chip host so the chip paints on top
         overlay.add(chatScrollPane);
         overlay.add(chipHost);
         this.chatOverlayPanel = overlay;
+        
+        // Set up ScrollHelper chatOverlayPanel reference
+        scrollHelper.setChatOverlayPanel(chatOverlayPanel);
 
         // Add scrollbar listener to cancel smooth scroll on user interaction and hide chip at bottom
         chatScrollPane.getVerticalScrollBar().addAdjustmentListener(e -> {
             // Cancel animation if the user scrolls
-            if (isSmoothScrolling && !isProgrammaticScroll) {
+            if (scrollHelper.isSmoothScrolling() && !scrollHelper.isProgrammaticScroll()) {
                 LOG.debug("userScroll: canceling smooth scroll (value=" + e.getValue() + ")");
-                cancelSmoothScroll();
+                scrollHelper.cancelSmoothScroll();
             }
             // Auto-hide chip when near the latest target
             if (latestUserMessageComponent != null) {
-                int target = computeAlignTopTarget(chatScrollPane, latestUserMessageComponent);
-                if (isNearTarget(chatScrollPane, target, 8)) {
+                int target = scrollHelper.computeAlignTopTarget(chatScrollPane, latestUserMessageComponent);
+                if (scrollHelper.isNearTarget(chatScrollPane, target, 8)) {
                     LOG.debug("atTarget: hiding chip (value=" + e.getValue() + ", target=" + target + ")");
-                    hideNewMessagesChip();
+                    scrollHelper.hideNewMessagesChip();
                 }
             }
         });
@@ -827,7 +825,7 @@ public class TriagePanelView {
         LOG.info("Sending user message: " + messageText.substring(0, Math.min(messageText.length(), 50)) + "...");
 	        // Capture whether the viewport was at bottom before content growth
         try {
-            wasNearBottomBeforeUserSend = isNearBottom(chatScrollPane, NEAR_TARGET_THRESHOLD_PX);
+            scrollHelper.setWasNearBottomBeforeUserSend(scrollHelper.isNearBottom(chatScrollPane, scrollHelper.getNearTargetThresholdPx()));
         } catch (Exception ignore) {}
         
         // Add user message to chat
@@ -1001,29 +999,29 @@ public class TriagePanelView {
             // Capture whether we are currently near the latest user target BEFORE appending
             try {
                 if (chatScrollPane != null && latestUserMessageComponent != null) {
-                    int preTarget = computeAlignTopTarget(chatScrollPane, latestUserMessageComponent);
-                    boolean preNear = isNearTarget(chatScrollPane, preTarget, NEAR_TARGET_THRESHOLD_PX);
-                    maintainAlignAfterAppend = preNear;
+                    int preTarget = scrollHelper.computeAlignTopTarget(chatScrollPane, latestUserMessageComponent);
+                    boolean preNear = scrollHelper.isNearTarget(chatScrollPane, preTarget, scrollHelper.getNearTargetThresholdPx());
+                    scrollHelper.setMaintainAlignAfterAppend(preNear);
                     // Capture anchor to preserve the user's row fixed position
-                    anchorActiveForAppend = true;
-                    anchorUserTopYBeforeAppend = latestUserMessageComponent.getY();
-                    anchorScrollValueBeforeAppend = chatScrollPane.getVerticalScrollBar().getValue();
+                    scrollHelper.setAnchorActiveForAppend(true);
+                    scrollHelper.setAnchorUserTopYBeforeAppend(latestUserMessageComponent.getY());
+                    scrollHelper.setAnchorScrollValueBeforeAppend(chatScrollPane.getVerticalScrollBar().getValue());
                     LOG.debug("preAppend AI: preNear=" + preNear + " preTarget=" + preTarget +
                         " value=" + chatScrollPane.getVerticalScrollBar().getValue());
                 } else {
-                    maintainAlignAfterAppend = false;
-                    anchorActiveForAppend = false;
+                    scrollHelper.setMaintainAlignAfterAppend(false);
+                    scrollHelper.setAnchorActiveForAppend(false);
                 }
             } catch (Exception ignore) {
-                maintainAlignAfterAppend = false;
-                anchorActiveForAppend = false;
+                scrollHelper.setMaintainAlignAfterAppend(false);
+                scrollHelper.setAnchorActiveForAppend(false);
             }
             // If we have a visible typing indicator, replace it in-place with the AI message component
             if (typingIndicatorRow != null && typingIndicatorVisible) {
                 try {
                     chatHistory.add(message);
                     MessageComponent aiComponent = new MessageComponent(message);
-                    replaceTypingIndicatorWithMessageComponent(aiComponent);
+                    scrollHelper.replaceTypingIndicatorWithMessageComponent(aiComponent, typingIndicatorRow);
                     return; // UI updated in-place; skip full rebuild
                 } catch (Exception ex) {
                     // Fallback to default path
@@ -1078,8 +1076,8 @@ public class TriagePanelView {
             messageContainer.revalidate();
             messageContainer.repaint();
             ApplicationManager.getApplication().invokeLater(() -> {
-                recomputeBottomSpacer();
-                restoreAnchorAfterAppend();
+                scrollHelper.recomputeBottomSpacer();
+                scrollHelper.restoreAnchorAfterAppend();
             });
 
             // Reset indicator reference
@@ -1087,31 +1085,7 @@ public class TriagePanelView {
         }
     }
 
-    /**
-     * Restores the viewport so the latest user row remains at the same viewport position
-     * as before the AI append, avoiding any jump to bottom or top.
-     */
-    private void restoreAnchorAfterAppend() {
-        if (!anchorActiveForAppend || chatScrollPane == null) {
-            maintainAlignAfterAppend = false;
-            return;
-        }
-        try {
-            JScrollBar sb = chatScrollPane.getVerticalScrollBar();
-            int extent = sb.getModel().getExtent();
-            int maxScroll = Math.max(0, sb.getMaximum() - extent);
-            int newY = latestUserMessageComponent != null ? latestUserMessageComponent.getY() : anchorUserTopYBeforeAppend;
-            int delta = newY - anchorUserTopYBeforeAppend;
-            int newValue = Math.max(0, Math.min(maxScroll, anchorScrollValueBeforeAppend + delta));
-            isProgrammaticScroll = true;
-            sb.setValue(newValue);
-            isProgrammaticScroll = false;
-        } catch (Exception ignore) {
-        } finally {
-            anchorActiveForAppend = false;
-            maintainAlignAfterAppend = false;
-        }
-    }
+
 
     /**
      * Adds a message component to the UI with proper layout.
@@ -1159,6 +1133,7 @@ public class TriagePanelView {
                 ChatMessage cm = ((MessageComponent) c).getMessage();
                 if (cm != null && cm.isFromUser()) {
                     latestUserMessageComponent = (JComponent) c;
+                    scrollHelper.setLatestUserMessageComponent(latestUserMessageComponent);
                     if (LOG.isDebugEnabled()) {
                         LOG.debug("Latest user message set - index: " + i + ", y: " + latestUserMessageComponent.getY() +
                             ", prefH: " + latestUserMessageComponent.getPreferredSize().height +
@@ -1183,7 +1158,7 @@ public class TriagePanelView {
 
         // Ensure bottom spacer is the last child
         messageContainer.add(bottomSpacer);
-        recomputeBottomSpacer();
+        scrollHelper.recomputeBottomSpacer();
         
         if (LOG.isDebugEnabled()) {
             LOG.debug("Final container state - component count: " + messageContainer.getComponentCount() + 
@@ -1210,6 +1185,7 @@ public class TriagePanelView {
                     Component c = messageContainer.getComponent(i);
                     if (c instanceof MessageComponent) {
                         latestUserMessageComponent = (JComponent) c;
+                        scrollHelper.setLatestUserMessageComponent(latestUserMessageComponent);
                         if (LOG.isDebugEnabled()) {
                             LOG.debug("Latest user message set - index: " + i + ", y: " +
                                 latestUserMessageComponent.getY() + ", prefH: " +
@@ -1226,28 +1202,28 @@ public class TriagePanelView {
 	        if (message != null && message.isFromUser() && latestUserMessageComponent != null) {
             ApplicationManager.getApplication().invokeLater(() -> {
                 try {
-                    javax.swing.Timer settleTimer = new javax.swing.Timer(LAYOUT_SETTLE_DELAY_MS, evt -> {
+                    javax.swing.Timer settleTimer = new javax.swing.Timer(scrollHelper.getLayoutSettleDelayMs(), evt -> {
                         try {
                             // Ensure the spacer reflects the latest layout so target is reachable
-                            recomputeBottomSpacer();
-                            int target = computeAlignTopTarget(chatScrollPane, latestUserMessageComponent);
-                            boolean nearTarget = isNearTarget(chatScrollPane, target, NEAR_TARGET_THRESHOLD_PX);
-                            boolean allowAlign = nearTarget || wasNearBottomBeforeUserSend;
+                            scrollHelper.recomputeBottomSpacer();
+                            int target = scrollHelper.computeAlignTopTarget(chatScrollPane, latestUserMessageComponent);
+                            boolean nearTarget = scrollHelper.isNearTarget(chatScrollPane, target, scrollHelper.getNearTargetThresholdPx());
+                            boolean allowAlign = nearTarget || scrollHelper.isWasNearBottomBeforeUserSend();
                             if (LOG.isDebugEnabled()) {
                                 LOG.debug("User send align - allow: " + allowAlign + ", start: " + 
                                          chatScrollPane.getVerticalScrollBar().getValue() + ", target: " + target + 
-                                         ", nearTarget: " + nearTarget + ", wasNearBottom: " + wasNearBottomBeforeUserSend);
+                                         ", nearTarget: " + nearTarget + ", wasNearBottom: " + scrollHelper.isWasNearBottomBeforeUserSend());
                             }
                             if (allowAlign) {
                                 // Smoothly scroll to align the latest user row at the top edge
-                                scrollToComponentTopSmooth(chatScrollPane, latestUserMessageComponent, SMOOTH_SCROLL_DURATION_MS);
+                                scrollHelper.scrollToComponentTopSmooth(chatScrollPane, latestUserMessageComponent, scrollHelper.getSmoothScrollDurationMs());
                             } else {
                                 // Do not yank; show the chip instead
-                                showNewMessagesChip();
+                                scrollHelper.showNewMessagesChip();
                             }
                         } catch (Exception ignore) {
                         } finally {
-                            wasNearBottomBeforeUserSend = false;
+                            scrollHelper.setWasNearBottomBeforeUserSend(false);
                         }
                     });
                     settleTimer.setRepeats(false);
@@ -1260,28 +1236,28 @@ public class TriagePanelView {
             // otherwise conditionally align-if-near after a brief settle.
             ApplicationManager.getApplication().invokeLater(() -> {
                 try {
-                    javax.swing.Timer settleTimer = new javax.swing.Timer(LAYOUT_SETTLE_DELAY_MS, evt -> {
+                    javax.swing.Timer settleTimer = new javax.swing.Timer(scrollHelper.getLayoutSettleDelayMs(), evt -> {
                         try {
-                            recomputeBottomSpacer();
+                            scrollHelper.recomputeBottomSpacer();
                             if (latestUserMessageComponent != null) {
-                                int target = computeAlignTopTarget(chatScrollPane, latestUserMessageComponent);
-                                boolean stillNear = isNearTarget(chatScrollPane, target, NEAR_TARGET_THRESHOLD_PX);
+                                int target = scrollHelper.computeAlignTopTarget(chatScrollPane, latestUserMessageComponent);
+                                boolean stillNear = scrollHelper.isNearTarget(chatScrollPane, target, scrollHelper.getNearTargetThresholdPx());
                                 if (LOG.isDebugEnabled()) {
-                                    LOG.debug("AI append - maintain: " + maintainAlignAfterAppend + ", value: " + 
+                                    LOG.debug("AI append - maintain: " + scrollHelper.isMaintainAlignAfterAppend() + ", value: " + 
                                              chatScrollPane.getVerticalScrollBar().getValue() + ", target: " + target + 
                                              ", stillNear: " + stillNear);
                                 }
-                                if (maintainAlignAfterAppend || stillNear) {
+                                if (scrollHelper.isMaintainAlignAfterAppend() || stillNear) {
                                     // Snap immediately to keep user's message top-aligned; no animation
-                                    alignTopImmediate(chatScrollPane, latestUserMessageComponent);
+                                    scrollHelper.alignTopImmediate(chatScrollPane, latestUserMessageComponent);
                                 } else {
-                                    showNewMessagesChip();
+                                    scrollHelper.showNewMessagesChip();
                                 }
                             }
                         } catch (Exception ignore) {
                         }
                         finally {
-                            maintainAlignAfterAppend = false;
+                            scrollHelper.setMaintainAlignAfterAppend(false);
                         }
                     });
                     settleTimer.setRepeats(false);
@@ -1333,7 +1309,7 @@ public class TriagePanelView {
                 }
                 messageContainer.revalidate();
                 messageContainer.repaint();
-                ApplicationManager.getApplication().invokeLater(() -> requestAlignNewestIfNear(chatScrollPane));
+                ApplicationManager.getApplication().invokeLater(() -> scrollHelper.requestAlignNewestIfNear(chatScrollPane));
             }
         } catch (Exception ignore) {
         }
@@ -1362,205 +1338,6 @@ public class TriagePanelView {
             }
         } catch (Exception ignore) {
         }
-    }
-
-    /**
-     * Returns true if the viewport is at the very bottom (distance == 0).
-     */
-    private boolean isAtBottom(JScrollPane sp) {
-        if (sp == null) return false;
-        JScrollBar sb = sp.getVerticalScrollBar();
-        int value = sb.getValue();
-        int extent = sb.getModel().getExtent();
-        int max = sb.getMaximum();
-        int distance = Math.max(0, max - (value + extent));
-        return distance == 0;
-    }
-
-    /** Returns true if the viewport is within thresholdPx of the bottom. */
-    private boolean isNearBottom(JScrollPane sp, int thresholdPx) {
-        if (sp == null) return false;
-        JScrollBar sb = sp.getVerticalScrollBar();
-        int value = sb.getValue();
-        int extent = sb.getModel().getExtent();
-        int max = sb.getMaximum();
-        int distance = Math.max(0, max - (value + extent));
-        return distance <= Math.max(0, thresholdPx);
-    }
-
-    // ===== Align-newest-to-top helpers =====
-
-    private int computeAlignTopTarget(JScrollPane sp, JComponent row) {
-        if (sp == null || row == null) return 0;
-        JScrollBar sb = sp.getVerticalScrollBar();
-        int extent = sb.getModel().getExtent();
-        int max = sb.getMaximum();
-        int maxScroll = Math.max(0, max - extent);
-        int y = row.getY();
-        LOG.debug("alignTop: rowY=" + y + " max=" + max + " extent=" + extent + " maxScroll=" + maxScroll);
-        return Math.max(0, Math.min(y, maxScroll));
-    }
-
-    private boolean isNearTarget(JScrollPane sp, int target, int thresholdPx) {
-        if (sp == null) return false;
-        JScrollBar sb = sp.getVerticalScrollBar();
-        int value = sb.getValue();
-        return Math.abs(value - Math.max(0, target)) <= Math.max(0, thresholdPx);
-    }
-
-    private void requestAlignNewestIfNear(JScrollPane sp) {
-        if (sp == null || latestUserMessageComponent == null) return;
-        // Ensure spacer is up-to-date before computing target
-        recomputeBottomSpacer();
-        int target = computeAlignTopTarget(sp, latestUserMessageComponent);
-        if (isNearTarget(sp, target, NEAR_TARGET_THRESHOLD_PX)) {
-            scrollToComponentTopSmooth(sp, latestUserMessageComponent, SMOOTH_SCROLL_DURATION_MS);
-        } else {
-            showNewMessagesChip();
-        }
-    }
-
-    private void scrollToComponentTopSmooth(JScrollPane sp, JComponent row, int durationMs) {
-        if (sp == null || row == null) return;
-        final int duration = (durationMs <= 0) ? 200 : durationMs;
-        JScrollBar sb = sp.getVerticalScrollBar();
-        int start = sb.getValue();
-        int target = computeAlignTopTarget(sp, row);
-        LOG.debug("smoothStart: start=" + start + " target=" + target + " durationMs=" + duration);
-        if (Math.abs(start - target) <= 1) {
-            isProgrammaticScroll = true;
-            sb.setValue(target);
-            isProgrammaticScroll = false;
-            hideNewMessagesChip();
-            return;
-        }
-
-        cancelSmoothScroll();
-        final long startTime = System.currentTimeMillis();
-        isSmoothScrolling = true;
-        smoothScrollTimer = new javax.swing.Timer(15, null);
-        smoothScrollTimer.addActionListener((java.awt.event.ActionEvent e) -> {
-            long elapsed = System.currentTimeMillis() - startTime;
-            double t = Math.min(1.0, (double) elapsed / duration);
-            double p = 1 - Math.pow(1 - t, 3); // easeOutCubic
-
-            int dynamicTarget = computeAlignTopTarget(sp, row);
-            int value = start + (int) Math.round((dynamicTarget - start) * p);
-            // Reduce noise: only log occasionally
-            if ((elapsed / 45) % 3 == 0) {
-                LOG.debug("smoothTick: t=" + String.format("%.3f", t) +
-                    " p=" + String.format("%.3f", p) +
-                    " value=" + value +
-                    " dynTarget=" + dynamicTarget);
-            }
-
-            isProgrammaticScroll = true;
-            sb.setValue(value);
-            isProgrammaticScroll = false;
-
-            if (t >= 1.0) {
-                LOG.debug("smoothDone: value=" + sb.getValue() +
-                    " target=" + dynamicTarget +
-                    " atTop?=" + isNearTarget(sp, dynamicTarget, 2));
-                cancelSmoothScroll();
-                hideNewMessagesChip();
-            }
-        });
-        smoothScrollTimer.start();
-    }
-
-    private void cancelSmoothScroll() {
-        if (smoothScrollTimer != null) {
-            smoothScrollTimer.stop();
-            smoothScrollTimer = null;
-        }
-        isSmoothScrolling = false;
-    }
-
-    /** Immediately align a row's top to the viewport top without animation. */
-    private void alignTopImmediate(JScrollPane sp, JComponent row) {
-        if (sp == null || row == null) return;
-        int target = computeAlignTopTarget(sp, row);
-        isProgrammaticScroll = true;
-        sp.getVerticalScrollBar().setValue(target);
-        isProgrammaticScroll = false;
-        hideNewMessagesChip();
-    }
-
-    private void showNewMessagesChip() {
-        if (newMessagesChip != null && !newMessagesChip.isVisible()) {
-            newMessagesChip.setVisible(true);
-            if (chatOverlayPanel != null) {
-                chatOverlayPanel.revalidate();
-                chatOverlayPanel.repaint();
-            }
-        }
-    }
-
-    private void hideNewMessagesChip() {
-        if (newMessagesChip != null && newMessagesChip.isVisible()) {
-            newMessagesChip.setVisible(false);
-            if (chatOverlayPanel != null) {
-                chatOverlayPanel.revalidate();
-                chatOverlayPanel.repaint();
-            }
-        }
-    }
-
-    private void scheduleDebouncedReScroll() {
-        if (rescrollDebounceTimer != null && rescrollDebounceTimer.isRunning()) {
-            rescrollDebounceTimer.stop();
-        }
-        rescrollDebounceTimer = new javax.swing.Timer(RESCROLL_DEBOUNCE_MS, evt -> {
-            if (chatScrollPane != null && latestUserMessageComponent != null) {
-                recomputeBottomSpacer();
-                requestAlignNewestIfNear(chatScrollPane);
-            }
-        });
-        rescrollDebounceTimer.setRepeats(false);
-        rescrollDebounceTimer.start();
-    }
-
-    private void recomputeBottomSpacer() {
-        if (chatScrollPane == null || bottomSpacer == null) return;
-        int viewportH = chatScrollPane.getViewport().getExtentSize().height;
-        if (latestUserMessageComponent == null) {
-            // No user messages yet; avoid introducing artificial bottom whitespace
-            bottomSpacer.setPreferredSize(new Dimension(1, 0));
-            messageContainer.revalidate();
-            messageContainer.repaint();
-            return;
-        }
-
-        int rowH = latestUserMessageComponent.getHeight() > 0
-            ? latestUserMessageComponent.getHeight()
-            : latestUserMessageComponent.getPreferredSize().height;
-        int rowY = latestUserMessageComponent.getY();
-
-        // If the latest user row is taller than the viewport, spacer should be 0
-        if (rowH >= viewportH) {
-            bottomSpacer.setPreferredSize(new Dimension(1, 0));
-            messageContainer.revalidate();
-            messageContainer.repaint();
-            return;
-        }
-
-        // Make after-row height equal to the viewport height so rowY is always reachable as a scroll target
-        int currentSpacerH = bottomSpacer.getPreferredSize() != null ? bottomSpacer.getPreferredSize().height : 0;
-        int totalHNoSpacer = messageContainer.getPreferredSize().height - currentSpacerH;
-        int heightBelowRow = Math.max(0, totalHNoSpacer - rowY);
-        int spacerH = Math.max(0, viewportH - heightBelowRow);
-        bottomSpacer.setPreferredSize(new Dimension(1, spacerH));
-
-        // Log scroll metrics
-        JScrollBar sb = chatScrollPane.getVerticalScrollBar();
-        int extent = sb.getModel().getExtent();
-        int max = sb.getMaximum();
-        int maxScroll = Math.max(0, max - extent);
-        LOG.debug("spacer: h=" + spacerH + " rowY=" + rowY + " max=" + max + " extent=" + extent + " maxScroll=" + maxScroll);
-
-        messageContainer.revalidate();
-        messageContainer.repaint();
     }
 
     /**
@@ -1689,7 +1466,7 @@ public class TriagePanelView {
                         for (ChatMessage message : chatHistory) {
                             addMessageToUI(message);
                         }
-                        ApplicationManager.getApplication().invokeLater(() -> requestAlignNewestIfNear(chatScrollPane));
+                        ApplicationManager.getApplication().invokeLater(() -> scrollHelper.requestAlignNewestIfNear(chatScrollPane));
                     }
                 } catch (Exception promptBuildError) {
                     LOG.error("Failed to build base prompt prior to document retrieval: " + promptBuildError.getMessage());
@@ -1729,7 +1506,7 @@ public class TriagePanelView {
                             for (ChatMessage message : chatHistory) {
                                 addMessageToUI(message);
                             }
-                            ApplicationManager.getApplication().invokeLater(() -> requestAlignNewestIfNear(chatScrollPane));
+                            ApplicationManager.getApplication().invokeLater(() -> scrollHelper.requestAlignNewestIfNear(chatScrollPane));
                         }
                         
                         // Create a separate AI message with just the analysis result
@@ -1780,7 +1557,7 @@ public class TriagePanelView {
                     for (ChatMessage message : chatHistory) {
                         addMessageToUI(message);
                     }
-                    ApplicationManager.getApplication().invokeLater(() -> requestAlignNewestIfNear(chatScrollPane));
+                    ApplicationManager.getApplication().invokeLater(() -> scrollHelper.requestAlignNewestIfNear(chatScrollPane));
                 }
                 
                 // No AI analysis - just show the prompt
@@ -2396,12 +2173,9 @@ public class TriagePanelView {
                 }
             }
             
-            // Stop any running timers
-            if (smoothScrollTimer != null && smoothScrollTimer.isRunning()) {
-                smoothScrollTimer.stop();
-            }
-            if (rescrollDebounceTimer != null && rescrollDebounceTimer.isRunning()) {
-                rescrollDebounceTimer.stop();
+            // Stop any running timers in ScrollHelper
+            if (scrollHelper != null) {
+                scrollHelper.cancelSmoothScroll();
             }
             
             // Clear chat history

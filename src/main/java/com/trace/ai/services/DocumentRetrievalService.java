@@ -331,7 +331,7 @@ public class DocumentRetrievalService {
             DocumentDatabaseService.EmbeddingType embeddingType = getEmbeddingType(serviceType);
             return databaseService.getDocumentCountWithEmbeddings(embeddingType);
         } catch (SQLException e) {
-            LOG.error("Failed to get document count", e);
+            LOG.warn("Database unavailable for document count", e);
             return 0;
         }
     }
@@ -347,7 +347,7 @@ public class DocumentRetrievalService {
             LOG.info("Document database contains " + documentCount + " documents with embeddings");
             return documentCount > 0;
         } catch (Exception e) {
-            LOG.error("Database validation failed", e);
+            LOG.warn("Database validation failed", e);
             return false;
         }
     }
