@@ -20,25 +20,17 @@ import com.trace.ai.services.AIModelService;
 import com.trace.ai.models.AIModel;
 import com.trace.ai.configuration.AIServiceType;
 import com.trace.ai.configuration.AISettings;
-import com.trace.ai.services.providers.GeminiProvider;
 import org.jetbrains.annotations.NotNull;
 
 import javax.swing.*;
 import java.awt.*;
-import java.util.List;
-import java.util.ArrayList;
 import java.util.Objects;
 import com.trace.common.constants.TriagePanelConstants;
 import com.google.common.annotations.VisibleForTesting;
-import java.util.concurrent.CompletableFuture;
 import com.intellij.openapi.application.ApplicationManager;
-import java.net.URI;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
-import java.time.Duration;
-import com.trace.ai.services.providers.OpenAIProvider;
 import com.trace.chat.ui.APIKeyManagerHelper;
+import com.trace.ai.ui.ModelManagerHelper;
+import com.trace.ai.ui.AIServiceConfigUIHelper;
 
 /**
  * Enhanced AI Service Configuration panel for TRACE settings.
@@ -71,6 +63,8 @@ public class AIServiceConfigPanel extends JBPanel<AIServiceConfigPanel> {
     private final AISettings aiSettings;
     private final AIModelService modelService;
     private final APIKeyManagerHelper apiKeyHelper;
+    private final ModelManagerHelper modelManagerHelper;
+    private final AIServiceConfigUIHelper uiHelper;
     
     // API Key Configuration
     private final JBPasswordField openaiApiKeyField;
@@ -97,7 +91,7 @@ public class AIServiceConfigPanel extends JBPanel<AIServiceConfigPanel> {
     private String geminiStatus = "Not configured";
     
     // Font size tracking for responsive updates
-    private int lastKnownFontSize = -1;
+    private final java.util.concurrent.atomic.AtomicInteger lastKnownFontSize = new java.util.concurrent.atomic.AtomicInteger(-1);
     
     /**
      * Creates a new AI service configuration panel.
@@ -108,12 +102,14 @@ public class AIServiceConfigPanel extends JBPanel<AIServiceConfigPanel> {
         this.aiSettings = aiSettings;
         this.modelService = AIModelService.getInstance();
         this.apiKeyHelper = new APIKeyManagerHelper();
+        this.modelManagerHelper = new ModelManagerHelper();
+        this.uiHelper = new AIServiceConfigUIHelper();
         
         // Initialize UI components
-        this.openaiApiKeyField = createResponsivePasswordField();
-        this.geminiApiKeyField = createResponsivePasswordField();
-        this.testOpenAIButton = createResponsiveButton("Apply");
-        this.testGeminiButton = createResponsiveButton("Apply");
+        this.openaiApiKeyField = uiHelper.createResponsivePasswordField();
+        this.geminiApiKeyField = uiHelper.createResponsivePasswordField();
+        this.testOpenAIButton = uiHelper.createResponsiveButton("Apply");
+        this.testGeminiButton = uiHelper.createResponsiveButton("Apply");
         this.openaiStatusLabel = new JBLabel("Not configured");
         this.geminiStatusLabel = new JBLabel("Not configured");
         
@@ -121,16 +117,17 @@ public class AIServiceConfigPanel extends JBPanel<AIServiceConfigPanel> {
         this.listModel = new DefaultListModel<>();
         this.modelList = new JBList<>(listModel);
         this.defaultModelLabel = new JBLabel("No default model selected");
-        this.setDefaultButton = createResponsiveButton("Set as Default");
-        this.refreshModelsButton = createResponsiveButton("Refresh Models");
+        this.setDefaultButton = uiHelper.createResponsiveButton("Set as Default");
+        this.refreshModelsButton = uiHelper.createResponsiveButton("Refresh Models");
         
         // Initialize font size tracking
-        this.lastKnownFontSize = UIUtil.getLabelFont().getSize();
+        this.lastKnownFontSize.set(UIUtil.getLabelFont().getSize());
         
         // Initialize the panel
         initializePanel();
         setupEventHandlers();
-        setupThemeChangeListener();
+        uiHelper.setupThemeChangeListener(this, modelList, testOpenAIButton, testGeminiButton, 
+                                         setDefaultButton, refreshModelsButton, lastKnownFontSize);
         
         // Load settings in background to avoid EDT violations
         ApplicationManager.getApplication().executeOnPooledThread(() -> {
@@ -163,7 +160,7 @@ public class AIServiceConfigPanel extends JBPanel<AIServiceConfigPanel> {
         setMaximumSize(new Dimension(Integer.MAX_VALUE, Integer.MAX_VALUE));
         
         // Create header with zoom responsiveness
-        JBLabel headerLabel = createZoomResponsiveHeader("AI Model Configuration");
+        JBLabel headerLabel = uiHelper.createZoomResponsiveHeader("AI Model Configuration");
         headerLabel.setBorder(JBUI.Borders.emptyBottom(3)); // Smaller border
         
         // Create main content panel
@@ -171,10 +168,14 @@ public class AIServiceConfigPanel extends JBPanel<AIServiceConfigPanel> {
         contentPanel.setBorder(JBUI.Borders.empty(5));
         
         // API Key Configuration Panel
-        JPanel apiKeyPanel = createAPIKeyPanel();
+        JPanel apiKeyPanel = uiHelper.createAPIKeyPanel(openaiApiKeyField, geminiApiKeyField, 
+                                                       testOpenAIButton, testGeminiButton,
+                                                       openaiStatusLabel, geminiStatusLabel,
+                                                       () -> apiKeyHelper.clearOpenAIKey(openaiApiKeyField, openaiStatusLabel, () -> refreshModelList()),
+                                                       () -> apiKeyHelper.clearGeminiKey(geminiApiKeyField, geminiStatusLabel, () -> refreshModelList()));
         
         // Model Management Panel
-        JPanel modelPanel = createModelPanel();
+        JPanel modelPanel = uiHelper.createModelPanel(modelList, defaultModelLabel, setDefaultButton, refreshModelsButton);
         
         // Add panels to content
         contentPanel.add(apiKeyPanel, BorderLayout.NORTH);
@@ -185,243 +186,9 @@ public class AIServiceConfigPanel extends JBPanel<AIServiceConfigPanel> {
         add(contentPanel, BorderLayout.CENTER);
     }
     
-    /**
-     * Creates a zoom-responsive header label that updates with font changes.
-     * 
-     * @param text the header text to display
-     * @return a JBLabel that responds to zoom changes
-     */
-    private JBLabel createZoomResponsiveHeader(String text) {
-        return new JBLabel(text) {
-            @Override
-            public Font getFont() {
-                // Always return the current UI font to respond to zoom changes
-                Font baseFont = UIUtil.getLabelFont();
-                return baseFont.deriveFont(Font.BOLD, baseFont.getSize() + 1);
-            }
-            
-            @Override
-            public void setFont(Font font) {
-                // Override to always use UI font for zoom responsiveness
-                Font baseFont = UIUtil.getLabelFont();
-                super.setFont(baseFont.deriveFont(Font.BOLD, baseFont.getSize() + 1));
-            }
-            
-            @Override
-            public void paint(Graphics g) {
-                // Ensure font is always current before painting
-                Font baseFont = UIUtil.getLabelFont();
-                setFont(baseFont.deriveFont(Font.BOLD, baseFont.getSize() + 1));
-                super.paint(g);
-            }
-        };
-    }
     
-    /**
-     * Creates the API key configuration panel.
-     */
-    @NotNull
-    private JPanel createAPIKeyPanel() {
-        JPanel panel = new JBPanel<>(new BorderLayout());
-        panel.setBorder(JBUI.Borders.compound(
-            JBUI.Borders.customLine(UIUtil.getPanelBackground().darker(), 1),
-            JBUI.Borders.empty(10)
-        ));
-        
-        // Header with zoom responsiveness
-        JBLabel headerLabel = createZoomResponsiveHeader("API Key Configuration");
-        headerLabel.setBorder(JBUI.Borders.emptyBottom(5)); // Smaller border
-        
-        // Create a structured layout for consistent sizing
-        JPanel keysPanel = new JBPanel<>(new GridBagLayout());
-        GridBagConstraints gbc = new GridBagConstraints();
-        
-        // Let input fields expand to fit content naturally (height tied to font metrics)
-        int fieldBaseFontSize = UIUtil.getLabelFont().getSize();
-        int fieldHeight = Math.max((int) Math.round(fieldBaseFontSize * 2.2), 28);
-        Insets fieldInsets = new Insets(6, 10, 6, 10);
-        
-        configurePasswordField(openaiApiKeyField, fieldHeight, fieldInsets);
-        configurePasswordField(geminiApiKeyField, fieldHeight, fieldInsets);
-        
-        // Configure Apply buttons responsively (avoid truncation at high zoom)
-        configureButtonForText(testOpenAIButton);
-        configureButtonForText(testGeminiButton);
-        
-        // OpenAI Configuration Row
-        gbc.gridx = 0; gbc.gridy = 0;
-        gbc.anchor = GridBagConstraints.WEST;
-        gbc.insets = JBUI.insets(0, 0, 5, 10);
-        JBLabel openaiLabel = new JBLabel("OpenAI API Key:");
-        keysPanel.add(openaiLabel, gbc);
-        
-        gbc.gridx = 1;
-        gbc.fill = GridBagConstraints.HORIZONTAL;
-        gbc.weightx = 1.0;
-        gbc.insets = JBUI.insets(0, 0, 5, 10);
-        keysPanel.add(createTextFieldWithX(openaiApiKeyField, () -> apiKeyHelper.clearOpenAIKey(openaiApiKeyField, openaiStatusLabel, this::refreshModelList)), gbc);
-        
-        gbc.gridx = 2;
-        gbc.fill = GridBagConstraints.NONE;
-        gbc.weightx = 0.0;
-        gbc.insets = JBUI.insets(0, 0, 5, 0);
-        keysPanel.add(testOpenAIButton, gbc);
-        
-        // OpenAI Status Row
-        gbc.gridx = 0; gbc.gridy = 1;
-        gbc.gridwidth = 3;
-        gbc.fill = GridBagConstraints.HORIZONTAL;
-        gbc.insets = JBUI.insets(0, 0, 10, 0);
-        keysPanel.add(openaiStatusLabel, gbc);
-        
-        // Gemini Configuration Row
-        gbc.gridx = 0; gbc.gridy = 2;
-        gbc.gridwidth = 1;
-        gbc.fill = GridBagConstraints.NONE;
-        gbc.insets = JBUI.insets(0, 0, 5, 10);
-        JBLabel geminiLabel = new JBLabel("Google Gemini API Key:");
-        keysPanel.add(geminiLabel, gbc);
-        
-        gbc.gridx = 1;
-        gbc.fill = GridBagConstraints.HORIZONTAL;
-        gbc.weightx = 1.0;
-        gbc.insets = JBUI.insets(0, 0, 5, 10);
-        keysPanel.add(createTextFieldWithX(geminiApiKeyField, () -> apiKeyHelper.clearGeminiKey(geminiApiKeyField, geminiStatusLabel, this::refreshModelList)), gbc);
-        
-        gbc.gridx = 2;
-        gbc.fill = GridBagConstraints.NONE;
-        gbc.weightx = 0.0;
-        gbc.insets = JBUI.insets(0, 0, 5, 0);
-        keysPanel.add(testGeminiButton, gbc);
-        
-        // Gemini Status Row
-        gbc.gridx = 0; gbc.gridy = 3;
-        gbc.gridwidth = 3;
-        gbc.fill = GridBagConstraints.HORIZONTAL;
-        gbc.insets = JBUI.insets(0, 0, 0, 0);
-        keysPanel.add(geminiStatusLabel, gbc);
-        
-        // Add to main panel
-        panel.add(headerLabel, BorderLayout.NORTH);
-        panel.add(keysPanel, BorderLayout.CENTER);
-        
-        return panel;
-    }
     
-    /**
-     * Creates a text field with an X icon for clearing.
-     */
-    private JPanel createTextFieldWithX(JBPasswordField textField, Runnable clearAction) {
-        JPanel panel = new JBPanel<>(new BorderLayout());
-        
-        // Add the text field (will stretch to fill available space)
-        panel.add(textField, BorderLayout.CENTER);
-        
-        // Create the X icon label
-        JBLabel xIcon = new JBLabel("✕");
-        xIcon.setFont(xIcon.getFont().deriveFont(Font.BOLD, 12f));
-        xIcon.setForeground(UIUtil.getLabelForeground().darker());
-        xIcon.setCursor(new Cursor(Cursor.HAND_CURSOR));
-        xIcon.setHorizontalAlignment(SwingConstants.CENTER);
-        xIcon.setVerticalAlignment(SwingConstants.CENTER);
-        xIcon.setBorder(JBUI.Borders.emptyLeft(5));
-        xIcon.setVisible(false); // Initially hidden
-        
-        // Add click listener to X icon
-        xIcon.addMouseListener(new java.awt.event.MouseAdapter() {
-            @Override
-            public void mouseClicked(java.awt.event.MouseEvent e) {
-                clearAction.run();
-            }
-        });
-        
-        // Add document listener to show/hide X based on content
-        textField.getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
-            @Override
-            public void insertUpdate(javax.swing.event.DocumentEvent e) {
-                xIcon.setVisible(textField.getPassword().length > 0);
-            }
-            
-            @Override
-            public void removeUpdate(javax.swing.event.DocumentEvent e) {
-                xIcon.setVisible(textField.getPassword().length > 0);
-            }
-            
-            @Override
-            public void changedUpdate(javax.swing.event.DocumentEvent e) {
-                xIcon.setVisible(textField.getPassword().length > 0);
-            }
-        });
-        
-        panel.add(xIcon, BorderLayout.EAST);
-        
-        return panel;
-    }
     
-    /**
-     * Creates the model management panel.
-     */
-    @NotNull
-    private JPanel createModelPanel() {
-        JPanel panel = new JBPanel<>(new BorderLayout());
-        panel.setBorder(JBUI.Borders.compound(
-            JBUI.Borders.customLine(UIUtil.getPanelBackground().darker(), 1),
-            JBUI.Borders.empty(10)
-        ));
-        
-        // Header with zoom responsiveness
-        JBLabel headerLabel = createZoomResponsiveHeader("Available Models");
-        headerLabel.setBorder(JBUI.Borders.emptyBottom(5)); // Smaller border
-        
-        // Main content panel using BorderLayout for proper alignment
-        JPanel contentPanel = new JBPanel<>(new BorderLayout());
-        contentPanel.setBorder(JBUI.Borders.empty(0, 0, 0, 0));
-        
-        // Default model section - moved to NORTH position for predictable alignment
-        JPanel defaultSection = new JBPanel<>(new FlowLayout(FlowLayout.LEFT, 0, 0));
-        defaultSection.setBorder(JBUI.Borders.empty(0, 0, 8, 0)); // bottom margin only
-        
-        // Label and value properly aligned using FlowLayout
-        JBLabel defaultLabel = new JBLabel("Default Model:");
-        defaultLabel.setBorder(JBUI.Borders.empty(0, 0, 0, 8)); // Right margin for spacing
-        
-        // Style the default model label
-        defaultModelLabel.setPreferredSize(new Dimension(300, 20));
-        
-        defaultSection.add(defaultLabel);
-        defaultSection.add(defaultModelLabel);
-        
-        // Model list (main control) - non-scrollable with zoom-responsive cells
-        modelList.setCellRenderer(new AIModelListCellRenderer());
-        modelList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
-        modelList.addListSelectionListener(e -> updateButtonStates());
-        
-        // Configure list to be non-scrollable and scale with zoom
-        configureResponsiveModelList();
-        
-        // Action buttons panel - use proper layout for professional appearance
-        JPanel actionButtonPanel = new JBPanel<>(new FlowLayout(FlowLayout.LEFT, 8, 4)); // Proper spacing
-        actionButtonPanel.setBorder(JBUI.Borders.empty(8, 0, 0, 0)); // Proper top margin
-        
-        // Configure buttons responsively to prevent truncation at any zoom
-        configureButtonForText(setDefaultButton);
-        configureButtonForText(refreshModelsButton);
-        
-        actionButtonPanel.add(setDefaultButton);
-        actionButtonPanel.add(refreshModelsButton);
-        
-        // Simple layout following JetBrains best practices
-        // Default model info at top, main control in center, action buttons at bottom
-        contentPanel.add(defaultSection, BorderLayout.NORTH);
-        contentPanel.add(modelList, BorderLayout.CENTER);
-        contentPanel.add(actionButtonPanel, BorderLayout.SOUTH);
-        
-        // Add sections to main panel
-        panel.add(headerLabel, BorderLayout.NORTH);
-        panel.add(contentPanel, BorderLayout.CENTER);
-        
-        return panel;
-    }
     
 
     
@@ -434,8 +201,9 @@ public class AIServiceConfigPanel extends JBPanel<AIServiceConfigPanel> {
         testGeminiButton.addActionListener(e -> apiKeyHelper.testGeminiKey(geminiApiKeyField, geminiStatusLabel, testGeminiButton, isTestingConnection, this::discoverNewModels, this));
         
         // Model management
-        setDefaultButton.addActionListener(e -> setSelectedAsDefault());
-        refreshModelsButton.addActionListener(e -> refreshModelList());
+        setDefaultButton.addActionListener(e -> modelManagerHelper.setSelectedAsDefault(modelList, modelService, this));
+        refreshModelsButton.addActionListener(e -> modelManagerHelper.refreshModelList(modelList, listModel, refreshModelsButton, modelService, this));
+        modelList.addListSelectionListener(e -> updateButtonStates());
         
         // API key change listeners
         openaiApiKeyField.getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
@@ -464,31 +232,6 @@ public class AIServiceConfigPanel extends JBPanel<AIServiceConfigPanel> {
     
     
     
-    /**
-     * Sets the selected model as default.
-     */
-    private void setSelectedAsDefault() {
-        AIModel selectedModel = modelList.getSelectedValue();
-        if (selectedModel == null) {
-            showError("Please select a model to set as default");
-            return;
-        }
-        
-        // Check if this model is already the default
-        AIModel currentDefault = modelService.getDefaultModel();
-        if (currentDefault != null && currentDefault.getId().equals(selectedModel.getId())) {
-            showSuccess("Model is already set as default: " + selectedModel.getDisplayName());
-            return;
-        }
-        
-        if (modelService.setDefaultModel(selectedModel.getId())) {
-            updateDefaultModelDisplay();
-            showSuccess("Default model set to: " + selectedModel.getDisplayName());
-            updateButtonStates();
-        } else {
-            showError("Failed to set default model");
-        }
-    }
     
 
     
@@ -558,38 +301,23 @@ public class AIServiceConfigPanel extends JBPanel<AIServiceConfigPanel> {
      * Only shows models for services with valid stored API keys.
      */
     private void refreshModelList(String storedOpenAIKey, String storedGeminiKey) {
-        LOG.debug("Refreshing model list - OpenAI: " + (storedOpenAIKey != null && !storedOpenAIKey.trim().isEmpty()) + 
-                 ", Gemini: " + (storedGeminiKey != null && !storedGeminiKey.trim().isEmpty()));
-        
-        listModel.clear();
-        
-        // Get all models from storage
-        List<AIModel> allModels = modelService.getAllModels();
-        
-        // Only show models for services with valid stored API keys
-        List<AIModel> availableModels = new ArrayList<>();
-        for (AIModel model : allModels) {
-            boolean hasValidKey = false;
-            if (model.getServiceType() == AIServiceType.OPENAI) {
-                hasValidKey = (storedOpenAIKey != null && !storedOpenAIKey.trim().isEmpty());
-            } else if (model.getServiceType() == AIServiceType.GEMINI) {
-                hasValidKey = (storedGeminiKey != null && !storedGeminiKey.trim().isEmpty());
-            }
-            
-            if (hasValidKey) {
-                availableModels.add(model);
-            }
-        }
-        
-        // Add available models to UI
-        for (AIModel model : availableModels) {
-            listModel.addElement(model);
-        }
-        
+        modelManagerHelper.refreshModelList(modelList, listModel, modelService, storedOpenAIKey, storedGeminiKey);
         updateDefaultModelDisplay();
         updateButtonStates();
-        
-        LOG.debug("Model list refreshed with " + availableModels.size() + " models");
+    }
+    
+    /**
+     * Refreshes the model list using stored API keys.
+     */
+    private void refreshModelList() {
+        ApplicationManager.getApplication().executeOnPooledThread(() -> {
+            String storedOpenAIKey = SecureAPIKeyManager.getAPIKey(AIServiceType.OPENAI);
+            String storedGeminiKey = SecureAPIKeyManager.getAPIKey(AIServiceType.GEMINI);
+            
+            ApplicationManager.getApplication().invokeLater(() -> {
+                refreshModelList(storedOpenAIKey, storedGeminiKey);
+            });
+        });
     }
     
     /**
@@ -603,174 +331,32 @@ public class AIServiceConfigPanel extends JBPanel<AIServiceConfigPanel> {
             String storedOpenAIKey = SecureAPIKeyManager.getAPIKey(AIServiceType.OPENAI);
             String storedGeminiKey = SecureAPIKeyManager.getAPIKey(AIServiceType.GEMINI);
             
-            discoverNewModels(storedOpenAIKey, storedGeminiKey);
-        });
-    }
-    
-    /**
-     * Discovers and adds new models for configured services with provided API keys.
-     * Only called after successful API key validation.
-     */
-    private void discoverNewModels(String storedOpenAIKey, String storedGeminiKey) {
-        LOG.info("Discovering new models for configured services");
-        
-        // Create default models for services with valid stored keys
-        if (storedOpenAIKey != null && !storedOpenAIKey.trim().isEmpty()) {
-            createDefaultModelsIfNeeded(AIServiceType.OPENAI);
-        }
-        
-        if (storedGeminiKey != null && !storedGeminiKey.trim().isEmpty()) {
-            discoverGeminiModels(storedGeminiKey);
-        }
-        
-        // Refresh the model list to show the newly created models
-        ApplicationManager.getApplication().invokeLater(() -> {
-            refreshModelList(storedOpenAIKey, storedGeminiKey);
-        });
-    }
-    
-    /**
-     * Creates default models for a service if they don't already exist.
-     */
-    private void createDefaultModelsIfNeeded(AIServiceType serviceType) {
-        String[] defaultModels;
-        switch (serviceType) {
-            case OPENAI:
-                // Use the same stable models as the filter
-                defaultModels = new String[]{"gpt-4o", "gpt-4o-mini", "gpt-3.5-turbo"};
-                break;
-            case GEMINI:
-                defaultModels = new String[]{"gemini-1.5-flash", "gemini-1.5-pro"};
-                break;
-            default:
-                return;
-        }
-        
-        for (String modelId : defaultModels) {
-            String displayName = getDefaultDisplayName(serviceType, modelId);
-            if (!modelService.hasModelWithName(displayName)) {
-                modelService.addDiscoveredModel(displayName, serviceType, modelId);
-                LOG.info("Added default model: " + displayName);
-            }
-        }
-    }
-    
-    /**
-     * Discovers Gemini models dynamically using the API and filters to stable models only.
-     */
-    private void discoverGeminiModels(String apiKey) {
-        LOG.info("Discovering Gemini models dynamically");
-        
-        GeminiProvider provider = new GeminiProvider(HttpClient.newHttpClient());
-        provider.discoverAvailableModels(apiKey)
-            .thenAccept(allModels -> {
-                ApplicationManager.getApplication().invokeLater(() -> {
-                    // Filter to only stable, production-ready models
-                    String[] stableModels = filterToStableGeminiModels(allModels);
-                    
-                    for (String modelId : stableModels) {
-                        String displayName = getDefaultDisplayName(AIServiceType.GEMINI, modelId);
-                        if (!modelService.hasModelWithName(displayName)) {
-                            modelService.addDiscoveredModel(displayName, AIServiceType.GEMINI, modelId);
-                            LOG.info("Added stable Gemini model: " + displayName);
-                        }
-                    }
-                    refreshModelList();
-                });
-            })
-            .exceptionally(throwable -> {
-                LOG.warn("Failed to discover Gemini models, using defaults: " + throwable.getMessage());
-                // Fallback to hardcoded models
-                createDefaultModelsIfNeeded(AIServiceType.GEMINI);
-                return null;
+            modelManagerHelper.discoverNewModels(modelService, storedOpenAIKey, storedGeminiKey);
+            
+            // Refresh the model list to show the newly created models
+            ApplicationManager.getApplication().invokeLater(() -> {
+                refreshModelList(storedOpenAIKey, storedGeminiKey);
             });
+        });
     }
     
-    /**
-     * Filters discovered Gemini models to only include stable, production-ready models.
-     * This ensures users see only the most reliable and useful models.
-     */
-    private String[] filterToStableGeminiModels(String[] allModels) {
-        // Define stable, production-ready models in order of preference
-        String[] stableModelIds = {
-            "gemini-1.5-flash",      // Fast, cost-effective, general purpose
-            "gemini-1.5-pro",        // High quality, general purpose
-            "gemini-2.0-flash",      // Latest fast model (if available)
-            "gemini-2.0-pro"         // Latest high-quality model (if available)
-        };
-        
-        List<String> filteredModels = new ArrayList<>();
-        
-        // Add stable models that are available
-        for (String stableId : stableModelIds) {
-            for (String discoveredId : allModels) {
-                if (discoveredId.equals(stableId)) {
-                    filteredModels.add(discoveredId);
-                    break;
-                }
-            }
-        }
-        
-        // If no stable models found, fall back to basic models
-        if (filteredModels.isEmpty()) {
-            LOG.warn("No stable Gemini models found, using basic fallback");
-            return new String[]{"gemini-1.5-flash", "gemini-1.5-pro"};
-        }
-        
-        LOG.info("Filtered to " + filteredModels.size() + " stable Gemini models: " + 
-                String.join(", ", filteredModels));
-        
-        return filteredModels.toArray(new String[0]);
-    }
     
-    /**
-     * Gets the default display name for a model.
-     */
-    private String getDefaultDisplayName(AIServiceType serviceType, String modelId) {
-        switch (serviceType) {
-            case OPENAI:
-                switch (modelId) {
-                    case "gpt-3.5-turbo": return "GPT-3.5 Turbo";
-                    case "gpt-3.5-turbo-16k": return "GPT-3.5 Turbo (16K)";
-                    case "gpt-4": return "GPT-4";
-                    case "gpt-4-turbo": return "GPT-4 Turbo";
-                    case "gpt-4o": return "GPT-4o";
-                    case "gpt-4o-mini": return "GPT-4o Mini";
-                    default: return modelId;
-                }
-            case GEMINI:
-                switch (modelId) {
-                    case "gemini-1.5-flash": return "Gemini 1.5 Flash";
-                    case "gemini-1.5-pro": return "Gemini 1.5 Pro";
-                    case "gemini-2.0-flash": return "Gemini 2.0 Flash";
-                    case "gemini-2.0-pro": return "Gemini 2.0 Pro";
-                    default: return modelId; // Fallback for unknown models
-                }
-            default:
-                return modelId;
-        }
-    }
+    
+    
+    
     
     /**
      * Updates button states based on current selection.
      */
     private void updateButtonStates() {
-        AIModel selectedModel = modelList.getSelectedValue();
-        boolean hasSelection = selectedModel != null;
-        
-        setDefaultButton.setEnabled(hasSelection);
+        modelManagerHelper.updateButtonStates(modelList, setDefaultButton);
     }
     
     /**
      * Updates the default model display label.
      */
     private void updateDefaultModelDisplay() {
-        AIModel defaultModel = modelService.getDefaultModel();
-        if (defaultModel != null) {
-            defaultModelLabel.setText(defaultModel.getDisplayName() + " (" + defaultModel.getServiceType().getDisplayName() + ")");
-        } else {
-            defaultModelLabel.setText("No default model selected");
-        }
+        modelManagerHelper.updateDefaultModelDisplay(defaultModelLabel, modelService);
     }
     
 
@@ -917,150 +503,13 @@ public class AIServiceConfigPanel extends JBPanel<AIServiceConfigPanel> {
         }
     }
 
-    /**
-     * Creates a password field that scales its height with the current UI font.
-     */
-    private JBPasswordField createResponsivePasswordField() {
-        JBPasswordField field = new JBPasswordField() {
-            @Override
-            public Dimension getPreferredSize() {
-                Dimension d = super.getPreferredSize();
-                int fontSize = UIUtil.getLabelFont().getSize();
-                int height = Math.max((int) Math.round(fontSize * 2.2), 28);
-                return new Dimension(d.width, height);
-            }
-        };
-        field.setFont(UIUtil.getLabelFont());
-        field.setMargin(new Insets(6, 10, 6, 10));
-        return field;
-    }
 
-    /**
-     * Applies consistent sizing rules to a password field instance.
-     */
-    private void configurePasswordField(JBPasswordField field, int height, Insets insets) {
-        field.setPreferredSize(new Dimension(0, height));
-        field.setMinimumSize(new Dimension(0, height));
-        field.setMaximumSize(new Dimension(Integer.MAX_VALUE, height));
-        field.setFont(UIUtil.getLabelFont());
-        field.setMargin(insets);
-    }
 
-    /**
-     * Creates a JButton that sizes itself based on its text (avoids truncation on zoom).
-     */
-    private JButton createResponsiveButton(String text) {
-        JButton button = new JButton(text) {
-            @Override
-            public Dimension getPreferredSize() {
-                Font font = UIUtil.getLabelFont();
-                FontMetrics fm = getFontMetrics(font);
-                int textWidth = fm.stringWidth(getText());
-                int fontSize = font.getSize();
-                
-                // More generous sizing to prevent text cutoff at smaller zoom levels
-                int width = textWidth + Math.max(32, fontSize * 3); // Increased padding
-                int height = Math.max((int) Math.round(fontSize * 2.5), 32); // Increased height
-                
-                return new Dimension(width, height);
-            }
-        };
-        button.setFont(UIUtil.getLabelFont());
-        button.setMargin(new Insets(8, 16, 8, 16)); // Increased margins
-        return button;
-    }
 
-    /**
-     * Ensures a button is large enough for its text at current zoom.
-     */
-    private void configureButtonForText(JButton button) {
-        Font font = UIUtil.getLabelFont();
-        FontMetrics fm = button.getFontMetrics(font);
-        int textWidth = fm.stringWidth(button.getText());
-        int fontSize = font.getSize();
-        
-        // More generous sizing to prevent text cutoff at smaller zoom levels
-        int width = textWidth + Math.max(32, fontSize * 3); // Increased padding
-        int height = Math.max((int) Math.round(fontSize * 2.5), 32); // Increased height
-        
-        button.setFont(font);
-        button.setMinimumSize(new Dimension(width, height));
-        button.setPreferredSize(new Dimension(width, height));
-        button.setMargin(new Insets(8, 16, 8, 16)); // Increased margins
-    }
     
-    /**
-     * Configures the model list to be non-scrollable with zoom-responsive cell sizing.
-     */
-    private void configureResponsiveModelList() {
-        // Set font to current UI font for zoom responsiveness
-        modelList.setFont(UIUtil.getLabelFont());
-        
-        // Calculate cell height based on current font size
-        int fontSize = UIUtil.getLabelFont().getSize();
-        int cellHeight = Math.max((int) Math.round(fontSize * 2.5), 32);
-        
-        // Set fixed cell height that scales with zoom
-        modelList.setFixedCellHeight(cellHeight);
-        modelList.setFixedCellWidth(-1); // Let width be determined by container
-        
-        // Remove scroll pane behavior - let the list size naturally
-        modelList.setPreferredSize(null); // Let Swing calculate based on content
-        modelList.setMinimumSize(new Dimension(0, 0)); // Allow shrinking
-        modelList.setMaximumSize(new Dimension(Integer.MAX_VALUE, Integer.MAX_VALUE));
-        
-        // Add a listener to recalculate cell height when font changes
-        modelList.addComponentListener(new java.awt.event.ComponentAdapter() {
-            @Override
-            public void componentShown(java.awt.event.ComponentEvent e) {
-                updateModelListCellHeight();
-            }
-        });
-    }
     
-    /**
-     * Updates the model list cell height based on current font size.
-     */
-    private void updateModelListCellHeight() {
-        int fontSize = UIUtil.getLabelFont().getSize();
-        int cellHeight = Math.max((int) Math.round(fontSize * 2.5), 32);
-        modelList.setFixedCellHeight(cellHeight);
-        modelList.revalidate();
-        modelList.repaint();
-    }
     
-    /**
-     * Sets up theme change listener to handle zoom and font changes.
-     */
-    private void setupThemeChangeListener() {
-        // Only listen for component visibility changes (when panel is shown)
-        // This prevents constant revalidation that causes auto-scroll issues
-        addComponentListener(new java.awt.event.ComponentAdapter() {
-            @Override
-            public void componentShown(java.awt.event.ComponentEvent event) {
-                SwingUtilities.invokeLater(() -> {
-                    updateModelListCellHeight();
-                    // Only update buttons if font size has changed significantly
-                    updateButtonSizesIfNeeded();
-                });
-            }
-        });
-    }
     
-    /**
-     * Updates button sizes only if font size has changed significantly.
-     */
-    private void updateButtonSizesIfNeeded() {
-        // Check if font size has changed significantly since last update
-        int currentFontSize = UIUtil.getLabelFont().getSize();
-        if (Math.abs(currentFontSize - lastKnownFontSize) >= 2) { // Only update if font changed by 2+ points
-            lastKnownFontSize = currentFontSize;
-            configureButtonForText(testOpenAIButton);
-            configureButtonForText(testGeminiButton);
-            configureButtonForText(setDefaultButton);
-            configureButtonForText(refreshModelsButton);
-        }
-    }
     /**
      * Gets the OpenAI API key field for testing purposes.
      * 
@@ -1119,211 +568,5 @@ public class AIServiceConfigPanel extends JBPanel<AIServiceConfigPanel> {
     @VisibleForTesting
     public JButton getTestGeminiButton() {
         return testGeminiButton;
-    }
-
-    /**
-     * Refreshes the model list by fetching new models from API providers.
-     * This method will discover available models from configured services and update the UI.
-     */
-    private void refreshModelList() {
-        LOG.info("Refreshing model list - replacing with current available models from APIs");
-        
-        // Disable refresh button and show loading state
-        refreshModelsButton.setEnabled(false);
-        refreshModelsButton.setText("Refreshing...");
-        
-        // Get stored API keys in background
-        ApplicationManager.getApplication().executeOnPooledThread(() -> {
-            String storedOpenAIKey = SecureAPIKeyManager.getAPIKey(AIServiceType.OPENAI);
-            String storedGeminiKey = SecureAPIKeyManager.getAPIKey(AIServiceType.GEMINI);
-            
-            // Replace entire model list with current available models
-            replaceModelListWithCurrentModels(storedOpenAIKey, storedGeminiKey);
-        });
-    }
-    
-    /**
-     * Replaces the entire model list with currently available models from APIs.
-     * This ensures the list reflects the current state of the user's API access.
-     * 
-     * @param storedOpenAIKey the stored OpenAI API key
-     * @param storedGeminiKey the stored Gemini API key
-     */
-    private void replaceModelListWithCurrentModels(String storedOpenAIKey, String storedGeminiKey) {
-        LOG.info("Replacing model list with current available models from APIs");
-        
-        // Clear existing models first
-        modelService.deleteAllModels();
-        
-        // Discover current available models
-        final boolean openaiDiscovered = discoverOpenAIModelsIfConfigured(storedOpenAIKey);
-        final boolean geminiDiscovered = discoverGeminiModelsIfConfigured(storedGeminiKey);
-        
-        // Update UI on EDT after discovery completes
-        ApplicationManager.getApplication().invokeLater(() -> {
-            // Re-enable refresh button
-            refreshModelsButton.setEnabled(true);
-            refreshModelsButton.setText("Refresh Models");
-            
-            // Show results to user
-            if (openaiDiscovered || geminiDiscovered) {
-                showSuccess("Model list refreshed successfully");
-            } else if (storedOpenAIKey == null && storedGeminiKey == null) {
-                showError("No API keys configured. Please configure API keys first.");
-            } else {
-                showError("Failed to refresh models. Please check your API keys and try again.");
-            }
-            
-            // Update the UI to show the new model list
-            refreshModelList(storedOpenAIKey, storedGeminiKey);
-        });
-    }
-    
-    /**
-     * Discovers OpenAI models if API key is configured.
-     * 
-     * @param storedOpenAIKey the stored OpenAI API key
-     * @return true if models were discovered successfully, false otherwise
-     */
-    private boolean discoverOpenAIModelsIfConfigured(String storedOpenAIKey) {
-        if (storedOpenAIKey == null || storedOpenAIKey.trim().isEmpty()) {
-            return false;
-        }
-        
-        try {
-            return discoverOpenAIModels(storedOpenAIKey);
-        } catch (Exception e) {
-            LOG.warn("Failed to discover OpenAI models: " + e.getMessage());
-            return false;
-        }
-    }
-    
-    /**
-     * Discovers Gemini models if API key is configured.
-     * 
-     * @param storedGeminiKey the stored Gemini API key
-     * @return true if models were discovered successfully, false otherwise
-     */
-    private boolean discoverGeminiModelsIfConfigured(String storedGeminiKey) {
-        if (storedGeminiKey == null || storedGeminiKey.trim().isEmpty()) {
-            return false;
-        }
-        
-        try {
-            return discoverGeminiModelsFromProvider(storedGeminiKey);
-        } catch (Exception e) {
-            LOG.warn("Failed to discover Gemini models: " + e.getMessage());
-            return false;
-        }
-    }
-    
-    /**
-     * Discovers OpenAI models using the OpenAI provider.
-     * 
-     * @param apiKey the OpenAI API key
-     * @return true if models were discovered successfully, false otherwise
-     */
-    private boolean discoverOpenAIModels(String apiKey) {
-        try {
-            LOG.info("Discovering OpenAI models");
-            
-            OpenAIProvider provider = new OpenAIProvider(HttpClient.newHttpClient());
-            String[] discoveredModels = provider.discoverAvailableModels(apiKey).get();
-            
-            if (discoveredModels != null && discoveredModels.length > 0) {
-                // Filter to only stable, production-ready models suitable for text analysis
-                String[] stableModels = filterToStableOpenAIModels(discoveredModels);
-                
-                // Add discovered models
-                for (String modelId : stableModels) {
-                    String displayName = getDefaultDisplayName(AIServiceType.OPENAI, modelId);
-                    modelService.addDiscoveredModel(displayName, AIServiceType.OPENAI, modelId);
-                }
-                
-                LOG.info("Successfully discovered " + stableModels.length + " stable OpenAI models");
-                return true;
-            } else {
-                LOG.warn("No OpenAI models discovered");
-                return false;
-            }
-        } catch (Exception e) {
-            LOG.error("Error discovering OpenAI models: " + e.getMessage(), e);
-            return false;
-        }
-    }
-    
-    /**
-     * Filters discovered OpenAI models to only include stable, production-ready models suitable for text analysis.
-     * This ensures users see only the most reliable and useful models for our use case.
-     */
-    private String[] filterToStableOpenAIModels(String[] allModels) {
-        // Define stable, production-ready models in order of preference
-        // Focus on models suitable for text analysis and code review
-        String[] stableModelIds = {
-            "gpt-4o",              // Latest GPT-4 model, best performance
-            "gpt-4o-mini",         // Fast, cost-effective GPT-4
-            "gpt-4-turbo",         // Previous GPT-4 Turbo
-            "gpt-4",               // Standard GPT-4
-            "gpt-3.5-turbo",       // Reliable, cost-effective option
-            "gpt-3.5-turbo-16k"    // Higher context window version
-        };
-        
-        List<String> filteredModels = new ArrayList<>();
-        
-        // Add stable models that are available
-        for (String stableId : stableModelIds) {
-            for (String discoveredId : allModels) {
-                if (discoveredId.equals(stableId)) {
-                    filteredModels.add(discoveredId);
-                    break;
-                }
-            }
-        }
-        
-        // If no stable models found, fall back to basic models
-        if (filteredModels.isEmpty()) {
-            LOG.warn("No stable OpenAI models found, using basic fallback");
-            return new String[]{"gpt-3.5-turbo", "gpt-4o", "gpt-4o-mini"};
-        }
-        
-        LOG.info("Filtered to " + filteredModels.size() + " stable OpenAI models: " + 
-                String.join(", ", filteredModels));
-        
-        return filteredModels.toArray(new String[0]);
-    }
-    
-    /**
-     * Discovers Gemini models using the Gemini provider.
-     * 
-     * @param apiKey the Gemini API key
-     * @return true if models were discovered successfully, false otherwise
-     */
-    private boolean discoverGeminiModelsFromProvider(String apiKey) {
-        try {
-            LOG.info("Discovering Gemini models from provider");
-            
-            GeminiProvider provider = new GeminiProvider(HttpClient.newHttpClient());
-            String[] discoveredModels = provider.discoverAvailableModels(apiKey).get();
-            
-            if (discoveredModels != null && discoveredModels.length > 0) {
-                // Filter to stable models only
-                String[] stableModels = filterToStableGeminiModels(discoveredModels);
-                
-                // Add discovered models
-                for (String modelId : stableModels) {
-                    String displayName = getDefaultDisplayName(AIServiceType.GEMINI, modelId);
-                    modelService.addDiscoveredModel(displayName, AIServiceType.GEMINI, modelId);
-                }
-                
-                LOG.info("Successfully discovered " + stableModels.length + " stable Gemini models");
-                return true;
-            } else {
-                LOG.warn("No Gemini models discovered");
-                return false;
-            }
-        } catch (Exception e) {
-            LOG.error("Error discovering Gemini models: " + e.getMessage(), e);
-            return false;
-        }
     }
 } 
