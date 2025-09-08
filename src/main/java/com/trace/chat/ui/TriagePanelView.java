@@ -678,7 +678,7 @@ public class TriagePanelView {
                 }
                 
                 // Log recent user queries for context verification
-                List<String> recentQueries = getLastThreeUserQueries();
+                List<String> recentQueries = UtilityHelper.getLastThreeUserQueries(project);
                 if (!recentQueries.isEmpty() && LOG.isDebugEnabled()) {
                     LOG.debug("Recent User Queries Context: " + String.join(", ", recentQueries));
                 }
@@ -1411,32 +1411,6 @@ public class TriagePanelView {
         return mainPanel;
     }
     
-    /**
-     * Gets the last 3 user queries from chat history for logging purposes.
-     * This helps verify that the sliding window context is working correctly.
-     *
-     * @return List of the last 3 user queries, or empty list if none available
-     */
-    private List<String> getLastThreeUserQueries() {
-        List<String> recentQueries = new ArrayList<>();
-        try {
-            ChatHistoryService chatHistoryService = project.getService(ChatHistoryService.class);
-            if (chatHistoryService != null) {
-                // Get the last 3 user queries from chat history
-                int queryCount = chatHistoryService.getUserQueryCount();
-                LOG.info("Total user queries in history: " + queryCount);
-                
-                // For now, we'll log the query count since the ChatHistoryService doesn't expose individual queries
-                // In a future enhancement, we could add a method to get the actual query content
-                if (queryCount > 0) {
-                    recentQueries.add("Last " + Math.min(3, queryCount) + " user queries available in chat history");
-                }
-            }
-        } catch (Exception e) {
-            LOG.error("Error accessing chat history for recent queries: " + e.getMessage());
-        }
-        return recentQueries;
-    }
     
     /**
      * Shuts down the orchestrator and cleans up resources.
@@ -1455,7 +1429,7 @@ public class TriagePanelView {
      * This can be called programmatically to test theme change behavior.
      */
     public void manualThemeRefresh() {
-        themeHelper.manualThemeRefresh();
+        UtilityHelper.manualThemeRefresh(themeHelper);
     }
 
 
@@ -1474,44 +1448,22 @@ public class TriagePanelView {
      * Rebuilds the panel layout based on the current tab state.
      */
     private void refreshMainPanel() {
-        mainPanel.removeAll();
-        mainPanel.setLayout(new BorderLayout());
-        
-        Color panelBg = ThemeUtils.panelBackground();
-        mainPanel.setBackground(panelBg);
-        mainPanel.setOpaque(true);
-        
-        JButton aiToggleButton2 = UIComponentHelper.createAIToggleButton();
-        JButton clearChatButton2 = UIComponentHelper.createClearChatButton();
-        JButton settingsButton2 = UIComponentHelper.createSettingsButton();
-        
-        // Add action listeners
-        clearChatButton2.addActionListener(e -> {
-            LOG.debug("Clear chat button clicked");
-            clearChat();
-        });
-        
-        settingsButton2.addActionListener(e -> {
-            LOG.debug("Settings button clicked");
-            showSettingsTab = !showSettingsTab;
-            refreshMainPanel();
-        });
-        
-        mainPanel.add(UIComponentHelper.createCustomHeaderPanel(aiToggleButton2, clearChatButton2, settingsButton2), BorderLayout.NORTH);
-        if (showSettingsTab) {
-            AISettings aiSettings = AISettings.getInstance();
-            ActionListener backToChatListener = e -> {
+        UtilityHelper.refreshMainPanel(
+            mainPanel, 
+            chatOverlayPanel, 
+            chatScrollPane, 
+            inputPanel,
+            showSettingsTab,
+            this::clearChat,
+            () -> {
+                showSettingsTab = !showSettingsTab;
+                refreshMainPanel();
+            },
+            () -> {
                 showSettingsTab = false;
                 refreshMainPanel();
-            };
-            mainPanel.add(UIComponentHelper.createSettingsPanel(aiSettings, backToChatListener), BorderLayout.CENTER);
-        } else {
-            mainPanel.add(chatOverlayPanel != null ? chatOverlayPanel : chatScrollPane, BorderLayout.CENTER);
-            mainPanel.add(inputPanel, BorderLayout.SOUTH);
-        }
-        
-        mainPanel.revalidate();
-        mainPanel.repaint();
+            }
+        );
     }
     
     /**
