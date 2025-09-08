@@ -89,6 +89,9 @@ public class TriagePanelView {
     // Scroll helper for managing scroll-related functionality
     private final ScrollHelper scrollHelper;
  
+    // Theme helper for managing theme-related functionality
+    private final ThemeHelper themeHelper;
+ 
     // Analysis mode state management
     private String currentAnalysisMode = "Quick Overview";
     private static final String ANALYSIS_MODE_OVERVIEW = "Quick Overview";
@@ -125,6 +128,12 @@ public class TriagePanelView {
         this.statusLabel = new JBLabel("");
         
         initializeUI();
+        
+        // Initialize theme helper after UI components are created
+        this.themeHelper = new ThemeHelper(mainPanel, chatScrollPane, messageContainer, 
+                                          inputArea, inputPanel, bottomSpacer, 
+                                          headerLabel, statusLabel);
+        
         setupEventHandlers();
         setupThemeChangeListener();
         LOG.info("TriagePanelView created successfully");
@@ -244,118 +253,7 @@ public class TriagePanelView {
     }
 
     private void refreshTheme() {
-        try {
-            LOG.info("Theme refresh started");
-            if (LOG.isDebugEnabled()) {
-                LOG.debug("Current theme: " + UIManager.getLookAndFeel().getName());
-                LOG.debug("Theme colors - Panel background: " + ThemeUtils.panelBackground());
-                LOG.debug("Theme colors - Text foreground: " + ThemeUtils.textForeground());
-                LOG.debug("Theme colors - Text field background: " + ThemeUtils.textFieldBackground());
-                LOG.debug("UIManager Panel.background: " + UIManager.getColor("Panel.background"));
-                LOG.debug("UIManager Label.foreground: " + UIManager.getColor("Label.foreground"));
-                LOG.debug("UIManager TextField.background: " + UIManager.getColor("TextField.background"));
-            }
-            
-            // Update main panel background
-            if (mainPanel != null) {
-                Color bg = ThemeUtils.panelBackground();
-                mainPanel.setBackground(bg);
-                mainPanel.revalidate();
-                mainPanel.repaint();
-                LOG.debug("Updated main panel background to: " + bg);
-            }
-            
-            // Update chat scroll pane and viewport
-            if (chatScrollPane != null && chatScrollPane.getViewport() != null) {
-                Color bg = ThemeUtils.panelBackground();
-                chatScrollPane.setBackground(bg);
-                chatScrollPane.getViewport().setBackground(bg);
-                chatScrollPane.revalidate();
-                chatScrollPane.repaint();
-            }
-            
-            // Update message container and all message components
-            if (messageContainer != null) {
-                Color bg = ThemeUtils.panelBackground();
-                messageContainer.setBackground(bg);
-                
-                // NUCLEAR OPTION: Recreate all message components to ensure proper theme switching
-                // This is the most reliable way to handle JEditorPane HTML content that doesn't refresh properly
-                recreateAllMessageComponents();
-                
-                messageContainer.revalidate();
-                messageContainer.repaint();
-            }
-            
-            // Update input area and input panel
-            if (inputArea != null) {
-                inputArea.setBackground(ThemeUtils.textFieldBackground());
-                inputArea.setForeground(ThemeUtils.textForeground());
-                inputArea.setCaretColor(ThemeUtils.textForeground());
-                inputArea.revalidate();
-                inputArea.repaint();
-            }
-            
-            if (inputPanel != null) {
-                // Keep input panel grey and render white background via the inner inputBoxContainer
-                inputPanel.setBackground(ThemeUtils.panelBackground());
-                inputPanel.setOpaque(true);
-
-                for (Component child : inputPanel.getComponents()) {
-                    if (child instanceof JPanel && "inputBoxContainer".equals(child.getName())) {
-                        JPanel box = (JPanel) child;
-                        box.setOpaque(true);
-                        box.setBackground(TriagePanelConstants.getInputContainerBackground());
-                        box.setBorder(BorderFactory.createCompoundBorder(
-                            BorderFactory.createLineBorder(TriagePanelConstants.getInputContainerBorder(), 1, true),
-                            BorderFactory.createEmptyBorder(8, 12, 8, 0)
-                        ));
-
-                        for (Component inner : box.getComponents()) {
-                            if (inner instanceof JTextArea) {
-                                JTextArea textArea = (JTextArea) inner;
-                                // Do not paint its own background; rely on the box
-                                textArea.setOpaque(false);
-                                textArea.setForeground(ThemeUtils.textForeground());
-                                textArea.setCaretColor(ThemeUtils.textForeground());
-                                textArea.setBorder(javax.swing.BorderFactory.createEmptyBorder(0, 0, 0, 0));
-                            } else if (inner instanceof JPanel && "buttonPanel".equals(inner.getName())) {
-                                JPanel buttonPanel = (JPanel) inner;
-                                // Let the white box show through
-                                buttonPanel.setOpaque(false);
-                                buttonPanel.setBorder(javax.swing.BorderFactory.createEmptyBorder(0, 0, 0, 0));
-                            }
-                        }
-                    }
-                }
-                inputPanel.revalidate();
-                inputPanel.repaint();
-            }
-            
-            // Update bottom spacer
-            if (bottomSpacer != null) {
-                bottomSpacer.setBackground(ThemeUtils.panelBackground());
-                bottomSpacer.revalidate();
-                bottomSpacer.repaint();
-            }
-            
-            // Update header and status labels
-            if (headerLabel != null) {
-                headerLabel.setForeground(ThemeUtils.textForeground());
-                headerLabel.revalidate();
-                headerLabel.repaint();
-            }
-            
-            if (statusLabel != null) {
-                statusLabel.setForeground(ThemeUtils.textForeground());
-                statusLabel.revalidate();
-                statusLabel.repaint();
-            }
-            
-            LOG.info("Theme refresh completed");
-        } catch (Exception e) {
-            LOG.error("Error during theme refresh: " + e.getMessage(), e);
-        }
+        themeHelper.refreshTheme();
     }
     
     /**
@@ -363,95 +261,11 @@ public class TriagePanelView {
      * This is the most reliable way to handle JEditorPane HTML content that doesn't refresh properly.
      */
     private void recreateAllMessageComponents() {
-        try {
-            LOG.debug("Recreating all message components for theme refresh");
-            
-            // Store current components and their order
-            List<Component> components = new ArrayList<>();
-            for (Component child : messageContainer.getComponents()) {
-                if (child instanceof com.trace.chat.components.MessageComponent) {
-                    components.add(child);
-                }
-            }
-            
-            // Remove all message components
-            for (Component child : components) {
-                messageContainer.remove(child);
-            }
-            
-            // Recreate all message components with current theme
-            for (Component oldComponent : components) {
-                if (oldComponent instanceof com.trace.chat.components.MessageComponent) {
-                    com.trace.chat.components.MessageComponent oldMsg = (com.trace.chat.components.MessageComponent) oldComponent;
-                    com.trace.chat.components.ChatMessage message = oldMsg.getMessage();
-                    
-                    // Create new message component with same message
-                    com.trace.chat.components.MessageComponent newMsg = new com.trace.chat.components.MessageComponent(message);
-                    newMsg.setAlignmentX(Component.LEFT_ALIGNMENT);
-                    
-                    // Add to container
-                    messageContainer.add(newMsg);
-                }
-            }
-            
-            if (LOG.isDebugEnabled()) {
-                LOG.debug("Recreated " + components.size() + " message components");
-            }
-        } catch (Exception e) {
-            LOG.error("Error recreating message components: " + e.getMessage(), e);
-        }
+        themeHelper.recreateAllMessageComponents();
     }
 
     private void refreshThemeInContainer(Container container) {
-        for (Component child : container.getComponents()) {
-            // Update markdown content
-            if (child instanceof javax.swing.JEditorPane) {
-                com.trace.chat.components.MarkdownRenderer.reapplyThemeStyles((javax.swing.JEditorPane) child);
-            }
-            
-            // Update JPanels and other containers
-            if (child instanceof JPanel) {
-                JPanel panel = (JPanel) child;
-                // Only update panels that are opaque (have explicit backgrounds)
-                if (panel.isOpaque()) {
-                    panel.setBackground(ThemeUtils.panelBackground());
-                    panel.revalidate();
-                    panel.repaint();
-                }
-            }
-            
-            // Update JLabels
-            if (child instanceof JLabel) {
-                JLabel label = (JLabel) child;
-                label.setForeground(ThemeUtils.textForeground());
-                label.revalidate();
-                label.repaint();
-            }
-            
-            // Update JTextAreas
-            if (child instanceof JTextArea) {
-                JTextArea textArea = (JTextArea) child;
-                // Use textFieldBackground for all text areas to ensure proper theme switching
-                textArea.setBackground(ThemeUtils.textFieldBackground());
-                textArea.setForeground(ThemeUtils.textForeground());
-                textArea.setCaretColor(ThemeUtils.textForeground());
-                textArea.revalidate();
-                textArea.repaint();
-            }
-            
-            // Update JButtons
-            if (child instanceof JButton) {
-                JButton button = (JButton) child;
-                button.setForeground(ThemeUtils.textForeground());
-                button.revalidate();
-                button.repaint();
-            }
-            
-            // Recursively update containers
-            if (child instanceof Container) {
-                refreshThemeInContainer((Container) child);
-            }
-        }
+        themeHelper.refreshThemeInContainer(container);
     }
 
     /**
@@ -741,77 +555,9 @@ public class TriagePanelView {
      * This ensures that existing chat messages and UI elements update their colors to match the new theme.
      * Uses a modern approach compatible with newer IntelliJ versions.
      */
-    private MessageBusConnection messageBusConnection;
     
     private void setupThemeChangeListener() {
-        try {
-            // Use modern MessageBus approach for theme change detection (IntelliJ 2025.2+)
-            messageBusConnection = ApplicationManager.getApplication().getMessageBus().connect();
-            messageBusConnection.subscribe(LafManagerListener.TOPIC, source -> {
-                ApplicationManager.getApplication().invokeLater(() -> {
-                        try {
-                            LOG.info("=== THEME CHANGE DETECTED (via MessageBus) ===");
-                            LOG.info("Current theme: " + UIManager.getLookAndFeel().getName());
-                            LOG.info("Panel background: " + UIManager.getColor("Panel.background"));
-                            LOG.info("Label foreground: " + UIManager.getColor("Label.foreground"));
-                            LOG.info("Text field background: " + UIManager.getColor("TextField.background"));
-                            
-                            // Store current scroll position
-                            int currentScrollValue = 0;
-                            if (chatScrollPane != null && chatScrollPane.getVerticalScrollBar() != null) {
-                                currentScrollValue = chatScrollPane.getVerticalScrollBar().getValue();
-                            }
-                            
-                            // Refresh all theme colors
-                            refreshTheme();
-                            
-                            // Restore scroll position to maintain user's view
-                            if (chatScrollPane != null && chatScrollPane.getVerticalScrollBar() != null) {
-                                chatScrollPane.getVerticalScrollBar().setValue(currentScrollValue);
-                                LOG.info("Restored scroll position to: " + currentScrollValue);
-                            }
-                            
-                            LOG.info("=== THEME CHANGE COMPLETED ===");
-                        } catch (Exception ex) {
-                            LOG.error("Error during theme change refresh: " + ex.getMessage(), ex);
-                        }
-                    });
-            });
-            
-            // Backup: Also add a property change listener for theme-related properties
-            mainPanel.addPropertyChangeListener("UI", evt -> {
-                ApplicationManager.getApplication().invokeLater(() -> {
-                    try {
-                        LOG.info("=== THEME CHANGE DETECTED (via property change backup) ===");
-                        LOG.info("Property change: " + evt.getPropertyName() + " = " + evt.getNewValue());
-                        refreshTheme();
-                        LOG.info("=== THEME CHANGE COMPLETED ===");
-                    } catch (Exception ex) {
-                        LOG.error("Error during theme change refresh: " + ex.getMessage(), ex);
-                    }
-                });
-            });
-            
-            // Add font change listener to respond to IDE font size changes
-            UIManager.addPropertyChangeListener(evt -> {
-                if ("defaultFont".equals(evt.getPropertyName())) {
-                    ApplicationManager.getApplication().invokeLater(() -> {
-                        try {
-                            LOG.info("=== FONT CHANGE DETECTED ===");
-                            LOG.info("Font change: " + evt.getPropertyName() + " = " + evt.getNewValue());
-                            refreshTheme();
-                            LOG.info("=== FONT CHANGE COMPLETED ===");
-                        } catch (Exception ex) {
-                            LOG.error("Error during font change refresh: " + ex.getMessage(), ex);
-                        }
-                    });
-                }
-            });
-            
-            LOG.info("Theme change listeners registered successfully");
-        } catch (Exception e) {
-            LOG.error("Failed to register theme change listeners: " + e.getMessage(), e);
-        }
+        themeHelper.setupThemeChangeListener();
     }
 
     /**
@@ -1709,29 +1455,7 @@ public class TriagePanelView {
      * This can be called programmatically to test theme change behavior.
      */
     public void manualThemeRefresh() {
-        LOG.info("Manual theme refresh triggered");
-        ApplicationManager.getApplication().invokeLater(() -> {
-            try {
-                // Store current scroll position
-                int currentScrollValue = 0;
-                if (chatScrollPane != null && chatScrollPane.getVerticalScrollBar() != null) {
-                    currentScrollValue = chatScrollPane.getVerticalScrollBar().getValue();
-                }
-                
-                // Refresh all theme colors
-                refreshTheme();
-                
-                // Restore scroll position to maintain user's view
-                if (chatScrollPane != null && chatScrollPane.getVerticalScrollBar() != null) {
-                    chatScrollPane.getVerticalScrollBar().setValue(currentScrollValue);
-                    LOG.debug("Restored scroll position to: " + currentScrollValue);
-                }
-                
-                LOG.info("Manual theme refresh completed");
-            } catch (Exception e) {
-                LOG.error("Error during manual theme refresh: " + e.getMessage(), e);
-            }
-        });
+        themeHelper.manualThemeRefresh();
     }
 
 
@@ -1798,15 +1522,9 @@ public class TriagePanelView {
         try {
             LOG.info("Disposing TriagePanelView resources");
             
-            // Disconnect MessageBus connection
-            if (messageBusConnection != null) {
-                try {
-                    messageBusConnection.disconnect();
-                    messageBusConnection = null;
-                    LOG.info("Disconnected MessageBus connection");
-                } catch (Exception e) {
-                    LOG.error("Error disconnecting MessageBus connection: " + e.getMessage());
-                }
+            // Dispose theme helper
+            if (themeHelper != null) {
+                themeHelper.dispose();
             }
             
             // Stop any running timers in ScrollHelper
