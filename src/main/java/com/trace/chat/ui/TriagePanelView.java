@@ -776,78 +776,15 @@ public class TriagePanelView {
 
     // ===== Typing indicator helpers =====
     private void showTypingIndicator() {
-        if (!SwingUtilities.isEventDispatchThread()) {
-            ApplicationManager.getApplication().invokeLater(this::showTypingIndicator);
-            return;
-        }
-        try {
-            if (!typingIndicatorVisible) {
-                typingIndicatorVisible = true;
-                if (typingIndicatorRow == null) {
-                    typingIndicatorRow = new TypingIndicatorRow();
-                }
-                // Insert before bottom spacer if currently built
-                int count = messageContainer.getComponentCount();
-                if (count > 0 && bottomSpacer != null) {
-                    int idx = -1;
-                    for (int i = 0; i < count; i++) {
-                        if (messageContainer.getComponent(i) == bottomSpacer) {
-                            idx = i;
-                            break;
-                        }
-                    }
-                    if (idx >= 0) {
-                        // Add spacing before indicator when preceding component is a message
-                        if (idx > 0) {
-                            Component prev = messageContainer.getComponent(idx - 1);
-                            if (!(prev instanceof Box.Filler)) {
-                                messageContainer.add(Box.createVerticalStrut(16), idx++);
-                            }
-                        }
-                        messageContainer.add(typingIndicatorRow, idx);
-                    } else {
-                        // Fallback: rebuild to include indicator
-                        MessageManagerHelper.addMessageToUI(chatHistory.isEmpty() ? null : chatHistory.get(chatHistory.size() - 1),
-                            chatHistory, messageContainer, typingIndicatorRow, typingIndicatorVisible, 
-                            latestUserMessageComponent, scrollHelper, bottomSpacer);
-                    }
-                } else {
-                    // Fallback: rebuild to include indicator
-                    MessageManagerHelper.addMessageToUI(chatHistory.isEmpty() ? null : chatHistory.get(chatHistory.size() - 1),
-                        chatHistory, messageContainer, typingIndicatorRow, typingIndicatorVisible, 
-                        latestUserMessageComponent, scrollHelper, bottomSpacer);
-                }
-                messageContainer.revalidate();
-                messageContainer.repaint();
-                ApplicationManager.getApplication().invokeLater(() -> scrollHelper.requestAlignNewestIfNear(chatScrollPane));
-            }
-        } catch (Exception ignore) {
-        }
+        MessageManagerHelper.showTypingIndicator(messageContainer, typingIndicatorRow, typingIndicatorVisible, 
+            bottomSpacer, chatHistory, latestUserMessageComponent, scrollHelper, chatScrollPane);
+        typingIndicatorVisible = true;
     }
 
     private void hideTypingIndicator() {
-        if (!SwingUtilities.isEventDispatchThread()) {
-            ApplicationManager.getApplication().invokeLater(this::hideTypingIndicator);
-            return;
-        }
-        try {
-            if (typingIndicatorVisible) {
-                typingIndicatorVisible = false;
-                if (typingIndicatorRow != null) {
-                    try {
-                        typingIndicatorRow.stopAnimation();
-                    } catch (Exception ignore) {}
-                    Container parent = typingIndicatorRow.getParent();
-                    if (parent != null) {
-                        parent.remove(typingIndicatorRow);
-                    }
-                }
-                typingIndicatorRow = null;
-                messageContainer.revalidate();
-                messageContainer.repaint();
-            }
-        } catch (Exception ignore) {
-        }
+        MessageManagerHelper.hideTypingIndicator(messageContainer, typingIndicatorRow, typingIndicatorVisible);
+        typingIndicatorVisible = false;
+        typingIndicatorRow = null;
     }
 
     /**
@@ -1083,8 +1020,6 @@ public class TriagePanelView {
      * Displays an AI analysis result in the chat interface.
      * This method is called when AI analysis completes successfully.
      * 
-     * NOTE: This method is now deprecated in favor of direct orchestrator integration.
-     * The TriagePanelView now handles analysis results directly through the orchestrator.
      *
      * @param result The AI analysis result to display
      */
@@ -1100,9 +1035,7 @@ public class TriagePanelView {
             LOG.info("AI analysis result is null, cannot display");
             return;
         }
-        
-        LOG.info("Displaying AI analysis result via legacy method");
-        
+                
         // Ensure we're on the EDT
         if (!SwingUtilities.isEventDispatchThread()) {
             ApplicationManager.getApplication().invokeLater(() -> displayAIAnalysisResult(result));

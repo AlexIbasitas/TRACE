@@ -350,9 +350,18 @@ public class MessageManagerHelper {
                                           ScrollHelper scrollHelper,
                                           JScrollPane chatScrollPane) {
         if (!SwingUtilities.isEventDispatchThread()) {
-            ApplicationManager.getApplication().invokeLater(() -> showTypingIndicator(messageContainer, 
-                typingIndicatorRow, typingIndicatorVisible, bottomSpacer, chatHistory, 
-                latestUserMessageComponent, scrollHelper, chatScrollPane));
+            final JPanel finalMessageContainer = messageContainer;
+            final TypingIndicatorRow finalTypingIndicatorRow = typingIndicatorRow;
+            final boolean finalTypingIndicatorVisible = typingIndicatorVisible;
+            final JPanel finalBottomSpacer = bottomSpacer;
+            final List<ChatMessage> finalChatHistory = chatHistory;
+            final JComponent finalLatestUserMessageComponent = latestUserMessageComponent;
+            final ScrollHelper finalScrollHelper = scrollHelper;
+            final JScrollPane finalChatScrollPane = chatScrollPane;
+            
+            ApplicationManager.getApplication().invokeLater(() -> showTypingIndicator(finalMessageContainer, 
+                finalTypingIndicatorRow, finalTypingIndicatorVisible, finalBottomSpacer, finalChatHistory, 
+                finalLatestUserMessageComponent, finalScrollHelper, finalChatScrollPane));
             return;
         }
         try {
@@ -412,8 +421,12 @@ public class MessageManagerHelper {
                                           TypingIndicatorRow typingIndicatorRow,
                                           boolean typingIndicatorVisible) {
         if (!SwingUtilities.isEventDispatchThread()) {
-            ApplicationManager.getApplication().invokeLater(() -> hideTypingIndicator(messageContainer, 
-                typingIndicatorRow, typingIndicatorVisible));
+            final JPanel finalMessageContainer = messageContainer;
+            final TypingIndicatorRow finalTypingIndicatorRow = typingIndicatorRow;
+            final boolean finalTypingIndicatorVisible = typingIndicatorVisible;
+            
+            ApplicationManager.getApplication().invokeLater(() -> hideTypingIndicator(finalMessageContainer, 
+                finalTypingIndicatorRow, finalTypingIndicatorVisible));
             return;
         }
         try {
