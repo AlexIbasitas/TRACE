@@ -38,6 +38,7 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
 import com.trace.ai.services.providers.OpenAIProvider;
+import com.trace.chat.ui.APIKeyManagerHelper;
 
 /**
  * Enhanced AI Service Configuration panel for TRACE settings.
@@ -69,6 +70,7 @@ public class AIServiceConfigPanel extends JBPanel<AIServiceConfigPanel> {
     // Services
     private final AISettings aiSettings;
     private final AIModelService modelService;
+    private final APIKeyManagerHelper apiKeyHelper;
     
     // API Key Configuration
     private final JBPasswordField openaiApiKeyField;
@@ -88,7 +90,7 @@ public class AIServiceConfigPanel extends JBPanel<AIServiceConfigPanel> {
     // State tracking
     private String originalOpenAIKey;
     private String originalGeminiKey;
-    private boolean isTestingConnection = false;
+    private final java.util.concurrent.atomic.AtomicBoolean isTestingConnection = new java.util.concurrent.atomic.AtomicBoolean(false);
     
     // Independent status tracking for each service
     private String openaiStatus = "Not configured";
@@ -105,6 +107,7 @@ public class AIServiceConfigPanel extends JBPanel<AIServiceConfigPanel> {
     public AIServiceConfigPanel(@NotNull AISettings aiSettings) {
         this.aiSettings = aiSettings;
         this.modelService = AIModelService.getInstance();
+        this.apiKeyHelper = new APIKeyManagerHelper();
         
         // Initialize UI components
         this.openaiApiKeyField = createResponsivePasswordField();
@@ -256,7 +259,7 @@ public class AIServiceConfigPanel extends JBPanel<AIServiceConfigPanel> {
         gbc.fill = GridBagConstraints.HORIZONTAL;
         gbc.weightx = 1.0;
         gbc.insets = JBUI.insets(0, 0, 5, 10);
-        keysPanel.add(createTextFieldWithX(openaiApiKeyField, this::clearOpenAIKey), gbc);
+        keysPanel.add(createTextFieldWithX(openaiApiKeyField, () -> apiKeyHelper.clearOpenAIKey(openaiApiKeyField, openaiStatusLabel, this::refreshModelList)), gbc);
         
         gbc.gridx = 2;
         gbc.fill = GridBagConstraints.NONE;
@@ -283,7 +286,7 @@ public class AIServiceConfigPanel extends JBPanel<AIServiceConfigPanel> {
         gbc.fill = GridBagConstraints.HORIZONTAL;
         gbc.weightx = 1.0;
         gbc.insets = JBUI.insets(0, 0, 5, 10);
-        keysPanel.add(createTextFieldWithX(geminiApiKeyField, this::clearGeminiKey), gbc);
+        keysPanel.add(createTextFieldWithX(geminiApiKeyField, () -> apiKeyHelper.clearGeminiKey(geminiApiKeyField, geminiStatusLabel, this::refreshModelList)), gbc);
         
         gbc.gridx = 2;
         gbc.fill = GridBagConstraints.NONE;
@@ -427,8 +430,8 @@ public class AIServiceConfigPanel extends JBPanel<AIServiceConfigPanel> {
      */
     private void setupEventHandlers() {
         // API Key testing
-        testOpenAIButton.addActionListener(e -> testOpenAIKey());
-        testGeminiButton.addActionListener(e -> testGeminiKey());
+        testOpenAIButton.addActionListener(e -> apiKeyHelper.testOpenAIKey(openaiApiKeyField, openaiStatusLabel, testOpenAIButton, isTestingConnection, this::discoverNewModels, this));
+        testGeminiButton.addActionListener(e -> apiKeyHelper.testGeminiKey(geminiApiKeyField, geminiStatusLabel, testGeminiButton, isTestingConnection, this::discoverNewModels, this));
         
         // Model management
         setDefaultButton.addActionListener(e -> setSelectedAsDefault());
@@ -437,311 +440,29 @@ public class AIServiceConfigPanel extends JBPanel<AIServiceConfigPanel> {
         // API key change listeners
         openaiApiKeyField.getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
             @Override
-            public void insertUpdate(javax.swing.event.DocumentEvent e) { handleOpenAIKeyChange(); }
+            public void insertUpdate(javax.swing.event.DocumentEvent e) { apiKeyHelper.handleOpenAIKeyChange(openaiApiKeyField, openaiStatusLabel); }
             @Override
-            public void removeUpdate(javax.swing.event.DocumentEvent e) { handleOpenAIKeyChange(); }
+            public void removeUpdate(javax.swing.event.DocumentEvent e) { apiKeyHelper.handleOpenAIKeyChange(openaiApiKeyField, openaiStatusLabel); }
             @Override
-            public void changedUpdate(javax.swing.event.DocumentEvent e) { handleOpenAIKeyChange(); }
+            public void changedUpdate(javax.swing.event.DocumentEvent e) { apiKeyHelper.handleOpenAIKeyChange(openaiApiKeyField, openaiStatusLabel); }
         });
         
         geminiApiKeyField.getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
             @Override
-            public void insertUpdate(javax.swing.event.DocumentEvent e) { handleGeminiKeyChange(); }
+            public void insertUpdate(javax.swing.event.DocumentEvent e) { apiKeyHelper.handleGeminiKeyChange(geminiApiKeyField, geminiStatusLabel); }
             @Override
-            public void removeUpdate(javax.swing.event.DocumentEvent e) { handleGeminiKeyChange(); }
+            public void removeUpdate(javax.swing.event.DocumentEvent e) { apiKeyHelper.handleGeminiKeyChange(geminiApiKeyField, geminiStatusLabel); }
             @Override
-            public void changedUpdate(javax.swing.event.DocumentEvent e) { handleGeminiKeyChange(); }
+            public void changedUpdate(javax.swing.event.DocumentEvent e) { apiKeyHelper.handleGeminiKeyChange(geminiApiKeyField, geminiStatusLabel); }
         });
     }
     
-    /**
-     * Tests and applies the OpenAI API key.
-     */
-    private void testOpenAIKey() {
-        if (isTestingConnection) {
-            return;
-        }
-        
-        String apiKey = new String(openaiApiKeyField.getPassword());
-        if (apiKey.trim().isEmpty()) {
-            showError("Please enter an OpenAI API key");
-            return;
-        }
-        
-        // Validate API key format
-        if (!isValidOpenAIKeyFormat(apiKey)) {
-            showError("Invalid OpenAI API key format. Should be a valid OpenAI API key.");
-            return;
-        }
-        
-        isTestingConnection = true;
-        testOpenAIButton.setEnabled(false);
-        openaiStatusLabel.setText("Testing connection...");
-        openaiStatusLabel.setForeground(UIUtil.getLabelInfoForeground());
-        
-        // Test basic connectivity without consuming quota
-        CompletableFuture.supplyAsync(() -> {
-            try {
-                return testOpenAIConnectivity(apiKey);
-            } catch (Exception e) {
-                LOG.warn("OpenAI connectivity test failed: " + e.getMessage());
-                return false;
-            }
-        }).thenAcceptAsync(success -> {
-            ApplicationManager.getApplication().invokeLater(() -> {
-                isTestingConnection = false;
-                testOpenAIButton.setEnabled(true);
-                
-                if (success) {
-                    // Test successful - save the API key in background thread
-                    ApplicationManager.getApplication().executeOnPooledThread(() -> {
-                        boolean saved = SecureAPIKeyManager.storeAPIKey(AIServiceType.OPENAI, apiKey);
-                        ApplicationManager.getApplication().invokeLater(() -> {
-                            if (saved) {
-                                openaiStatusLabel.setText("✅ Connected");
-                                openaiStatusLabel.setForeground(UIUtil.getLabelSuccessForeground());
-                                showSuccess("OpenAI API key applied successfully");
-                                
-                                // Discover and show new models after successful validation
-                                discoverNewModels();
-                                
-                                // Update original state for modification detection
-                                updateOriginalState();
-                                
-                                LOG.info("OpenAI API key tested and saved successfully");
-                            } else {
-                                openaiStatusLabel.setText("Failed to save API key");
-                                openaiStatusLabel.setForeground(TriagePanelConstants.ERROR_FOREGROUND);
-                                showError("Failed to save OpenAI API key");
-                                LOG.error("Failed to save OpenAI API key");
-                            }
-                        });
-                    });
-                } else {
-                    openaiStatusLabel.setText("Connection failed");
-                    openaiStatusLabel.setForeground(TriagePanelConstants.ERROR_FOREGROUND);
-                    showError("OpenAI API key is invalid or connection failed");
-                    LOG.warn("OpenAI API key test failed");
-                }
-            });
-        });
-    }
     
-    /**
-     * Tests and applies the Gemini API key.
-     */
-    private void testGeminiKey() {
-        if (isTestingConnection) {
-            return;
-        }
-        
-        String apiKey = new String(geminiApiKeyField.getPassword());
-        if (apiKey.trim().isEmpty()) {
-            showError("Please enter a Gemini API key");
-            return;
-        }
-        
-        // Validate API key format
-        if (!isValidGeminiKeyFormat(apiKey)) {
-            showError("Invalid Gemini API key format. Should be a valid Google API key.");
-            return;
-        }
-        
-        isTestingConnection = true;
-        testGeminiButton.setEnabled(false);
-        geminiStatusLabel.setText("Testing connection...");
-        geminiStatusLabel.setForeground(UIUtil.getLabelInfoForeground());
-        
-        // Test basic connectivity without consuming quota
-        CompletableFuture.supplyAsync(() -> {
-            try {
-                return testGeminiConnectivity(apiKey);
-            } catch (Exception e) {
-                LOG.warn("Gemini connectivity test failed: " + e.getMessage());
-                return false;
-            }
-        }).thenAcceptAsync(success -> {
-            ApplicationManager.getApplication().invokeLater(() -> {
-                isTestingConnection = false;
-                testGeminiButton.setEnabled(true);
-                
-                if (success) {
-                    // Test successful - save the API key in background thread
-                    ApplicationManager.getApplication().executeOnPooledThread(() -> {
-                        boolean saved = SecureAPIKeyManager.storeAPIKey(AIServiceType.GEMINI, apiKey);
-                        ApplicationManager.getApplication().invokeLater(() -> {
-                            if (saved) {
-                                geminiStatusLabel.setText("✅ Connected");
-                                geminiStatusLabel.setForeground(UIUtil.getLabelSuccessForeground());
-                                showSuccess("Gemini API key applied successfully");
-                                
-                                // Discover and show new models after successful validation
-                                discoverNewModels();
-                                
-                                // Update original state for modification detection
-                                updateOriginalState();
-                                
-                                LOG.info("Gemini API key tested and saved successfully");
-                            } else {
-                                geminiStatusLabel.setText("Failed to save API key");
-                                geminiStatusLabel.setForeground(TriagePanelConstants.ERROR_FOREGROUND);
-                                showError("Failed to save Gemini API key");
-                                LOG.error("Failed to save Gemini API key");
-                            }
-                        });
-                    });
-                } else {
-                    geminiStatusLabel.setText("Connection failed");
-                    geminiStatusLabel.setForeground(TriagePanelConstants.ERROR_FOREGROUND);
-                    showError("Gemini API key is invalid or connection failed");
-                    LOG.warn("Gemini API key test failed");
-                }
-            });
-        });
-    }
     
-    /**
-     * Validates OpenAI API key format.
-     */
-    private boolean isValidOpenAIKeyFormat(String apiKey) {
-        return apiKey != null && apiKey.startsWith("sk-") && apiKey.length() >= 50;
-    }
     
-    /**
-     * Validates Gemini API key format.
-     */
-    private boolean isValidGeminiKeyFormat(String apiKey) {
-        return apiKey != null && apiKey.length() >= 20 && apiKey.matches("^[A-Za-z0-9_-]+$");
-    }
     
-    /**
-     * Tests OpenAI connectivity without consuming quota.
-     */
-    private boolean testOpenAIConnectivity(String apiKey) {
-        try {
-            LOG.info("Testing OpenAI connectivity with API key: " + apiKey.substring(0, 8) + "...");
-            
-            // Use HEAD request to test connectivity without consuming quota
-            var client = HttpClient.newHttpClient();
-            var request = HttpRequest.newBuilder()
-                .uri(URI.create("https://api.openai.com/v1/models"))
-                .header("Authorization", "Bearer " + apiKey)
-                .method("HEAD", HttpRequest.BodyPublishers.noBody())
-                .timeout(Duration.ofSeconds(10))
-                .build();
-            
-            var response = client.send(request, HttpResponse.BodyHandlers.discarding());
-            
-            LOG.info("OpenAI connectivity test response: " + response.statusCode());
-            
-            // Only accept 200 (OK) as valid response
-            if (response.statusCode() == 200) {
-                LOG.info("OpenAI connectivity test successful - API key is valid");
-                return true;
-            } else {
-                LOG.warn("OpenAI connectivity test failed - Status code: " + response.statusCode());
-                return false;
-            }
-        } catch (Exception e) {
-            LOG.warn("OpenAI connectivity test failed with exception: " + e.getMessage(), e);
-            return false;
-        }
-    }
     
-    /**
-     * Tests Gemini connectivity without consuming quota.
-     */
-    private boolean testGeminiConnectivity(String apiKey) {
-        try {
-            LOG.info("Testing Gemini connectivity with API key: " + apiKey.substring(0, 8) + "...");
-            
-            // Use GET request to test connectivity without consuming quota
-            var client = HttpClient.newHttpClient();
-            var request = HttpRequest.newBuilder()
-                .uri(URI.create("https://generativelanguage.googleapis.com/v1beta/models?key=" + apiKey))
-                .GET()
-                .timeout(Duration.ofSeconds(10))
-                .build();
-            
-            var response = client.send(request, HttpResponse.BodyHandlers.ofString());
-            
-            LOG.info("Gemini connectivity test response: " + response.statusCode());
-            
-            // Only accept 200 (OK) as valid response
-            if (response.statusCode() == 200) {
-                LOG.info("Gemini connectivity test successful - API key is valid");
-                return true;
-            } else {
-                LOG.warn("Gemini connectivity test failed - Status code: " + response.statusCode() + ", Response: " + response.body());
-                return false;
-            }
-        } catch (Exception e) {
-            LOG.warn("Gemini connectivity test failed with exception: " + e.getMessage(), e);
-            return false;
-        }
-    }
     
-    /**
-     * Clears the OpenAI API key.
-     */
-    private void clearOpenAIKey() {
-        // Clear UI immediately for responsive feedback
-        openaiApiKeyField.setText("");
-        openaiStatusLabel.setText("Clearing...");
-        openaiStatusLabel.setForeground(UIUtil.getLabelInfoForeground());
-        
-        // Perform slow operation on background thread
-        ApplicationManager.getApplication().executeOnPooledThread(() -> {
-            boolean cleared = SecureAPIKeyManager.clearAPIKey(AIServiceType.OPENAI);
-            
-            // Update UI on EDT after operation completes
-            ApplicationManager.getApplication().invokeLater(() -> {
-                if (cleared) {
-                    openaiStatusLabel.setText("Not configured");
-                    openaiStatusLabel.setForeground(UIUtil.getLabelForeground());
-                    LOG.info("OpenAI API key cleared successfully");
-                } else {
-                    openaiStatusLabel.setText("Failed to clear");
-                    openaiStatusLabel.setForeground(TriagePanelConstants.ERROR_FOREGROUND);
-                    LOG.error("Failed to clear OpenAI API key");
-                }
-                
-                // Remove OpenAI models from the list when key is cleared
-                refreshModelList();
-            });
-        });
-    }
-    
-    /**
-     * Clears the Gemini API key.
-     */
-    private void clearGeminiKey() {
-        // Clear UI immediately for responsive feedback
-        geminiApiKeyField.setText("");
-        geminiStatusLabel.setText("Clearing...");
-        geminiStatusLabel.setForeground(UIUtil.getLabelInfoForeground());
-        
-        // Perform slow operation on background thread
-        ApplicationManager.getApplication().executeOnPooledThread(() -> {
-            boolean cleared = SecureAPIKeyManager.clearAPIKey(AIServiceType.GEMINI);
-            
-            // Update UI on EDT after operation completes
-            ApplicationManager.getApplication().invokeLater(() -> {
-                if (cleared) {
-                    geminiStatusLabel.setText("Not configured");
-                    geminiStatusLabel.setForeground(UIUtil.getLabelForeground());
-                    LOG.info("Gemini API key cleared successfully");
-                } else {
-                    geminiStatusLabel.setText("Failed to clear");
-                    geminiStatusLabel.setForeground(TriagePanelConstants.ERROR_FOREGROUND);
-                    LOG.error("Failed to clear Gemini API key");
-                }
-                
-                // Remove Gemini models from the list when key is cleared
-                refreshModelList();
-            });
-        });
-    }
     
     /**
      * Sets the selected model as default.
@@ -1054,33 +775,6 @@ public class AIServiceConfigPanel extends JBPanel<AIServiceConfigPanel> {
     
 
     
-    /**
-     * Handles OpenAI API key changes.
-     */
-    private void handleOpenAIKeyChange() {
-        String openaiKey = new String(openaiApiKeyField.getPassword());
-        if (!openaiKey.trim().isEmpty()) {
-            openaiStatusLabel.setText("API key entered (click Apply to test & save)");
-            openaiStatusLabel.setForeground(UIUtil.getLabelInfoForeground());
-        } else {
-            openaiStatusLabel.setText("Not configured");
-            openaiStatusLabel.setForeground(UIUtil.getLabelForeground());
-        }
-    }
-    
-    /**
-     * Handles Gemini API key changes.
-     */
-    private void handleGeminiKeyChange() {
-        String geminiKey = new String(geminiApiKeyField.getPassword());
-        if (!geminiKey.trim().isEmpty()) {
-            geminiStatusLabel.setText("API key entered (click Apply to test & save)");
-            geminiStatusLabel.setForeground(UIUtil.getLabelInfoForeground());
-        } else {
-            geminiStatusLabel.setText("Not configured");
-            geminiStatusLabel.setForeground(UIUtil.getLabelForeground());
-        }
-    }
     
     /**
      * Checks if the panel has been modified.
