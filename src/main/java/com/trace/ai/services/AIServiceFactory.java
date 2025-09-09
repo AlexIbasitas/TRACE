@@ -185,4 +185,23 @@ public final class AIServiceFactory {
                 .connectTimeout(Duration.ofSeconds(10))
                 .build();
     }
+    
+    /**
+     * Cleans up static resources to prevent memory leaks and ensure consistent startup behavior.
+     * 
+     * <p>This method should be called during plugin shutdown or when resources need to be reset.
+     * It clears the static providers map to prevent memory leaks.</p>
+     */
+    public static void cleanup() {
+        LOG.info("Starting cleanup of AIServiceFactory static resources");
+        
+        int resourcesCleaned = providers.size();
+        
+        try {
+            providers.clear();
+            LOG.info("AIServiceFactory cleanup completed - cleared " + resourcesCleaned + " AI service providers");
+        } catch (Exception e) {
+            LOG.error("Error during AIServiceFactory cleanup: " + e.getMessage(), e);
+        }
+    }
 } 

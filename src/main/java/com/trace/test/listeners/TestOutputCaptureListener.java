@@ -273,4 +273,23 @@ public class TestOutputCaptureListener {
     public static int getCapturedOutputCount() {
         return testOutputMap.size();
     }
+    
+    /**
+     * Cleans up static resources to prevent memory leaks and ensure consistent startup behavior.
+     * 
+     * <p>This method should be called during plugin shutdown or when resources need to be reset.
+     * It clears the static test output map to prevent memory leaks.</p>
+     */
+    public static void cleanup() {
+        LOG.info("Starting cleanup of TestOutputCaptureListener static resources");
+        
+        int resourcesCleaned = testOutputMap.size();
+        
+        try {
+            testOutputMap.clear();
+            LOG.info("TestOutputCaptureListener cleanup completed - cleared " + resourcesCleaned + " test output entries");
+        } catch (Exception e) {
+            LOG.error("Error during TestOutputCaptureListener cleanup: " + e.getMessage(), e);
+        }
+    }
 } 

@@ -6,6 +6,7 @@ import com.intellij.openapi.components.State;
 import com.intellij.openapi.components.Storage;
 import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.openapi.project.Project;
+import com.intellij.openapi.Disposable;
 import com.trace.ai.models.AIModel;
 import com.trace.ai.configuration.AIServiceType;
 
@@ -39,7 +40,7 @@ import java.util.stream.Collectors;
     name = "com.trace.ai.services.ai-model-service",
     storages = @Storage("trace-ai-models.xml")
 )
-public class AIModelService implements PersistentStateComponent<AIModelService.State> {
+public class AIModelService implements PersistentStateComponent<AIModelService.State>, Disposable {
     
     private static final Logger LOG = Logger.getInstance(AIModelService.class);
     
@@ -667,5 +668,43 @@ public class AIModelService implements PersistentStateComponent<AIModelService.S
     public boolean ensureValidDefaultModel() {
         AIModel currentDefault = getDefaultModel();
         return AIModelSelectionHelper.ensureValidDefaultModel(currentDefault, modelCache, myState, this::notifyStateChanged);
+    }
+    
+    /**
+     * Disposes of all resources and cleans up static resources across the plugin.
+     * 
+     * <p>This method is called when the plugin is disabled or uninstalled. It ensures
+     * that all static resources are properly cleaned up to prevent memory leaks and
+     * ensure consistent startup behavior on plugin restart.</p>
+     */
+    @Override
+    public void dispose() {
+        LOG.info("Starting AIModelService disposal - cleaning up plugin resources");
+        
+        try {
+            // Clear local caches
+            int modelCacheSize = modelCache.size();
+            int retrievalCacheSize = retrievalCache.size();
+            
+            modelCache.clear();
+            retrievalCache.clear();
+            
+            LOG.info("Cleared local caches - " + modelCacheSize + " models, " + retrievalCacheSize + " retrieval entries");
+            
+            // Clean up static resources from other classes
+            LOG.info("Cleaning up static resources from plugin components");
+            
+            // Import the cleanup classes
+            com.trace.test.listeners.CucumberTestExecutionListener.cleanup();
+            com.trace.test.listeners.TestOutputCaptureListener.cleanup();
+            com.trace.chat.ui.TriagePanelToolWindowFactory.cleanup();
+            com.trace.chat.handlers.TriagePanelEventHandlers.cleanup();
+            com.trace.ai.services.AIServiceFactory.cleanup();
+            
+            LOG.info("AIModelService disposal completed successfully - all plugin resources cleaned up");
+            
+        } catch (Exception e) {
+            LOG.error("Error during AIModelService disposal: " + e.getMessage(), e);
+        }
     }
 } 

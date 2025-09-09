@@ -11,7 +11,7 @@ import java.awt.*;
 import java.awt.event.*;
 import java.lang.reflect.InvocationTargetException;
 import java.util.Map;
-import java.util.WeakHashMap;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Centralized event handlers for the TRACE UI components.
@@ -58,11 +58,11 @@ public final class TriagePanelEventHandlers {
     // COLOR STATE MANAGEMENT
     // ============================================================================
     
-    /** WeakHashMap to store original component colors - prevents memory leaks */
-    private static final Map<Component, Color> originalColors = new WeakHashMap<>();
+    /** ConcurrentHashMap to store original component colors with proper lifecycle management */
+    private static final Map<Component, Color> originalColors = new ConcurrentHashMap<>();
     
-    /** WeakHashMap to store component color states for tracking */
-    private static final Map<Component, ColorState> componentColorStates = new WeakHashMap<>();
+    /** ConcurrentHashMap to store component color states for tracking with proper lifecycle management */
+    private static final Map<Component, ColorState> componentColorStates = new ConcurrentHashMap<>();
     
     /**
      * Color state tracking for components.
@@ -717,5 +717,29 @@ public final class TriagePanelEventHandlers {
         componentColorStates.remove(component);
         
         LOG.debug("TriagePanelEventHandlers: Disposed all listeners and color states from component: " + component.getName());
+    }
+    
+    /**
+     * Cleans up static resources to prevent memory leaks and ensure consistent startup behavior.
+     * 
+     * <p>This method should be called during plugin shutdown or when resources need to be reset.
+     * It clears all static maps to prevent memory leaks and ensure consistent behavior across
+     * plugin restarts.</p>
+     */
+    public static void cleanup() {
+        LOG.info("Starting cleanup of TriagePanelEventHandlers static resources");
+        
+        int originalColorsCleaned = originalColors.size();
+        int componentStatesCleaned = componentColorStates.size();
+        
+        try {
+            originalColors.clear();
+            componentColorStates.clear();
+            
+            LOG.info("TriagePanelEventHandlers cleanup completed - cleared " + originalColorsCleaned + 
+                    " original colors and " + componentStatesCleaned + " component states");
+        } catch (Exception e) {
+            LOG.error("Error during TriagePanelEventHandlers cleanup: " + e.getMessage(), e);
+        }
     }
 } 

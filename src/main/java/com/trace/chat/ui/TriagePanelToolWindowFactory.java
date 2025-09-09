@@ -210,4 +210,23 @@ public class TriagePanelToolWindowFactory implements ToolWindowFactory {
         }
         return panelInstances.containsKey(project);
     }
+    
+    /**
+     * Cleans up static resources to prevent memory leaks and ensure consistent startup behavior.
+     * 
+     * <p>This method should be called during plugin shutdown or when resources need to be reset.
+     * It clears the static panel instances map to prevent memory leaks.</p>
+     */
+    public static void cleanup() {
+        LOG.info("Starting cleanup of TriagePanelToolWindowFactory static resources");
+        
+        int resourcesCleaned = panelInstances.size();
+        
+        try {
+            panelInstances.clear();
+            LOG.info("TriagePanelToolWindowFactory cleanup completed - cleared " + resourcesCleaned + " panel instances");
+        } catch (Exception e) {
+            LOG.error("Error during TriagePanelToolWindowFactory cleanup: " + e.getMessage(), e);
+        }
+    }
 } 
