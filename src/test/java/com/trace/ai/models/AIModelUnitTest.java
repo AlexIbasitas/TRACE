@@ -79,22 +79,28 @@ class AIModelUnitTest {
         @Test
         @DisplayName("should handle null name gracefully")
         void shouldThrowException_whenNameIsNull() {
-            // Act & Assert - @NotNull annotations are not enforced in test environment
-            assertThatNoException().isThrownBy(() -> new AIModel(null, AIServiceType.OPENAI, "gpt-4"));
+            // Act & Assert
+            assertThatThrownBy(() -> new AIModel(null, AIServiceType.OPENAI, "gpt-4"))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Argument for @NotNull parameter 'name'");
         }
         
         @Test
         @DisplayName("should handle null service type gracefully")
         void shouldThrowException_whenServiceTypeIsNull() {
-            // Act & Assert - @NotNull annotations are not enforced in test environment
-            assertThatNoException().isThrownBy(() -> new AIModel("Test Model", null, "gpt-4"));
+            // Act & Assert
+            assertThatThrownBy(() -> new AIModel("Test Model", null, "gpt-4"))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Argument for @NotNull parameter 'serviceType'");
         }
         
         @Test
         @DisplayName("should handle null model ID gracefully")
         void shouldThrowException_whenModelIdIsNull() {
-            // Act & Assert - @NotNull annotations are not enforced in test environment
-            assertThatNoException().isThrownBy(() -> new AIModel("Test Model", AIServiceType.OPENAI, null));
+            // Act & Assert
+            assertThatThrownBy(() -> new AIModel("Test Model", AIServiceType.OPENAI, null))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Argument for @NotNull parameter 'modelId'");
         }
     }
     
@@ -125,10 +131,14 @@ class AIModelUnitTest {
         @Test
         @DisplayName("should handle property validation")
         void shouldHandlePropertyValidation() {
-            // Act & Assert - @NotNull annotations are not enforced in test environment
-            assertThatNoException().isThrownBy(() -> openAIModel.setName(null));
+            // Act & Assert
+            assertThatThrownBy(() -> openAIModel.setName(null))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Argument for @NotNull parameter 'name'");
             
-            assertThatNoException().isThrownBy(() -> openAIModel.setNotes(null));
+            assertThatThrownBy(() -> openAIModel.setNotes(null))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Argument for @NotNull parameter 'notes'");
         }
         
         @Test

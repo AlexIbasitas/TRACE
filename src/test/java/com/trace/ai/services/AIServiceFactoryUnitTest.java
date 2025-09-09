@@ -75,7 +75,7 @@ class AIServiceFactoryUnitTest {
             // Act & Assert
             assertThatThrownBy(() -> AIServiceFactory.registerProvider(null, testProvider))
                 .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("Service type cannot be null");
+                .hasMessageContaining("Argument for @NotNull parameter 'serviceType'");
         }
         
         @Test
@@ -84,7 +84,7 @@ class AIServiceFactoryUnitTest {
             // Act & Assert
             assertThatThrownBy(() -> AIServiceFactory.registerProvider(AIServiceType.OPENAI, null))
                 .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("Provider cannot be null");
+                .hasMessageContaining("Argument for @NotNull parameter 'provider'");
         }
     }
     
@@ -126,7 +126,8 @@ class AIServiceFactoryUnitTest {
         void shouldThrowException_whenNullServiceTypeProvided() {
             // Act & Assert
             assertThatThrownBy(() -> AIServiceFactory.getProvider(null))
-                .isInstanceOf(NullPointerException.class);
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Argument for @NotNull parameter 'serviceType'");
         }
     }
     
@@ -159,7 +160,8 @@ class AIServiceFactoryUnitTest {
         void shouldThrowException_whenNullServiceTypeProvided() {
             // Act & Assert
             assertThatThrownBy(() -> AIServiceFactory.hasProvider(null))
-                .isInstanceOf(NullPointerException.class);
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Argument for @NotNull parameter 'serviceType'");
         }
     }
     
@@ -200,7 +202,8 @@ class AIServiceFactoryUnitTest {
         void shouldThrowException_whenNullServiceTypeProvided() {
             // Act & Assert
             assertThatThrownBy(() -> AIServiceFactory.unregisterProvider(null))
-                .isInstanceOf(NullPointerException.class);
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Argument for @NotNull parameter 'serviceType'");
         }
     }
     
@@ -415,11 +418,11 @@ class AIServiceFactoryUnitTest {
             // Act & Assert
             assertThatThrownBy(() -> AIServiceFactory.registerProvider(null, testProvider))
                 .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("Service type cannot be null");
+                .hasMessageContaining("Argument for @NotNull parameter 'serviceType'");
             
             assertThatThrownBy(() -> AIServiceFactory.registerProvider(AIServiceType.OPENAI, null))
                 .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("Provider cannot be null");
+                .hasMessageContaining("Argument for @NotNull parameter 'provider'");
         }
         
         @Test
@@ -427,7 +430,8 @@ class AIServiceFactoryUnitTest {
         void shouldHandleProviderRetrievalWithInvalidParameters() {
             // Act & Assert
             assertThatThrownBy(() -> AIServiceFactory.getProvider(null))
-                .isInstanceOf(NullPointerException.class);
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Argument for @NotNull parameter 'serviceType'");
         }
         
         @Test
@@ -435,7 +439,8 @@ class AIServiceFactoryUnitTest {
         void shouldHandleProviderExistenceCheckWithInvalidParameters() {
             // Act & Assert
             assertThatThrownBy(() -> AIServiceFactory.hasProvider(null))
-                .isInstanceOf(NullPointerException.class);
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Argument for @NotNull parameter 'serviceType'");
         }
         
         @Test
@@ -443,7 +448,8 @@ class AIServiceFactoryUnitTest {
         void shouldHandleProviderUnregistrationWithInvalidParameters() {
             // Act & Assert
             assertThatThrownBy(() -> AIServiceFactory.unregisterProvider(null))
-                .isInstanceOf(NullPointerException.class);
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Argument for @NotNull parameter 'serviceType'");
         }
     }
     

@@ -51,8 +51,8 @@ class DocumentRetrievalServiceUnitTest {
                     null, mockOpenAIEmbeddingService, mockGeminiEmbeddingService, mockAISettings
                 )
             )
-                .isInstanceOf(NullPointerException.class)
-                .hasMessageContaining("Database service cannot be null");
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Argument for @NotNull parameter 'databaseService'");
         }
         
         @Test
@@ -64,8 +64,8 @@ class DocumentRetrievalServiceUnitTest {
                     mockDatabaseService, null, mockGeminiEmbeddingService, mockAISettings
                 )
             )
-                .isInstanceOf(NullPointerException.class)
-                .hasMessageContaining("OpenAI embedding service cannot be null");
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Argument for @NotNull parameter 'openAIEmbeddingService'");
         }
         
         @Test
@@ -77,8 +77,8 @@ class DocumentRetrievalServiceUnitTest {
                     mockDatabaseService, mockOpenAIEmbeddingService, null, mockAISettings
                 )
             )
-                .isInstanceOf(NullPointerException.class)
-                .hasMessageContaining("Gemini embedding service cannot be null");
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Argument for @NotNull parameter 'geminiEmbeddingService'");
         }
         
         @Test
@@ -90,8 +90,8 @@ class DocumentRetrievalServiceUnitTest {
                     mockDatabaseService, mockOpenAIEmbeddingService, mockGeminiEmbeddingService, null
                 )
             )
-                .isInstanceOf(NullPointerException.class)
-                .hasMessageContaining("AI settings cannot be null");
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Argument for @NotNull parameter 'aiSettings'");
         }
         
         @Test
@@ -116,7 +116,7 @@ class DocumentRetrievalServiceUnitTest {
                 )
             )
                 .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("Query text cannot be null or empty");
+                .hasMessageContaining("Argument for @NotNull parameter 'queryText'");
         }
         
         @Test

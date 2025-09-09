@@ -67,7 +67,7 @@ class UserQueryUnitTest {
             // Act & Assert
             assertThatThrownBy(() -> new UserQuery(null, System.currentTimeMillis()))
                 .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("Query cannot be null or empty");
+                .hasMessageContaining("Argument for @NotNull parameter 'query'");
         }
         
         @Test
@@ -130,7 +130,7 @@ class UserQueryUnitTest {
             // Act & Assert
             assertThatThrownBy(() -> new UserQuery(null, System.currentTimeMillis()))
                 .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("Query cannot be null or empty");
+                .hasMessageContaining("Argument for @NotNull parameter 'query'");
         }
         
         @Test
