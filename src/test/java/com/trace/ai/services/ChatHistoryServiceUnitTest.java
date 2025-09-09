@@ -47,7 +47,7 @@ class ChatHistoryServiceUnitTest {
             // Act & Assert
             assertThatThrownBy(() -> chatHistoryService.setFailureContext(null))
                 .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("@NotNull parameter 'failureContext'");
+                .hasMessageContaining("Failure context cannot be null or empty");
         }
         
         @Test
@@ -105,7 +105,7 @@ class ChatHistoryServiceUnitTest {
             // Act & Assert
             assertThatThrownBy(() -> chatHistoryService.addUserQuery(null))
                 .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("@NotNull parameter 'query'");
+                .hasMessageContaining("Query cannot be null or empty");
         }
         
         @Test
@@ -322,7 +322,7 @@ class ChatHistoryServiceUnitTest {
             // Act & Assert
             assertThatThrownBy(() -> chatHistoryService.buildContextString(null))
                 .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("@NotNull parameter 'currentQuery'");
+                .hasMessageContaining("Current query cannot be null or empty");
         }
         
         @Test
