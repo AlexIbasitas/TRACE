@@ -31,7 +31,10 @@
             <li>Developers who want faster test failure triage</li>
         </ul>
         
-        <p><b>Note:</b> Requires OpenAI API key or Google Gemini API key for AI analysis features.</p>
+        <p><b>Requirements:</b> OpenAI API key or Google Gemini API key for AI analysis features.</p>
+        <p><b>Compatibility:</b> IntelliJ IDEA 2025.2+ | <b>Version:</b> 1.0.0</p>
+        <p><b>Privacy Policy:</b> <a href="https://github.com/alexibasitas/trace/blob/main/docs/PRIVACY.html">View our privacy policy</a></p>
+        <p><b>Support:</b> <a href="https://github.com/alexibasitas/trace">GitHub Repository</a></p>
     ]]></description>
 
     <idea-version since-build="252" until-build="252.*"/>
