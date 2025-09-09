@@ -147,7 +147,7 @@ public class TriagePanelView {
                                                               currentFailureInfo);
         
         setupEventHandlers();
-        setupThemeChangeListener();
+        themeHelper.setupThemeChangeListener();
         LOG.info("TriagePanelView created successfully");
     }
 
@@ -251,7 +251,8 @@ public class TriagePanelView {
         // Add action listeners
         clearChatButton.addActionListener(e -> {
             LOG.debug("Clear chat button clicked");
-            clearChat();
+            MessageManagerHelper.clearChat(chatHistory, messageContainer, bottomSpacer, latestUserMessageComponent);
+            latestUserMessageComponent = null;
         });
         
         settingsButton.addActionListener(e -> {
@@ -272,22 +273,6 @@ public class TriagePanelView {
             mainPanel.add(chatOverlayPanel != null ? chatOverlayPanel : chatScrollPane, BorderLayout.CENTER);
             mainPanel.add(inputPanel, BorderLayout.SOUTH);
         }
-    }
-
-    private void refreshTheme() {
-        themeHelper.refreshTheme();
-    }
-    
-    /**
-     * Recreates all message components to ensure proper theme switching.
-     * This is the most reliable way to handle JEditorPane HTML content that doesn't refresh properly.
-     */
-    private void recreateAllMessageComponents() {
-        themeHelper.recreateAllMessageComponents();
-    }
-
-    private void refreshThemeInContainer(Container container) {
-        themeHelper.refreshThemeInContainer(container);
     }
 
     /**
@@ -465,11 +450,11 @@ public class TriagePanelView {
         
         // Add action listener to toggle between modes
         analysisModeButton.addActionListener(e -> {
-            if (ANALYSIS_MODE_OVERVIEW.equals(currentAnalysisMode)) {
-                setCurrentAnalysisMode(ANALYSIS_MODE_FULL);
-            } else {
-                setCurrentAnalysisMode(ANALYSIS_MODE_OVERVIEW);
-            }
+        if (ANALYSIS_MODE_OVERVIEW.equals(currentAnalysisMode)) {
+            setCurrentAnalysisMode(ANALYSIS_MODE_FULL);
+        } else {
+            setCurrentAnalysisMode(ANALYSIS_MODE_OVERVIEW);
+        }
             UIComponentHelper.updateAnalysisModeButtonText(analysisModeButton, currentAnalysisMode);
         });
         
@@ -577,10 +562,6 @@ public class TriagePanelView {
      * This ensures that existing chat messages and UI elements update their colors to match the new theme.
      * Uses a modern approach compatible with newer IntelliJ versions.
      */
-    
-    private void setupThemeChangeListener() {
-        themeHelper.setupThemeChangeListener();
-    }
 
     /**
      * Sends the current message from the input area.
@@ -606,7 +587,9 @@ public class TriagePanelView {
         inputArea.setText("");
 
         // Show typing indicator immediately after user message
-        showTypingIndicator();
+        MessageManagerHelper.showTypingIndicator(messageContainer, typingIndicatorRow, typingIndicatorVisible, 
+            bottomSpacer, chatHistory, latestUserMessageComponent, scrollHelper, chatScrollPane);
+        typingIndicatorVisible = true;
         
         // Check AI configuration and provide appropriate response
         failureAnalysisHelper.handleUserMessageWithAI(messageText);
@@ -635,7 +618,9 @@ public class TriagePanelView {
                 }
             }
             // No indicator to replace; proceed with normal flow
-            hideTypingIndicator();
+            MessageManagerHelper.hideTypingIndicator(messageContainer, typingIndicatorRow, typingIndicatorVisible);
+            typingIndicatorVisible = false;
+            typingIndicatorRow = null;
         }
 
         MessageManagerHelper.addMessage(message, chatHistory, messageContainer, typingIndicatorRow, 
@@ -655,19 +640,6 @@ public class TriagePanelView {
      *
      * @param message The message to add to the UI
      */
-
-    // ===== Typing indicator helpers =====
-    private void showTypingIndicator() {
-        MessageManagerHelper.showTypingIndicator(messageContainer, typingIndicatorRow, typingIndicatorVisible, 
-            bottomSpacer, chatHistory, latestUserMessageComponent, scrollHelper, chatScrollPane);
-        typingIndicatorVisible = true;
-    }
-
-    private void hideTypingIndicator() {
-        MessageManagerHelper.hideTypingIndicator(messageContainer, typingIndicatorRow, typingIndicatorVisible);
-        typingIndicatorVisible = false;
-        typingIndicatorRow = null;
-    }
 
     /**
      * Updates the panel with new failure information.
@@ -689,16 +661,6 @@ public class TriagePanelView {
     }
 
     /**
-     * Clears the chat history and UI.
-     * Removes all messages and resets the message container.
-     */
-    private void clearChat() {
-        MessageManagerHelper.clearChat(chatHistory, messageContainer, bottomSpacer, latestUserMessageComponent);
-        latestUserMessageComponent = null;
-    }
-
-    
-    /**
      * Displays an AI analysis result in the chat interface.
      * This method is called when AI analysis completes successfully.
      * 
@@ -706,37 +668,7 @@ public class TriagePanelView {
      * @param result The AI analysis result to display
      */
     public void displayAIAnalysisResult(AIAnalysisResult result) {
-        // Check if TRACE is enabled (power button) - if not, do nothing at all
-        AISettings aiSettings = AISettings.getInstance();
-        if (!aiSettings.isAIEnabled()) {
-            LOG.info("TRACE is disabled - skipping AI analysis result display");
-            return; // Complete silence - no messages from TRACE
-        }
-        
-        if (result == null) {
-            LOG.info("AI analysis result is null, cannot display");
-            return;
-        }
-                
-        // Ensure we're on the EDT
-        if (!SwingUtilities.isEventDispatchThread()) {
-            ApplicationManager.getApplication().invokeLater(() -> displayAIAnalysisResult(result));
-            return;
-        }
-        
-        try {
-            // Create an AI message with the analysis result
-            String analysisText = result.getAnalysis();
-            if (analysisText != null && !analysisText.trim().isEmpty()) {
-                addMessage(new ChatMessage(ChatMessage.Role.AI, analysisText, System.currentTimeMillis(), null, null));
-            } else {
-                LOG.info("AI analysis result is empty");
-                addMessage(new ChatMessage(ChatMessage.Role.AI, "AI analysis completed but returned no content.", System.currentTimeMillis(), null, null));
-            }
-        } catch (Exception e) {
-            LOG.error("Error displaying AI analysis result: " + e.getMessage(), e);
-            addMessage(new ChatMessage(ChatMessage.Role.AI, "Error displaying AI analysis result: " + e.getMessage(), System.currentTimeMillis(), null, null));
-        }
+        MessageManagerHelper.displayAIAnalysisResult(result, this::addMessage, LOG);
     }
     
     /**
@@ -746,32 +678,7 @@ public class TriagePanelView {
      * @param errorMessage The error message to display
      */
     public void displayAIAnalysisError(String errorMessage) {
-        // Check if TRACE is enabled (power button) - if not, do nothing at all
-        AISettings aiSettings = AISettings.getInstance();
-        if (!aiSettings.isAIEnabled()) {
-            LOG.info("TRACE is disabled - skipping AI analysis error display");
-            return; // Complete silence - no messages from TRACE
-        }
-        
-        if (errorMessage == null || errorMessage.trim().isEmpty()) {
-            LOG.info("AI analysis error message is null or empty");
-            return;
-        }
-        
-        LOG.info("Displaying AI analysis error: " + errorMessage);
-        
-        // Ensure we're on the EDT
-        if (!SwingUtilities.isEventDispatchThread()) {
-            ApplicationManager.getApplication().invokeLater(() -> displayAIAnalysisError(errorMessage));
-            return;
-        }
-        
-        try {
-            // Create an AI message with the error
-            addMessage(new ChatMessage(ChatMessage.Role.AI, "AI Analysis Error: " + errorMessage, System.currentTimeMillis(), null, null));
-        } catch (Exception e) {
-            LOG.error("Error displaying AI analysis error: " + e.getMessage(), e);
-        }
+        MessageManagerHelper.displayAIAnalysisError(errorMessage, this::addMessage, LOG);
     }
 
     /**
@@ -795,25 +702,6 @@ public class TriagePanelView {
         }
         LOG.info("TriagePanelView shutdown completed");
     }
-    
-    /**
-     * Manually triggers a theme refresh for all components.
-     * This can be called programmatically to test theme change behavior.
-     */
-    public void manualThemeRefresh() {
-        UtilityHelper.manualThemeRefresh(themeHelper);
-    }
-
-
-
-
-    
-    
-    
-    
-
-
-
 
     /**
      * Refreshes the main panel when switching tabs.
@@ -826,7 +714,10 @@ public class TriagePanelView {
             chatScrollPane, 
             inputPanel,
             showSettingsTab,
-            this::clearChat,
+            () -> {
+                MessageManagerHelper.clearChat(chatHistory, messageContainer, bottomSpacer, latestUserMessageComponent);
+                latestUserMessageComponent = null;
+            },
             () -> {
                 showSettingsTab = !showSettingsTab;
                 refreshMainPanel();

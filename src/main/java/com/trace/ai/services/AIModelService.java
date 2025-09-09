@@ -47,12 +47,6 @@ public class AIModelService implements PersistentStateComponent<AIModelService.S
     private static final long MODEL_CACHE_DURATION_MS = 5000; // 5 seconds
     private static final String DEFAULT_MODEL_CACHE_KEY = "default_model";
     
-    // Stupid simple - hardcoded list of known deprecated models
-    private static final Set<String> DEPRECATED_MODELS = Set.of(
-        "gemini-1.0-pro-vision-latest",
-        "gemini-pro", 
-        "gemini-pro-vision"
-    );
     
     // Service instance managed by IntelliJ
     
@@ -161,14 +155,10 @@ public class AIModelService implements PersistentStateComponent<AIModelService.S
     private void ensureCleanup() {
         if (!cleanupPerformed) {
             LOG.debug("Performing initial cleanup of deprecated models");
-            cleanupDeprecatedModels();
+            AIModelMaintenanceHelper.cleanupDeprecatedModels(modelCache, this::deleteModel);
             cleanupPerformed = true;
         }
     }
-    
-    // ============================================================================
-    // CRUD OPERATIONS
-    // ============================================================================
     
     /**
      * Adds a discovered AI model to the service.
@@ -197,7 +187,7 @@ public class AIModelService implements PersistentStateComponent<AIModelService.S
         }
         
         // Check if name already exists
-        if (hasModelWithName(name)) {
+        if (AIModelValidationHelper.hasModelWithName(name, modelCache)) {
             LOG.debug("Model with name '" + name + "' already exists, skipping");
             return null;
         }
@@ -251,7 +241,7 @@ public class AIModelService implements PersistentStateComponent<AIModelService.S
     @NotNull
     public List<AIModel> getAllModels() {
         // Clean up deprecated models before returning
-        cleanupDeprecatedModels();
+        AIModelMaintenanceHelper.cleanupDeprecatedModels(modelCache, this::deleteModel);
         
         List<AIModel> models = new ArrayList<>(modelCache.values());
         LOG.debug("Getting all models, count: " + models.size());
@@ -277,7 +267,7 @@ public class AIModelService implements PersistentStateComponent<AIModelService.S
     @NotNull
     public List<AIModel> getEnabledModels() {
         // Clean up deprecated models before returning
-        cleanupDeprecatedModels();
+        AIModelMaintenanceHelper.cleanupDeprecatedModels(modelCache, this::deleteModel);
         return modelCache.values().stream()
                 .filter(AIModel::isEnabled)
                 .collect(Collectors.toList());
@@ -339,7 +329,7 @@ public class AIModelService implements PersistentStateComponent<AIModelService.S
             notifyStateChanged();
             
             // Invalidate cache since model data changed
-            invalidateRetrievalCache();
+            AIModelMaintenanceHelper.invalidateRetrievalCache(retrievalCache);
             
             LOG.info("Updated AI model: " + model.getFullDisplayName());
             return true;
@@ -377,7 +367,7 @@ public class AIModelService implements PersistentStateComponent<AIModelService.S
             
             // Update default model if this was the default
             if (modelId.equals(myState.defaultModelId)) {
-                myState.defaultModelId = getNextDefaultModelId();
+                myState.defaultModelId = AIModelSelectionHelper.getNextDefaultModelId(modelCache);
                 LOG.info("Updated default model after deletion: " + myState.defaultModelId);
             }
             
@@ -465,7 +455,7 @@ public class AIModelService implements PersistentStateComponent<AIModelService.S
         if (model == null || !model.isEnabled()) {
             LOG.info("Default model not found or disabled, finding new default");
             // Default model not found or disabled, try to find a new default
-            myState.defaultModelId = getNextDefaultModelId();
+            myState.defaultModelId = AIModelSelectionHelper.getNextDefaultModelId(modelCache);
             LOG.debug("New default model ID: " + myState.defaultModelId);
             if (myState.defaultModelId != null) {
                 model = modelCache.get(myState.defaultModelId);
@@ -505,7 +495,7 @@ public class AIModelService implements PersistentStateComponent<AIModelService.S
         notifyStateChanged();
         
         // Invalidate cache since default model changed
-        invalidateRetrievalCache();
+        AIModelMaintenanceHelper.invalidateRetrievalCache(retrievalCache);
         
         LOG.info("Set default model: " + modelId);
         return true;
@@ -529,7 +519,7 @@ public class AIModelService implements PersistentStateComponent<AIModelService.S
         }
         
         // Fall back to auto-selection
-        return autoSelectBestModel();
+        return AIModelSelectionHelper.autoSelectBestModel(modelCache);
     }
     
     /**
@@ -540,13 +530,7 @@ public class AIModelService implements PersistentStateComponent<AIModelService.S
      */
     @Nullable
     public AIModel getBestAvailableModelForService(@NotNull AIServiceType serviceType) {
-        List<AIModel> enabledModels = getEnabledModelsForService(serviceType);
-        if (enabledModels.isEmpty()) {
-            return null;
-        }
-        
-        // Return the first enabled model (could be enhanced with priority logic)
-        return enabledModels.get(0);
+        return AIModelSelectionHelper.getBestAvailableModelForService(serviceType, modelCache);
     }
     
     /**
@@ -556,32 +540,7 @@ public class AIModelService implements PersistentStateComponent<AIModelService.S
      */
     @Nullable
     public AIModel autoSelectBestModel() {
-        List<AIModel> enabledModels = getEnabledModels();
-        if (enabledModels.isEmpty()) {
-            return null;
-        }
-        
-        // Simple selection: prefer GPT-4 models, then Gemini Pro models
-        Optional<AIModel> gpt4Model = enabledModels.stream()
-                .filter(model -> model.getServiceType() == AIServiceType.OPENAI && 
-                               model.getModelId().contains("gpt-4"))
-                .findFirst();
-        
-        if (gpt4Model.isPresent()) {
-            return gpt4Model.get();
-        }
-        
-        Optional<AIModel> geminiProModel = enabledModels.stream()
-                .filter(model -> model.getServiceType() == AIServiceType.GEMINI && 
-                               model.getModelId().contains("pro"))
-                .findFirst();
-        
-        if (geminiProModel.isPresent()) {
-            return geminiProModel.get();
-        }
-        
-        // Return the first enabled model
-        return enabledModels.get(0);
+        return AIModelSelectionHelper.autoSelectBestModel(modelCache);
     }
     
     // ============================================================================
@@ -595,8 +554,7 @@ public class AIModelService implements PersistentStateComponent<AIModelService.S
      * @return true if a model with this name exists, false otherwise
      */
     public boolean hasModelWithName(@NotNull String name) {
-        return modelCache.values().stream()
-                .anyMatch(model -> model.getName().equals(name));
+        return AIModelValidationHelper.hasModelWithName(name, modelCache);
     }
     
     /**
@@ -605,7 +563,7 @@ public class AIModelService implements PersistentStateComponent<AIModelService.S
      * @return the model count
      */
     public int getModelCount() {
-        return modelCache.size();
+        return AIModelValidationHelper.getModelCount(modelCache);
     }
     
     /**
@@ -614,9 +572,7 @@ public class AIModelService implements PersistentStateComponent<AIModelService.S
      * @return the enabled model count
      */
     public int getEnabledModelCount() {
-        return (int) modelCache.values().stream()
-                .filter(AIModel::isEnabled)
-                .count();
+        return AIModelValidationHelper.getEnabledModelCount(modelCache);
     }
     
     /**
@@ -625,7 +581,7 @@ public class AIModelService implements PersistentStateComponent<AIModelService.S
      * @return true if auto-selection is enabled, false otherwise
      */
     public boolean isAutoSelectBestModel() {
-        return myState.autoSelectBestModel;
+        return AIModelValidationHelper.isAutoSelectBestModel(myState.autoSelectBestModel);
     }
     
     /**
@@ -634,17 +590,9 @@ public class AIModelService implements PersistentStateComponent<AIModelService.S
      * @param autoSelect true to enable auto-selection, false to disable
      */
     public void setAutoSelectBestModel(boolean autoSelect) {
-        myState.autoSelectBestModel = autoSelect;
-        notifyStateChanged();
+        AIModelValidationHelper.setAutoSelectBestModel(autoSelect, myState, this::notifyStateChanged);
     }
     
-    /**
-     * Invalidates the retrieval cache to ensure fresh data on next request.
-     */
-    private void invalidateRetrievalCache() {
-        retrievalCache.clear();
-        LOG.debug("Retrieval cache invalidated");
-    }
     
     /**
      * Notifies IntelliJ that the service state has changed and needs to be persisted.
@@ -701,113 +649,13 @@ public class AIModelService implements PersistentStateComponent<AIModelService.S
         }
         
         // Clean up deprecated models
-        cleanupDeprecatedModels();
+        AIModelMaintenanceHelper.cleanupDeprecatedModels(modelCache, this::deleteModel);
         
         // Initialize default models if none exist
         if (modelCache.isEmpty()) {
             LOG.debug("No models found in state, initializing defaults");
-            initializeDefaultModels();
+            AIModelMaintenanceHelper.initializeDefaultModels(this::addDiscoveredModel);
         }
-    }
-    
-    /**
-     * Cleans up deprecated models from the cache and state.
-     */
-    private void cleanupDeprecatedModels() {
-        LOG.debug("AIModelService.cleanupDeprecatedModels() called");
-        List<String> deprecatedModelIds = new ArrayList<>();
-        
-        for (AIModel model : modelCache.values()) {
-            if (isDeprecatedModel(model.getServiceType(), model.getModelId())) {
-                LOG.info("Found deprecated model: " + model.getFullDisplayName() + " - will be removed");
-                deprecatedModelIds.add(model.getId());
-            }
-        }
-        
-        // Remove deprecated models
-        for (String modelId : deprecatedModelIds) {
-            deleteModel(modelId);
-        }
-        
-        if (!deprecatedModelIds.isEmpty()) {
-            LOG.info("Cleaned up " + deprecatedModelIds.size() + " deprecated models");
-        }
-    }
-    
-    /**
-     * Checks if a model ID is deprecated.
-     * 
-     * @param serviceType the service type
-     * @param modelId the model ID to check
-     * @return true if deprecated, false otherwise
-     */
-    private boolean isDeprecatedModel(@NotNull AIServiceType serviceType, @NotNull String modelId) {
-        switch (serviceType) {
-            case GEMINI:
-                return DEPRECATED_MODELS.contains(modelId);
-            case OPENAI:
-                // Currently no deprecated OpenAI models
-                return false;
-            default:
-                return false;
-        }
-    }
-    
-    /**
-     * Initializes default models if no models exist.
-     */
-    private void initializeDefaultModels() {
-        LOG.debug("Initializing default models");
-        
-        // Create default OpenAI model
-        AIModel openaiModel = addDiscoveredModel("GPT-3.5 Turbo (Default)", AIServiceType.OPENAI, "gpt-3.5-turbo");
-        if (openaiModel != null) {
-            LOG.debug("Created OpenAI model: " + openaiModel.getFullDisplayName());
-            LOG.debug("OpenAI model service type: " + openaiModel.getServiceType());
-            LOG.debug("OpenAI model ID: " + openaiModel.getModelId());
-        }
-        
-        // Create default Gemini model
-        AIModel geminiModel = addDiscoveredModel("Gemini 1.5 Flash (Default)", AIServiceType.GEMINI, "gemini-1.5-flash");
-        if (geminiModel != null) {
-            LOG.debug("Created Gemini model: " + geminiModel.getFullDisplayName());
-            LOG.debug("Gemini model service type: " + geminiModel.getServiceType());
-            LOG.debug("Gemini model ID: " + geminiModel.getModelId());
-        }
-        
-        // Also create the specific model that's causing the issue
-        AIModel geminiProModel = addDiscoveredModel("Gemini 1.5 Pro (Default)", AIServiceType.GEMINI, "gemini-1.5-pro");
-        if (geminiProModel != null) {
-            LOG.debug("Created Gemini Pro model: " + geminiProModel.getFullDisplayName());
-            LOG.debug("Gemini Pro model service type: " + geminiProModel.getServiceType());
-            LOG.debug("Gemini Pro model ID: " + geminiProModel.getModelId());
-        }
-    }
-    
-    /**
-     * Gets the next available model ID to use as default.
-     * 
-     * @return the next default model ID, or null if no models available
-     */
-    @Nullable
-    private String getNextDefaultModelId() {
-        List<AIModel> enabledModels = getEnabledModels();
-        if (enabledModels.isEmpty()) {
-            return null;
-        }
-        
-        // Prefer the best available model (GPT-4 models first, then Gemini Pro)
-        Optional<AIModel> bestModel = enabledModels.stream()
-                .filter(model -> model.getServiceType() == AIServiceType.OPENAI && 
-                               model.getModelId().contains("gpt-4"))
-                .findFirst();
-        
-        if (bestModel.isPresent()) {
-            return bestModel.get().getId();
-        }
-        
-        // Fall back to first available model
-        return enabledModels.get(0).getId();
     }
     
     /**
@@ -818,19 +666,6 @@ public class AIModelService implements PersistentStateComponent<AIModelService.S
      */
     public boolean ensureValidDefaultModel() {
         AIModel currentDefault = getDefaultModel();
-        if (currentDefault != null && currentDefault.isEnabled()) {
-            return false; // Current default is valid
-        }
-        
-        // Current default is invalid or missing, find a new one
-        String newDefaultId = getNextDefaultModelId();
-        if (newDefaultId != null) {
-            myState.defaultModelId = newDefaultId;
-            AIModel newDefault = modelCache.get(newDefaultId);
-            LOG.info("Auto-selected new default model: " + newDefault.getFullDisplayName());
-            return true;
-        }
-        
-        return false;
+        return AIModelSelectionHelper.ensureValidDefaultModel(currentDefault, modelCache, myState, this::notifyStateChanged);
     }
 } 

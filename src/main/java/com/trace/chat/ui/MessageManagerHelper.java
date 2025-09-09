@@ -5,6 +5,8 @@ import com.intellij.openapi.application.ApplicationManager;
 import com.trace.chat.components.ChatMessage;
 import com.trace.chat.components.MessageComponent;
 import com.trace.chat.components.TypingIndicatorRow;
+import com.trace.ai.configuration.AISettings;
+import com.trace.ai.models.AIAnalysisResult;
 
 import javax.swing.*;
 import java.awt.*;
@@ -446,6 +448,89 @@ public class MessageManagerHelper {
                 messageContainer.repaint();
             }
         } catch (Exception ignore) {
+        }
+    }
+    
+    /**
+     * Displays an AI analysis result in the chat interface.
+     * This method is called when AI analysis completes successfully.
+     * 
+     * @param result The AI analysis result to display
+     * @param addMessageFunction Function to add messages to the chat
+     * @param logger Logger instance for logging
+     */
+    public static void displayAIAnalysisResult(AIAnalysisResult result, 
+                                             java.util.function.Consumer<ChatMessage> addMessageFunction,
+                                             Logger logger) {
+        // Check if TRACE is enabled (power button) - if not, do nothing at all
+        AISettings aiSettings = AISettings.getInstance();
+        if (!aiSettings.isAIEnabled()) {
+            logger.info("TRACE is disabled - skipping AI analysis result display");
+            return; // Complete silence - no messages from TRACE
+        }
+        
+        if (result == null) {
+            logger.info("AI analysis result is null, cannot display");
+            return;
+        }
+                
+        // Ensure we're on the EDT
+        if (!SwingUtilities.isEventDispatchThread()) {
+            ApplicationManager.getApplication().invokeLater(() -> displayAIAnalysisResult(result, addMessageFunction, logger));
+            return;
+        }
+        
+        try {
+            // Create an AI message with the analysis result
+            String analysisText = result.getAnalysis();
+            if (analysisText != null && !analysisText.trim().isEmpty()) {
+                addMessageFunction.accept(new ChatMessage(ChatMessage.Role.AI, analysisText, System.currentTimeMillis(), null, null));
+            } else {
+                logger.info("AI analysis result is empty");
+                addMessageFunction.accept(new ChatMessage(ChatMessage.Role.AI, "AI analysis completed but returned no content.", System.currentTimeMillis(), null, null));
+            }
+        } catch (Exception e) {
+            logger.error("Error displaying AI analysis result: " + e.getMessage(), e);
+            addMessageFunction.accept(new ChatMessage(ChatMessage.Role.AI, "Error displaying AI analysis result: " + e.getMessage(), System.currentTimeMillis(), null, null));
+        }
+    }
+    
+    /**
+     * Displays an AI analysis error in the chat interface.
+     * This method is called when AI analysis fails.
+     *
+     * @param errorMessage The error message to display
+     * @param addMessageFunction Function to add messages to the chat
+     * @param logger Logger instance for logging
+     */
+    public static void displayAIAnalysisError(String errorMessage,
+                                            java.util.function.Consumer<ChatMessage> addMessageFunction,
+                                            Logger logger) {
+        // Check if TRACE is enabled (power button) - if not, do nothing at all
+        AISettings aiSettings = AISettings.getInstance();
+        if (!aiSettings.isAIEnabled()) {
+            logger.info("TRACE is disabled - skipping AI analysis error display");
+            return; // Complete silence - no messages from TRACE
+        }
+        
+        if (errorMessage == null || errorMessage.trim().isEmpty()) {
+            logger.info("AI analysis error message is null or empty");
+            return;
+        }
+        
+        logger.info("Displaying AI analysis error: " + errorMessage);
+        
+        // Ensure we're on the EDT
+        if (!SwingUtilities.isEventDispatchThread()) {
+            ApplicationManager.getApplication().invokeLater(() -> displayAIAnalysisError(errorMessage, addMessageFunction, logger));
+            return;
+        }
+        
+        try {
+            // Create an AI message with the error
+            addMessageFunction.accept(new ChatMessage(ChatMessage.Role.AI, "AI Analysis Error: " + errorMessage, System.currentTimeMillis(), null, null));
+        } catch (Exception e) {
+            logger.error("Error displaying AI analysis error: " + e.getMessage(), e);
         }
     }
 }
