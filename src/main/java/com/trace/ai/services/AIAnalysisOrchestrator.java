@@ -1,5 +1,6 @@
 package com.trace.ai.services;
 
+import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.openapi.project.Project;
 import com.trace.ai.models.AIAnalysisResult;
@@ -52,8 +53,12 @@ public final class AIAnalysisOrchestrator {
     private final AIRequestHandler requestHandler;
     private final InitialPromptFailureAnalysisService initialOrchestrator;
     private final UserQueryPromptService userQueryOrchestrator;
-    private final DocumentRetrievalService documentRetrievalService;
     private final AISettings aiSettings;
+    
+    // Lazy-loaded services to avoid EDT violations
+    private volatile DocumentRetrievalService documentRetrievalService;
+    private volatile OpenAIEmbeddingService openAIEmbeddingService;
+    private volatile GeminiEmbeddingService geminiEmbeddingService;
     
     /**
      * Constructor for AIAnalysisOrchestrator.
@@ -69,34 +74,12 @@ public final class AIAnalysisOrchestrator {
         this.project = project;
         this.aiSettings = AISettings.getInstance();
         
-        // Initialize embedding services
-        OpenAIEmbeddingService openAIEmbeddingService = new OpenAIEmbeddingService(
-            SecureAPIKeyManager.getAPIKey(AIServiceType.OPENAI) != null ? 
-            SecureAPIKeyManager.getAPIKey(AIServiceType.OPENAI) : ""
-        );
-        GeminiEmbeddingService geminiEmbeddingService = new GeminiEmbeddingService(
-            SecureAPIKeyManager.getAPIKey(AIServiceType.GEMINI) != null ? 
-            SecureAPIKeyManager.getAPIKey(AIServiceType.GEMINI) : ""
-        );
-        
-        // Initialize document database service
-        DocumentDatabaseService databaseService = new DocumentDatabaseService();
-        try {
-            databaseService.initializeDatabase();
-        } catch (Exception e) {
-            LOG.warn("Failed to initialize document database", e);
-        }
-        
-        // Initialize document retrieval service
-        this.documentRetrievalService = new DocumentRetrievalService(
-            databaseService, openAIEmbeddingService, geminiEmbeddingService, aiSettings
-        );
-        
+        // Initialize services that don't require slow operations
         this.requestHandler = new AIRequestHandler(project);
         this.initialOrchestrator = new InitialPromptFailureAnalysisService();
         this.userQueryOrchestrator = new UserQueryPromptService();
         
-        LOG.info("AIAnalysisOrchestrator initialized with document retrieval service");
+        LOG.info("AIAnalysisOrchestrator initialized (embedding services will be loaded lazily)");
     }
     
     /**
@@ -125,13 +108,7 @@ public final class AIAnalysisOrchestrator {
         }
         if (!aiSettings.isTraceEnabled()) {
             LOG.info("TRACE is OFF - skipping analysis");
-            return CompletableFuture.completedFuture(new AIAnalysisResult(
-                "TRACE is OFF. Turn TRACE ON to enable context extraction and AI features.",
-                AIServiceType.OPENAI,
-                "disabled",
-                System.currentTimeMillis(),
-                0L
-            ));
+            return CompletableFuture.completedFuture(AIResultUtils.createTraceDisabledResult(AIServiceType.OPENAI));
         }
         
         LOG.info("Dispatching initial failure analysis for: " + failureInfo.getScenarioName());
@@ -151,14 +128,7 @@ public final class AIAnalysisOrchestrator {
             // Gate: if AI analysis is disabled, return a result with prompt only (no network)
             if (!aiSettings.isAutoAnalyzeEnabled()) {
                 LOG.info("Enable AI Analysis is OFF - returning prompt-only result (no AI call)");
-                return CompletableFuture.completedFuture(new AIAnalysisResult(
-                    "Prompt preview only. AI Analysis is disabled.",
-                    prompt,
-                    AIServiceType.OPENAI,
-                    "disabled",
-                    System.currentTimeMillis(),
-                    0L
-                ));
+                return CompletableFuture.completedFuture(AIResultUtils.createPromptOnlyResult(prompt, AIServiceType.OPENAI));
             }
 
             // Send the prompt to the AI request handler
@@ -179,13 +149,7 @@ public final class AIAnalysisOrchestrator {
                 })
                 .exceptionally(throwable -> {
                     LOG.error("Initial failure analysis failed", throwable);
-                    return new AIAnalysisResult(
-                        "Analysis failed due to an error: " + throwable.getMessage(),
-                        AIServiceType.OPENAI,
-                        "error",
-                        System.currentTimeMillis(),
-                        0L
-                    );
+                    return AIResultUtils.createErrorResult(throwable, AIServiceType.OPENAI);
                 });
         } catch (Exception e) {
             LOG.error("Failed to create initial failure analysis", e);
@@ -215,7 +179,7 @@ public final class AIAnalysisOrchestrator {
      */
     public CompletableFuture<AIAnalysisResult> analyzeInitialFailureWithDocuments(@NotNull FailureInfo failureInfo, @NotNull AnalysisMode mode) {
         LOG.debug("=== DEBUG: analyzeInitialFailureWithDocuments called ===");
-        LOG.debug("=== DEBUG: Document retrieval service available: " + (documentRetrievalService != null) + " ===");
+        LOG.debug("=== DEBUG: Document retrieval service will be initialized lazily ===");
         
         if (failureInfo == null) {
             throw new IllegalArgumentException("FailureInfo cannot be null");
@@ -225,13 +189,7 @@ public final class AIAnalysisOrchestrator {
         }
         if (!aiSettings.isTraceEnabled()) {
             LOG.info("TRACE is OFF - skipping analysis");
-            return CompletableFuture.completedFuture(new AIAnalysisResult(
-                "TRACE is OFF. Turn TRACE ON to enable context extraction and AI features.",
-                AIServiceType.OPENAI,
-                "disabled",
-                System.currentTimeMillis(),
-                0L
-            ));
+            return CompletableFuture.completedFuture(AIResultUtils.createTraceDisabledResult(AIServiceType.OPENAI));
         }
         
         LOG.info("Dispatching initial failure analysis with document retrieval for: " + failureInfo.getScenarioName());
@@ -254,7 +212,7 @@ public final class AIAnalysisOrchestrator {
             }
 
             // First, retrieve relevant documents
-            return documentRetrievalService.retrieveRelevantDocuments(
+            return getDocumentRetrievalService().retrieveRelevantDocuments(
                 failureInfo.getScenarioName(),
                 "failure_analysis",
                 failureInfo.getErrorMessage(),
@@ -266,7 +224,7 @@ public final class AIAnalysisOrchestrator {
                     : initialOrchestrator.generateDetailedPrompt(failureInfo);
                 
         // Insert document context before the "Analysis Request" section and avoid duplicate headers
-        String enhancedPrompt = insertDocumentContext(basePrompt, documentContext);
+        String enhancedPrompt = PromptUtils.insertDocumentContext(basePrompt, documentContext);
                 
                 LOG.info("=== DOCUMENT RETRIEVAL RESULTS ===");
                 LOG.info("Query: " + failureInfo.getScenarioName());
@@ -371,14 +329,7 @@ public final class AIAnalysisOrchestrator {
                 ChatHistoryService chatHistoryService = project.getService(ChatHistoryService.class);
                 chatHistoryService.addUserQuery(userQuery);
                 String prompt = userQueryOrchestrator.generatePrompt(failureInfo, userQuery, chatHistoryService);
-                return CompletableFuture.completedFuture(new AIAnalysisResult(
-                    "Prompt preview only. AI Analysis is disabled.",
-                    prompt,
-                    AIServiceType.OPENAI,
-                    "disabled",
-                    System.currentTimeMillis(),
-                    0L
-                ));
+                return CompletableFuture.completedFuture(AIResultUtils.createPromptOnlyResult(prompt, AIServiceType.OPENAI));
             }
 
             // Get the chat history service for context
@@ -504,7 +455,7 @@ public final class AIAnalysisOrchestrator {
             LOG.info("Added user query to chat history: " + userQuery);
             
             // First, retrieve relevant documents for the user query
-            return documentRetrievalService.retrieveRelevantDocuments(
+            return getDocumentRetrievalService().retrieveRelevantDocuments(
                 userQuery,
                 "user_query",
                 failureInfo.getErrorMessage(),
@@ -514,7 +465,7 @@ public final class AIAnalysisOrchestrator {
                 String basePrompt = userQueryOrchestrator.generatePrompt(failureInfo, userQuery, chatHistoryService);
                 
                 // Insert document context before the "Analysis Request" section
-                String enhancedPrompt = insertDocumentContext(basePrompt, documentContext);
+                String enhancedPrompt = PromptUtils.insertDocumentContext(basePrompt, documentContext);
                 
                 LOG.info("=== DOCUMENT RETRIEVAL RESULTS FOR USER QUERY ===");
                 LOG.info("Query: " + userQuery);
@@ -601,24 +552,10 @@ public final class AIAnalysisOrchestrator {
             ChatHistoryService chatHistoryService = project.getService(ChatHistoryService.class);
             
             // Build comprehensive failure context string
-            StringBuilder contextBuilder = new StringBuilder();
-            contextBuilder.append("Test Name: ").append(failureInfo.getScenarioName()).append("\n");
-            
-            if (failureInfo.getFailedStepText() != null) {
-                contextBuilder.append("Failed Step: ").append(failureInfo.getFailedStepText()).append("\n");
-            }
-            
-            if (failureInfo.getErrorMessage() != null) {
-                contextBuilder.append("Error: ").append(failureInfo.getErrorMessage()).append("\n");
-            }
-            
-            if (failureInfo.getExpectedValue() != null && failureInfo.getActualValue() != null) {
-                contextBuilder.append("Expected: ").append(failureInfo.getExpectedValue()).append("\n");
-                contextBuilder.append("Actual: ").append(failureInfo.getActualValue()).append("\n");
-            }
+            String failureContext = FailureContextUtils.buildFailureContext(failureInfo);
             
             // Store the failure context
-            chatHistoryService.setFailureContext(contextBuilder.toString());
+            chatHistoryService.setFailureContext(failureContext);
             LOG.debug("Stored failure context successfully");
             
         } catch (Exception e) {
@@ -725,38 +662,103 @@ public final class AIAnalysisOrchestrator {
     }
 
     /**
-     * Inserts document context into the prompt before the "Analysis Request" section.
-     * This positions the document context as background information rather than
-     * part of the response format.
+     * Gets the OpenAI embedding service with lazy initialization.
+     * This method ensures thread-safe initialization and avoids EDT violations.
      *
-     * @param prompt the base prompt
-     * @param documentContext the retrieved document context
-     * @return the enhanced prompt with document context inserted
+     * @return the OpenAI embedding service
      */
-    private String insertDocumentContext(String prompt, String documentContext) {
-        // Insert document context before the "Analysis Request" section
-        final String analysisRequestMarker = "### Analysis Request ###";
-        final String docsHeader = "### Relevant Documentation ###";
-        int insertIndex = prompt.indexOf(analysisRequestMarker);
-
-        // Normalize incoming document context and avoid duplicate headers
-        String docSection = documentContext == null ? "" : documentContext.trim();
-        if (!docSection.startsWith(docsHeader)) {
-            docSection = docsHeader + "\n" + docSection;
+    private OpenAIEmbeddingService getOpenAIEmbeddingService() {
+        if (openAIEmbeddingService == null) {
+            synchronized (this) {
+                if (openAIEmbeddingService == null) {
+                    // Check if we're on EDT and move API key retrieval off EDT
+                    if (ApplicationManager.getApplication().isDispatchThread()) {
+                        // We're on EDT, need to get API key off EDT
+                        CompletableFuture<String> apiKeyFuture = CompletableFuture.supplyAsync(() -> 
+                            SecureAPIKeyManager.getAPIKey(AIServiceType.OPENAI));
+                        try {
+                            String apiKey = apiKeyFuture.get(); // This will block but we're in a synchronized block
+                            openAIEmbeddingService = new OpenAIEmbeddingService(apiKey != null ? apiKey : "");
+                        } catch (Exception e) {
+                            LOG.warn("Failed to get OpenAI API key off EDT", e);
+                            openAIEmbeddingService = new OpenAIEmbeddingService("");
+                        }
+                    } else {
+                        // We're not on EDT, safe to call directly
+                        String apiKey = SecureAPIKeyManager.getAPIKey(AIServiceType.OPENAI);
+                        openAIEmbeddingService = new OpenAIEmbeddingService(apiKey != null ? apiKey : "");
+                    }
+                    LOG.debug("OpenAI embedding service initialized lazily");
+                }
+            }
         }
-
-        if (insertIndex != -1) {
-            // Insert document context before the Analysis Request section
-            String beforeAnalysisRequest = prompt.substring(0, insertIndex)
-                .replaceAll("\n+$", ""); // remove trailing newlines
-            String afterAnalysisRequest = prompt.substring(insertIndex)
-                .replaceAll("^\n+", ""); // remove leading newlines
-            // Ensure exactly one blank line above docs and two above Analysis Request
-            return beforeAnalysisRequest + "\n" + docSection + "\n\n" + afterAnalysisRequest;
-        } else {
-            // Fallback: append document context at the end
-            LOG.debug("Analysis Request section not found in prompt, appending document context at the end");
-            return prompt + "\n\n" + docSection;
-        }
+        return openAIEmbeddingService;
     }
+    
+    /**
+     * Gets the Gemini embedding service with lazy initialization.
+     * This method ensures thread-safe initialization and avoids EDT violations.
+     *
+     * @return the Gemini embedding service
+     */
+    private GeminiEmbeddingService getGeminiEmbeddingService() {
+        if (geminiEmbeddingService == null) {
+            synchronized (this) {
+                if (geminiEmbeddingService == null) {
+                    // Check if we're on EDT and move API key retrieval off EDT
+                    if (ApplicationManager.getApplication().isDispatchThread()) {
+                        // We're on EDT, need to get API key off EDT
+                        CompletableFuture<String> apiKeyFuture = CompletableFuture.supplyAsync(() -> 
+                            SecureAPIKeyManager.getAPIKey(AIServiceType.GEMINI));
+                        try {
+                            String apiKey = apiKeyFuture.get(); // This will block but we're in a synchronized block
+                            geminiEmbeddingService = new GeminiEmbeddingService(apiKey != null ? apiKey : "");
+                        } catch (Exception e) {
+                            LOG.warn("Failed to get Gemini API key off EDT", e);
+                            geminiEmbeddingService = new GeminiEmbeddingService("");
+                        }
+                    } else {
+                        // We're not on EDT, safe to call directly
+                        String apiKey = SecureAPIKeyManager.getAPIKey(AIServiceType.GEMINI);
+                        geminiEmbeddingService = new GeminiEmbeddingService(apiKey != null ? apiKey : "");
+                    }
+                    LOG.debug("Gemini embedding service initialized lazily");
+                }
+            }
+        }
+        return geminiEmbeddingService;
+    }
+    
+    /**
+     * Gets the document retrieval service with lazy initialization.
+     * This method ensures thread-safe initialization and avoids EDT violations.
+     *
+     * @return the document retrieval service
+     */
+    private DocumentRetrievalService getDocumentRetrievalService() {
+        if (documentRetrievalService == null) {
+            synchronized (this) {
+                if (documentRetrievalService == null) {
+                    // Initialize document database service
+                    DocumentDatabaseService databaseService = new DocumentDatabaseService();
+                    try {
+                        databaseService.initializeDatabase();
+                    } catch (Exception e) {
+                        LOG.warn("Failed to initialize document database", e);
+                    }
+                    
+                    // Initialize document retrieval service with lazy-loaded embedding services
+                    documentRetrievalService = new DocumentRetrievalService(
+                        databaseService, 
+                        getOpenAIEmbeddingService(), 
+                        getGeminiEmbeddingService(), 
+                        aiSettings
+                    );
+                    LOG.debug("Document retrieval service initialized lazily");
+                }
+            }
+        }
+        return documentRetrievalService;
+    }
+
 } 

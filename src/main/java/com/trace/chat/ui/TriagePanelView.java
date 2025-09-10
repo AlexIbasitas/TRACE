@@ -73,7 +73,7 @@ public class TriagePanelView {
     
     // Chat state management
     private final List<ChatMessage> chatHistory;
-    private final AIAnalysisOrchestrator aiAnalysisOrchestrator;
+    private AIAnalysisOrchestrator aiAnalysisOrchestrator;
     private FailureInfo currentFailureInfo;
     private JScrollPane chatScrollPane;
     private JPanel messageContainer;
@@ -118,9 +118,15 @@ public class TriagePanelView {
         LOG.info("Creating TriagePanelView for project: " + project.getName());
         this.project = project;
         this.chatHistory = new ArrayList<>();
-        this.aiAnalysisOrchestrator = new AIAnalysisOrchestrator(project);
+        this.aiAnalysisOrchestrator = null; // Will be initialized asynchronously
         this.currentFailureInfo = null;
         this.scrollHelper = new ScrollHelper();
+        
+        // Initialize AIAnalysisOrchestrator off EDT to avoid violations
+        ApplicationManager.getApplication().executeOnPooledThread(() -> {
+            this.aiAnalysisOrchestrator = new AIAnalysisOrchestrator(project);
+            LOG.info("AIAnalysisOrchestrator initialized asynchronously for project: " + project.getName());
+        });
         
         // Initialize UI components
         this.mainPanel = new JPanel(new BorderLayout());
@@ -138,6 +144,7 @@ public class TriagePanelView {
                                           headerLabel, statusLabel);
         
         // Initialize failure analysis helper after UI components are created
+        // Note: aiAnalysisOrchestrator will be null initially, but FailureAnalysisHelper will handle this
         this.failureAnalysisHelper = new FailureAnalysisHelper(project, aiAnalysisOrchestrator,
                                                               chatHistory, messageContainer,
                                                               chatScrollPane, bottomSpacer,
@@ -148,6 +155,26 @@ public class TriagePanelView {
         
         setupEventHandlers();
         themeHelper.setupThemeChangeListener();
+        
+        // Update the failure analysis helper with the orchestrator once it's initialized
+        ApplicationManager.getApplication().executeOnPooledThread(() -> {
+            // Wait for orchestrator to be initialized
+            while (this.aiAnalysisOrchestrator == null) {
+                try {
+                    Thread.sleep(10); // Small delay to avoid busy waiting
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    return;
+                }
+            }
+            
+            // Update the failure analysis helper on EDT
+            ApplicationManager.getApplication().invokeLater(() -> {
+                failureAnalysisHelper.setAIAnalysisOrchestrator(this.aiAnalysisOrchestrator);
+                LOG.info("FailureAnalysisHelper updated with AIAnalysisOrchestrator");
+            });
+        });
+        
         LOG.info("TriagePanelView created successfully");
     }
 

@@ -42,7 +42,7 @@ public class FailureAnalysisHelper {
     
     // Component references needed for failure analysis operations
     private final Project project;
-    private final AIAnalysisOrchestrator aiAnalysisOrchestrator;
+    private AIAnalysisOrchestrator aiAnalysisOrchestrator;
     private final List<ChatMessage> chatHistory;
     private final JPanel messageContainer;
     private final JScrollPane chatScrollPane;
@@ -95,6 +95,17 @@ public class FailureAnalysisHelper {
     }
     
     /**
+     * Sets the AI analysis orchestrator reference.
+     * This method is used to update the orchestrator after it's been initialized asynchronously.
+     *
+     * @param aiAnalysisOrchestrator the initialized orchestrator
+     */
+    public void setAIAnalysisOrchestrator(AIAnalysisOrchestrator aiAnalysisOrchestrator) {
+        this.aiAnalysisOrchestrator = aiAnalysisOrchestrator;
+        LOG.debug("AIAnalysisOrchestrator reference updated in FailureAnalysisHelper");
+    }
+    
+    /**
      * Updates the panel with new failure information.
      * Clears the chat and generates an initial AI prompt for the failure.
      *
@@ -141,7 +152,11 @@ public class FailureAnalysisHelper {
         
         // Store failure context for future user queries
         this.currentFailureInfo = failureInfo;
-        aiAnalysisOrchestrator.storeFailureContext(failureInfo);
+        if (aiAnalysisOrchestrator != null) {
+            aiAnalysisOrchestrator.storeFailureContext(failureInfo);
+        } else {
+            LOG.warn("AIAnalysisOrchestrator not yet initialized, skipping failure context storage");
+        }
         
         clearChat();
         generateAndDisplayPrompt(failureInfo);
@@ -182,8 +197,12 @@ public class FailureAnalysisHelper {
                 chatHistoryService.addUserQuery(messageText);
             }
             // Build prompt preview only; do not attach it to Show AI thinking for user messages
-            aiAnalysisOrchestrator.getUserQueryOrchestrator()
-                .generatePrompt(currentFailureInfo, messageText, chatHistoryService);
+            if (aiAnalysisOrchestrator != null) {
+                aiAnalysisOrchestrator.getUserQueryOrchestrator()
+                    .generatePrompt(currentFailureInfo, messageText, chatHistoryService);
+            } else {
+                LOG.warn("AIAnalysisOrchestrator not yet initialized, skipping prompt generation");
+            }
             addMessage(new ChatMessage(
                 ChatMessage.Role.AI,
                 "Enable AI Analysis is OFF. Turn it ON to run AI analysis.",
@@ -246,6 +265,14 @@ public class FailureAnalysisHelper {
         }
         
         // Process the user query with enhanced analysis and RAG
+        if (aiAnalysisOrchestrator == null) {
+            LOG.warn("AIAnalysisOrchestrator not yet initialized, cannot process user query");
+            addMessage(new ChatMessage(ChatMessage.Role.AI,
+                "AI services are still initializing. Please wait a moment and try again.",
+                System.currentTimeMillis(), null, null));
+            return;
+        }
+        
         LOG.info("Calling aiAnalysisOrchestrator.analyzeUserQueryWithDocuments()");
         CompletableFuture<AIAnalysisResult> analysisFuture = 
             aiAnalysisOrchestrator.analyzeUserQueryWithDocuments(currentFailureInfo, messageText);
@@ -322,6 +349,14 @@ public class FailureAnalysisHelper {
 
                 // Populate the AI thinking section with the base prompt before document retrieval
                 try {
+                    if (aiAnalysisOrchestrator == null) {
+                        LOG.warn("AIAnalysisOrchestrator not yet initialized, cannot generate prompt");
+                        addMessage(new ChatMessage(ChatMessage.Role.AI,
+                            "AI services are still initializing. Please wait a moment and try again.",
+                            System.currentTimeMillis(), null, null));
+                        return;
+                    }
+                    
                     final String basePrompt = ANALYSIS_MODE_OVERVIEW.equals(currentAnalysisMode)
                         ? aiAnalysisOrchestrator.getInitialOrchestrator().generateSummaryPrompt(failureInfo)
                         : aiAnalysisOrchestrator.getInitialOrchestrator().generateDetailedPrompt(failureInfo);
@@ -354,6 +389,14 @@ public class FailureAnalysisHelper {
                 showTypingIndicator();
 
                 // Use enhanced analysis with RAG for both overview and full analysis modes
+                if (aiAnalysisOrchestrator == null) {
+                    LOG.warn("AIAnalysisOrchestrator not yet initialized, cannot perform analysis");
+                    addMessage(new ChatMessage(ChatMessage.Role.AI,
+                        "AI services are still initializing. Please wait a moment and try again.",
+                        System.currentTimeMillis(), null, null));
+                    return;
+                }
+                
                 CompletableFuture<AIAnalysisResult> analysisFuture = 
                     aiAnalysisOrchestrator.analyzeInitialFailureWithDocuments(
                         failureInfo,
@@ -413,6 +456,14 @@ public class FailureAnalysisHelper {
                 addMessage(new ChatMessage(ChatMessage.Role.AI, "", System.currentTimeMillis(), null, failureInfo));
                 
                 // Generate basic prompt for display only (no AI analysis)
+                if (aiAnalysisOrchestrator == null) {
+                    LOG.warn("AIAnalysisOrchestrator not yet initialized, cannot generate prompt");
+                    addMessage(new ChatMessage(ChatMessage.Role.AI,
+                        "AI services are still initializing. Please wait a moment and try again.",
+                        System.currentTimeMillis(), null, null));
+                    return;
+                }
+                
                 String prompt;
                 if (ANALYSIS_MODE_OVERVIEW.equals(currentAnalysisMode)) {
                     prompt = aiAnalysisOrchestrator.getInitialOrchestrator().generateSummaryPrompt(failureInfo);
