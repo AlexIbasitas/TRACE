@@ -201,7 +201,7 @@ public class AIServiceConfigPanel extends JBPanel<AIServiceConfigPanel> {
         testGeminiButton.addActionListener(e -> apiKeyHelper.testGeminiKey(geminiApiKeyField, geminiStatusLabel, testGeminiButton, isTestingConnection, this::discoverNewModels, this));
         
         // Model management
-        setDefaultButton.addActionListener(e -> modelManagerHelper.setSelectedAsDefault(modelList, modelService, this));
+        setDefaultButton.addActionListener(e -> modelManagerHelper.setSelectedAsDefault(modelList, modelService, this, this::updateDefaultModelDisplay));
         refreshModelsButton.addActionListener(e -> modelManagerHelper.refreshModelList(modelList, listModel, refreshModelsButton, modelService, this));
         modelList.addListSelectionListener(e -> updateButtonStates());
         
@@ -224,16 +224,6 @@ public class AIServiceConfigPanel extends JBPanel<AIServiceConfigPanel> {
             public void changedUpdate(javax.swing.event.DocumentEvent e) { apiKeyHelper.handleGeminiKeyChange(geminiApiKeyField, geminiStatusLabel); }
         });
     }
-    
-    
-    
-    
-    
-    
-    
-    
-    
-
     
     /**
      * Loads current settings into the UI.

@@ -41,6 +41,13 @@ public class ModelManagerHelper {
      * Sets the selected model as default.
      */
     public void setSelectedAsDefault(JBList<AIModel> modelList, AIModelService modelService, java.awt.Component parentComponent) {
+        setSelectedAsDefault(modelList, modelService, parentComponent, null);
+    }
+    
+    /**
+     * Sets the selected model as default with optional callback for UI updates.
+     */
+    public void setSelectedAsDefault(JBList<AIModel> modelList, AIModelService modelService, java.awt.Component parentComponent, Runnable uiUpdateCallback) {
         AIModel selectedModel = modelList.getSelectedValue();
         if (selectedModel == null) {
             showError("Please select a model to set as default", parentComponent);
@@ -56,6 +63,11 @@ public class ModelManagerHelper {
         
         if (modelService.setDefaultModel(selectedModel.getId())) {
             showSuccess("Default model set to: " + selectedModel.getDisplayName(), parentComponent);
+            
+            // Update UI if callback provided
+            if (uiUpdateCallback != null) {
+                uiUpdateCallback.run();
+            }
         } else {
             showError("Failed to set default model", parentComponent);
         }
