@@ -34,6 +34,15 @@ public class DocumentStoreRefresher {
     
     private static final Logger LOG = Logger.getInstance(DocumentStoreRefresher.class);
     
+    /**
+     * Returns the path where the database should be written for JAR bundling.
+     * 
+     * @return the database file path in the resources directory
+     */
+    private static String getDatabasePath() {
+        return "src/main/resources/db/trace-documents.db";
+    }
+    
     public static void main(String[] args) {
         // Parse command line arguments
         String openaiApiKey = null;
@@ -87,10 +96,11 @@ public class DocumentStoreRefresher {
                     LOG.info("Refreshing document store");
         
         try {
-            // Initialize single database
+            // Initialize database for writing to resources directory
             DocumentDatabaseService database = new DocumentDatabaseService();
-            database.initializeDatabase();
-            LOG.info("Database initialized: trace-documents.db");
+            String databasePath = getDatabasePath();
+            database.initializeDatabaseForWriting(databasePath);
+            LOG.info("Database initialized for writing: " + databasePath);
             
             // Clear existing documents before fresh insertion
             database.clearAllDocuments();

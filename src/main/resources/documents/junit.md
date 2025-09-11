@@ -71,3 +71,11 @@
 **Resolution Steps**:
 1. Use BeforeEach when test-specific setup needed
 2. Use BeforeAll only for heavy one-time setups
+### Title: Ignoring Exceptions in Tests (JUnit)
+**Summary**: Exceptions swallowed, test passes incorrectly.
+**Root Causes**:
+- Try/catch without rethrowing
+- Missing assertions inside catch block
+**Resolution Steps**:
+1. Avoid empty catch blocks in tests
+2. Use `assertThrows` to explicitly verify exceptions

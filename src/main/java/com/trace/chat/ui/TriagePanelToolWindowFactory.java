@@ -1,8 +1,10 @@
 package com.trace.chat.ui;
 
 import com.intellij.execution.testframework.sm.runner.SMTRunnerEventsListener;
+import com.intellij.openapi.Disposable;
 import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.openapi.project.Project;
+import com.intellij.openapi.util.Disposer;
 import com.intellij.openapi.wm.ToolWindow;
 import com.intellij.openapi.wm.ToolWindowFactory;
 import com.intellij.ui.content.Content;
@@ -33,7 +35,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * @see TriagePanelView
  * @see CucumberTestExecutionListener
  */
-public class TriagePanelToolWindowFactory implements ToolWindowFactory {
+public class TriagePanelToolWindowFactory implements ToolWindowFactory, Disposable {
     
     private static final Logger LOG = Logger.getInstance(TriagePanelToolWindowFactory.class);
     
@@ -42,6 +44,12 @@ public class TriagePanelToolWindowFactory implements ToolWindowFactory {
      * Ensures proper isolation between different project instances.
      */
     private static final ConcurrentHashMap<Project, TriagePanelView> panelInstances = new ConcurrentHashMap<>();
+    
+    /**
+     * Thread-safe registry of MessageBusConnection instances by project.
+     * Ensures proper cleanup of message bus connections.
+     */
+    private static final ConcurrentHashMap<Project, com.intellij.util.messages.MessageBusConnection> messageBusConnections = new ConcurrentHashMap<>();
 
     /**
      * Creates the tool window content for the specified project.
@@ -117,8 +125,12 @@ public class TriagePanelToolWindowFactory implements ToolWindowFactory {
             // Create a listener instance for this project
             CucumberTestExecutionListener listener = new CucumberTestExecutionListener(project);
             
+            // Create and store the message bus connection for proper cleanup
+            com.intellij.util.messages.MessageBusConnection connection = project.getMessageBus().connect();
+            messageBusConnections.put(project, connection);
+            
             // Register with the test framework via project message bus
-            project.getMessageBus().connect().subscribe(
+            connection.subscribe(
                 SMTRunnerEventsListener.TEST_STATUS, 
                 listener
             );
@@ -172,8 +184,32 @@ public class TriagePanelToolWindowFactory implements ToolWindowFactory {
             throw new IllegalArgumentException("Project cannot be null");
         }
         
+        LOG.info("=== CLEANUP: removePanelForProject called for project: " + project.getName() + " ===");
+        
+        // Dispose MessageBusConnection first
+        com.intellij.util.messages.MessageBusConnection connection = messageBusConnections.remove(project);
+        if (connection != null) {
+            try {
+                connection.disconnect();
+                LOG.debug("Disconnected MessageBusConnection for project: " + project.getName());
+            } catch (Exception e) {
+                LOG.warn("Error disconnecting MessageBusConnection for project: " + project.getName(), e);
+            }
+        }
+        
+        // Remove and dispose panel instance
         TriagePanelView removedPanel = panelInstances.remove(project);
         if (removedPanel != null) {
+            try {
+                // Dispose the panel if it implements Disposable
+                if (removedPanel instanceof Disposable) {
+                    Disposer.dispose((Disposable) removedPanel);
+                    LOG.debug("Disposed TriagePanelView for project: " + project.getName());
+                }
+            } catch (Exception e) {
+                LOG.warn("Error disposing TriagePanelView for project: " + project.getName(), e);
+            }
+            
             if (LOG.isDebugEnabled()) {
                 LOG.info("Removed panel instance for project: " + project.getName() + 
                         " (Remaining instances: " + panelInstances.size() + ")");
@@ -223,10 +259,38 @@ public class TriagePanelToolWindowFactory implements ToolWindowFactory {
         int resourcesCleaned = panelInstances.size();
         
         try {
-            panelInstances.clear();
-            LOG.info("TriagePanelToolWindowFactory cleanup completed - cleared " + resourcesCleaned + " panel instances");
+            // Dispose all panel instances and message bus connections
+            for (Project project : panelInstances.keySet()) {
+                removePanelForProject(project);
+            }
+            
+            LOG.info("TriagePanelToolWindowFactory cleanup completed - disposed " + resourcesCleaned + " panel instances");
         } catch (Exception e) {
             LOG.error("Error during TriagePanelToolWindowFactory cleanup: " + e.getMessage(), e);
+        }
+    }
+    
+    /**
+     * Disposes of all resources managed by this factory.
+     * 
+     * <p>This method is called by IntelliJ's Disposer system when the plugin is being
+     * unloaded or when the factory needs to be disposed. It ensures proper cleanup
+     * of all MessageBusConnections, panel instances, and other resources.</p>
+     * 
+     * <p>This method implements the Disposable interface and is automatically called
+     * by the IntelliJ platform when the plugin is disposed.</p>
+     */
+    @Override
+    public void dispose() {
+        LOG.info("Disposing TriagePanelToolWindowFactory");
+        
+        try {
+            // Clean up all static resources
+            cleanup();
+            
+            LOG.info("TriagePanelToolWindowFactory disposed successfully");
+        } catch (Exception e) {
+            LOG.error("Error during TriagePanelToolWindowFactory disposal: " + e.getMessage(), e);
         }
     }
 } 

@@ -7,6 +7,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.File;
+import java.io.InputStream;
 import java.nio.ByteBuffer;
 import java.sql.*;
 import java.time.LocalDateTime;
@@ -56,12 +57,15 @@ public class DocumentDatabaseService {
     }
     
     /**
-     * Initializes the database connection and creates the schema if it doesn't exist.
+     * Initializes the database connection by loading the pre-populated database from JAR resources into memory.
+     * 
+     * <p>This method loads the entire SQLite database from the bundled JAR resources into an in-memory
+     * database for optimal performance and to meet JetBrains Marketplace requirements.</p>
      * 
      * @throws SQLException if database initialization fails
      */
     public void initializeDatabase() throws SQLException {
-        LOG.info("Initializing document database");
+        LOG.info("Initializing document database from JAR resources");
         
         // Explicitly load the SQLite JDBC driver
         try {
@@ -72,15 +76,48 @@ public class DocumentDatabaseService {
             throw new SQLException("SQLite JDBC driver not found", e);
         }
         
-        String dbPath = getDatabasePath();
+        // Load database from JAR resources into memory
+        loadDatabaseFromResource();
         
-        connection = DriverManager.getConnection("jdbc:sqlite:" + dbPath);
+        LOG.info("Document database initialized successfully from JAR resources");
+    }
+    
+    /**
+     * Initializes the database connection for file-based operations (used by DocumentStoreRefresher).
+     * 
+     * <p>This method creates a file-based database connection for writing operations.
+     * It's used by DocumentStoreRefresher to update the database file that gets bundled in the JAR.</p>
+     * 
+     * @param databasePath the path to the database file
+     * @throws SQLException if database initialization fails
+     */
+    public void initializeDatabaseForWriting(String databasePath) throws SQLException {
+        LOG.info("Initializing document database for writing to: " + databasePath);
+        
+        // Explicitly load the SQLite JDBC driver
+        try {
+            Class.forName("org.sqlite.JDBC");
+            LOG.info("SQLite JDBC driver loaded successfully");
+        } catch (ClassNotFoundException e) {
+            LOG.error("Failed to load SQLite JDBC driver", e);
+            throw new SQLException("SQLite JDBC driver not found", e);
+        }
+        
+        // Create the target directory if it doesn't exist
+        java.io.File targetFile = new java.io.File(databasePath);
+        java.io.File parentDir = targetFile.getParentFile();
+        if (parentDir != null && !parentDir.exists()) {
+            parentDir.mkdirs();
+        }
+        
+        // Create file-based database connection
+        connection = DriverManager.getConnection("jdbc:sqlite:" + databasePath);
         connection.setAutoCommit(false);
         
+        // Create tables if they don't exist
         createTables();
-        createIndexes();
         
-        LOG.info("Document database initialized successfully");
+        LOG.info("Document database initialized successfully for writing to: " + databasePath);
     }
     
     /**
@@ -576,24 +613,54 @@ public class DocumentDatabaseService {
     }
     
     /**
-     * Gets the database file path in a consistent, predictable location.
+     * Loads the pre-populated SQLite database from JAR resources into an in-memory database.
      * 
-     * <p>Uses a single, consistent path that works in both plugin and standalone modes.
-     * This eliminates confusion and ensures the database is always in the same location.</p>
+     * <p>This method reads the bundled database file from the JAR resources and loads it into
+     * an in-memory SQLite database. The database is read-only at runtime and provides optimal
+     * performance for document retrieval operations.</p>
      * 
-     * @return the database file path
+     * @throws SQLException if database loading fails
      */
-    public String getDatabasePath() {
-        // Use a consistent, predictable location that works in all modes
-        String baseDir = System.getProperty("user.home") + "/.trace/documents";
-        
-        // Ensure the directory exists
-        java.io.File dir = new java.io.File(baseDir);
-        if (!dir.exists()) {
-            dir.mkdirs();
+    private void loadDatabaseFromResource() throws SQLException {
+        try {
+            // Load the database from JAR resources
+            InputStream dbStream = getClass().getResourceAsStream("/db/trace-documents.db");
+            if (dbStream == null) {
+                throw new SQLException("Database resource not found: /db/trace-documents.db");
+            }
+            
+            // Create in-memory database connection
+            connection = DriverManager.getConnection("jdbc:sqlite::memory:");
+            connection.setAutoCommit(false);
+            
+            // Read the entire database file into memory
+            byte[] dbBytes = dbStream.readAllBytes();
+            dbStream.close();
+            
+            // Write the database content to the in-memory database
+            // SQLite allows loading from a byte array using the backup API
+            try (Connection sourceConnection = DriverManager.getConnection("jdbc:sqlite::memory:")) {
+                // Create a temporary file to restore from
+                java.io.File tempFile = java.io.File.createTempFile("trace-db-", ".db");
+                tempFile.deleteOnExit();
+                
+                // Write database bytes to temporary file
+                java.nio.file.Files.write(tempFile.toPath(), dbBytes);
+                
+                // Restore from temporary file to in-memory database
+                String restoreSql = "RESTORE FROM '" + tempFile.getAbsolutePath() + "'";
+                connection.createStatement().execute(restoreSql);
+                
+                // Clean up temporary file
+                tempFile.delete();
+            }
+            
+            LOG.info("Successfully loaded database from JAR resources into memory");
+            
+        } catch (Exception e) {
+            LOG.error("Failed to load database from JAR resources", e);
+            throw new SQLException("Database loading failed: " + e.getMessage(), e);
         }
-        
-        return baseDir + "/" + DATABASE_NAME;
     }
     
 

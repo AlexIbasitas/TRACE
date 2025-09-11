@@ -32,34 +32,6 @@ class DocumentDatabaseServiceUnitTest {
     }
     
     @Nested
-    @DisplayName("Database Path Management")
-    class DatabasePathManagement {
-        
-        @Test
-        @DisplayName("should return consistent database path")
-        void shouldReturnConsistentDatabasePath() {
-            // Act
-            String dbPath = documentDatabaseService.getDatabasePath();
-            
-            // Assert
-            assertThat(dbPath).isNotNull();
-            assertThat(dbPath).contains("trace-documents.db");
-            assertThat(dbPath).contains(".trace/documents");
-        }
-        
-        @Test
-        @DisplayName("should return same path on multiple calls")
-        void shouldReturnSamePathOnMultipleCalls() {
-            // Act
-            String path1 = documentDatabaseService.getDatabasePath();
-            String path2 = documentDatabaseService.getDatabasePath();
-            
-            // Assert
-            assertThat(path1).isEqualTo(path2);
-        }
-    }
-    
-    @Nested
     @DisplayName("Cosine Similarity Calculation")
     class CosineSimilarityCalculation {
         

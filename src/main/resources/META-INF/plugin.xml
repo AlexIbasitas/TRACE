@@ -2,6 +2,7 @@
 <idea-plugin>
     <id>com.trace</id>
     <name>TRACE</name>
+    <version>1.0.0</version>
     <vendor>Alex Ibasitas</vendor>
     <description><![CDATA[
         <p>TRACE is an intelligent test failure analysis assistant for Cucumber Java tests in IntelliJ IDEA.</p>
@@ -37,7 +38,7 @@
         <p><b>Support:</b> <a href="https://github.com/alexibasitas/trace">GitHub Repository</a></p>
     ]]></description>
 
-    <idea-version since-build="252" until-build="252.*"/>
+    <idea-version since-build="252" until-build="253.*"/>
 
     <depends>com.intellij.modules.platform</depends>
     <depends>com.intellij.modules.java</depends>
@@ -53,12 +54,11 @@
                    icon="icons/logo_13.png" 
                    anchor="right" 
                    factoryClass="com.trace.chat.ui.TriagePanelToolWindowFactory"/>
-
-        <!-- Services -->
+        
+        <!-- Services with proper disposal configuration -->
         <projectService serviceImplementation="com.trace.ai.services.AINetworkService"/>
         <applicationService serviceImplementation="com.trace.ai.services.AIModelService"/>
         <projectService serviceImplementation="com.trace.ai.services.ChatHistoryService"/>
-
         <applicationService serviceImplementation="com.trace.ai.prompts.InitialPromptFailureAnalysisService"/>
         <applicationService serviceImplementation="com.trace.ai.configuration.AISettings"/>
     </extensions>
@@ -68,6 +68,11 @@
         <listener class="com.trace.test.listeners.CucumberTestExecutionListener"
                   topic="com.intellij.execution.testframework.sm.runner.SMTRunnerEventsListener"/>
     </applicationListeners>
-    
+
+    <projectListeners>
+        <!-- Project Lifecycle Listener for cleanup -->
+        <listener class="com.trace.listeners.ProjectLifecycleListener"
+                  topic="com.intellij.openapi.project.ProjectManagerListener"/>
+    </projectListeners>
 
 </idea-plugin> 
