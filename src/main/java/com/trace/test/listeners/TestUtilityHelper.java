@@ -179,14 +179,14 @@ public class TestUtilityHelper {
             if (outputStream != null) {
                 String capturedOutput = outputStream.toString();
                 if (!capturedOutput.trim().isEmpty()) {
-                    TestOutputCaptureListener.captureTestOutput(test, "=== CAPTURED STDOUT ===\n" + capturedOutput);
+                    TestOutputCaptureListener.captureTestOutput(test, "STDOUT:\n" + capturedOutput);
                 }
             }
             
             if (errorStream != null) {
                 String capturedError = errorStream.toString();
                 if (!capturedError.trim().isEmpty()) {
-                    TestOutputCaptureListener.captureTestOutput(test, "=== CAPTURED STDERR ===\n" + capturedError);
+                    TestOutputCaptureListener.captureTestOutput(test, "STDERR:\n" + capturedError);
                 }
             }
             

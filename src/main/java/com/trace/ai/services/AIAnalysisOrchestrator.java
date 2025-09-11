@@ -97,8 +97,7 @@ public final class AIAnalysisOrchestrator {
      * @throws IllegalArgumentException if failureInfo is null
      */
     public CompletableFuture<AIAnalysisResult> analyzeInitialFailure(@NotNull FailureInfo failureInfo, @NotNull AnalysisMode mode) {
-        LOG.info("=== DEBUG: analyzeInitialFailure called ===");
-        LOG.info("=== DEBUG: This is a test log message ===");
+        LOG.debug("Starting initial failure analysis");
         
         if (failureInfo == null) {
             throw new IllegalArgumentException("FailureInfo cannot be null");
@@ -119,11 +118,7 @@ public final class AIAnalysisOrchestrator {
                 ? initialOrchestrator.generateSummaryPrompt(failureInfo)
                 : initialOrchestrator.generateDetailedPrompt(failureInfo);
             
-            LOG.info("=== INITIAL FAILURE ANALYSIS PROMPT ===");
-            LOG.info("Prompt length: " + prompt.length() + " characters");
-            LOG.info("Complete prompt:");
-            LOG.info(prompt);
-            LOG.info("=== END INITIAL FAILURE ANALYSIS PROMPT ===");
+            LOG.debug("Generated initial failure analysis prompt (" + prompt.length() + " chars)");
             
             // Gate: if AI analysis is disabled, return a result with prompt only (no network)
             if (!aiSettings.isAutoAnalyzeEnabled()) {
@@ -178,8 +173,7 @@ public final class AIAnalysisOrchestrator {
      * @throws IllegalArgumentException if failureInfo is null
      */
     public CompletableFuture<AIAnalysisResult> analyzeInitialFailureWithDocuments(@NotNull FailureInfo failureInfo, @NotNull AnalysisMode mode) {
-        LOG.debug("=== DEBUG: analyzeInitialFailureWithDocuments called ===");
-        LOG.debug("=== DEBUG: Document retrieval service will be initialized lazily ===");
+        LOG.debug("Starting initial failure analysis with documents");
         
         if (failureInfo == null) {
             throw new IllegalArgumentException("FailureInfo cannot be null");
@@ -226,19 +220,9 @@ public final class AIAnalysisOrchestrator {
         // Insert document context before the "Analysis Request" section and avoid duplicate headers
         String enhancedPrompt = PromptUtils.insertDocumentContext(basePrompt, documentContext);
                 
-                LOG.info("=== DOCUMENT RETRIEVAL RESULTS ===");
-                LOG.info("Query: " + failureInfo.getScenarioName());
-                LOG.info("Document Context Retrieved:");
-                LOG.info(documentContext);
-                LOG.info("=== END DOCUMENT RETRIEVAL RESULTS ===");
+                LOG.debug("Retrieved document context for scenario '" + failureInfo.getScenarioName() + "' (" + documentContext.length() + " chars)");
                 
-                LOG.info("=== ENHANCED INITIAL FAILURE ANALYSIS PROMPT WITH DOCUMENTS ===");
-                LOG.info("Base prompt length: " + basePrompt.length() + " characters");
-                LOG.info("Document context length: " + documentContext.length() + " characters");
-                LOG.info("Enhanced prompt length: " + enhancedPrompt.length() + " characters");
-                LOG.info("Complete enhanced prompt:");
-                LOG.info(enhancedPrompt);
-                LOG.info("=== END ENHANCED INITIAL FAILURE ANALYSIS PROMPT ===");
+                LOG.debug("Enhanced prompt with documents (base: " + basePrompt.length() + " + context: " + documentContext.length() + " = " + enhancedPrompt.length() + " chars)");
                 
                 // Send the enhanced prompt to the AI request handler
                 final String requestLabel = (mode == AnalysisMode.OVERVIEW)
@@ -309,9 +293,7 @@ public final class AIAnalysisOrchestrator {
             throw new IllegalArgumentException("UserQuery cannot be null or empty");
         }
         
-        LOG.info("=== USER QUERY ANALYSIS STARTED ===");
-        LOG.info("User Query: " + userQuery);
-        LOG.info("Failure Context: " + failureInfo.getScenarioName());
+        LOG.debug("Starting user query analysis for scenario '" + failureInfo.getScenarioName() + "' (" + userQuery.length() + " chars)");
         
         try {
             if (!aiSettings.isTraceEnabled()) {
@@ -348,22 +330,12 @@ public final class AIAnalysisOrchestrator {
             // Use the user query orchestrator to create a prompt with context
             String prompt = userQueryOrchestrator.generatePrompt(failureInfo, userQuery, chatHistoryService);
             
-            // Log the complete prompt for manual verification
-            LOG.info("=== COMPLETE AI PROMPT FOR USER QUERY ===");
-            LOG.info("Prompt Length: " + prompt.length() + " characters");
-            LOG.info("Estimated Tokens: ~" + (prompt.length() / 4) + " tokens");
-            LOG.info("Prompt Content:");
-            LOG.info("--- START PROMPT ---");
-            LOG.info(prompt);
-            LOG.info("--- END PROMPT ---");
-            LOG.info("=== END PROMPT LOGGING ===");
+            LOG.debug("Generated user query prompt (" + prompt.length() + " chars, ~" + (prompt.length() / 4) + " tokens)");
             
             // Send the prompt to the AI request handler
             return requestHandler.sendRequest(prompt, "User Query")
                 .thenApply(result -> {
-                    LOG.info("=== USER QUERY ANALYSIS COMPLETED ===");
-                    LOG.info("AI Response Length: " + (result.getAnalysis() != null ? result.getAnalysis().length() : 0) + " characters");
-                    LOG.info("AI Response Service Type: " + result.getServiceType());
+                    LOG.debug("User query analysis completed by " + result.getServiceType() + " (" + (result.getAnalysis() != null ? result.getAnalysis().length() : 0) + " chars)");
                     LOG.info("AI Response Timestamp: " + result.getTimestamp());
                     
                     // Create a new result that includes the prompt for display in "Show AI thinking"
@@ -377,8 +349,7 @@ public final class AIAnalysisOrchestrator {
                     );
                 })
                 .exceptionally(throwable -> {
-                    LOG.error("=== USER QUERY ANALYSIS FAILED ===");
-                    LOG.error("Error: " + throwable.getMessage(), throwable);
+                    LOG.error("User query analysis failed: " + throwable.getMessage(), throwable);
                     return new AIAnalysisResult(
                         "User query analysis failed: " + throwable.getMessage(),
                         null,
@@ -389,8 +360,7 @@ public final class AIAnalysisOrchestrator {
                 });
                 
         } catch (Exception e) {
-            LOG.error("=== UNEXPECTED ERROR IN USER QUERY ANALYSIS ===");
-            LOG.error("Error: " + e.getMessage(), e);
+            LOG.error("Unexpected error in user query analysis: " + e.getMessage(), e);
             return CompletableFuture.completedFuture(
                 new AIAnalysisResult(
                     "Unexpected error during user query analysis: " + e.getMessage(),
@@ -426,9 +396,7 @@ public final class AIAnalysisOrchestrator {
             throw new IllegalArgumentException("UserQuery cannot be null or empty");
         }
         
-        LOG.info("=== USER QUERY ANALYSIS WITH DOCUMENTS STARTED ===");
-        LOG.info("User Query: " + userQuery);
-        LOG.info("Failure Context: " + failureInfo.getScenarioName());
+        LOG.debug("Starting user query analysis with documents for scenario '" + failureInfo.getScenarioName() + "' (" + userQuery.length() + " chars)");
         
         try {
             if (!aiSettings.isTraceEnabled()) {
@@ -467,26 +435,14 @@ public final class AIAnalysisOrchestrator {
                 // Insert document context before the "Analysis Request" section
                 String enhancedPrompt = PromptUtils.insertDocumentContext(basePrompt, documentContext);
                 
-                LOG.info("=== DOCUMENT RETRIEVAL RESULTS FOR USER QUERY ===");
-                LOG.info("Query: " + userQuery);
-                LOG.info("Document Context Retrieved:");
-                LOG.info(documentContext);
-                LOG.info("=== END DOCUMENT RETRIEVAL RESULTS ===");
+                LOG.debug("Retrieved document context for user query (" + userQuery.length() + " + " + documentContext.length() + " chars)");
                 
-                LOG.info("=== ENHANCED USER QUERY PROMPT WITH DOCUMENTS ===");
-                LOG.info("Base prompt length: " + basePrompt.length() + " characters");
-                LOG.info("Document context length: " + documentContext.length() + " characters");
-                LOG.info("Enhanced prompt length: " + enhancedPrompt.length() + " characters");
-                LOG.info("Complete enhanced prompt:");
-                LOG.info(enhancedPrompt);
-                LOG.info("=== END ENHANCED USER QUERY PROMPT ===");
+                LOG.debug("Enhanced user query prompt with documents (base: " + basePrompt.length() + " + context: " + documentContext.length() + " = " + enhancedPrompt.length() + " chars)");
                 
                 // Send the enhanced prompt to the AI request handler
                 return requestHandler.sendRequest(enhancedPrompt, "Enhanced User Query with Documents")
                     .thenApply(result -> {
-                        LOG.info("=== ENHANCED USER QUERY ANALYSIS COMPLETED ===");
-                        LOG.info("AI Response Length: " + (result.getAnalysis() != null ? result.getAnalysis().length() : 0) + " characters");
-                        LOG.info("AI Response Service Type: " + result.getServiceType());
+                        LOG.debug("Enhanced user query analysis completed by " + result.getServiceType() + " (" + (result.getAnalysis() != null ? result.getAnalysis().length() : 0) + " chars)");
                         LOG.info("AI Response Timestamp: " + result.getTimestamp());
                         
                         // Create a new result that includes the prompt for display in "Show AI thinking"
@@ -500,8 +456,7 @@ public final class AIAnalysisOrchestrator {
                         );
                     })
                     .exceptionally(throwable -> {
-                        LOG.error("=== ENHANCED USER QUERY ANALYSIS FAILED ===");
-                        LOG.error("Error: " + throwable.getMessage(), throwable);
+                        LOG.error("Enhanced user query analysis failed: " + throwable.getMessage(), throwable);
                         return new AIAnalysisResult(
                             "Enhanced user query analysis failed: " + throwable.getMessage(),
                             AIServiceType.OPENAI,
@@ -517,8 +472,7 @@ public final class AIAnalysisOrchestrator {
             });
             
         } catch (Exception e) {
-            LOG.error("=== UNEXPECTED ERROR IN ENHANCED USER QUERY ANALYSIS ===");
-            LOG.error("Error: " + e.getMessage(), e);
+            LOG.error("Unexpected error in enhanced user query analysis: " + e.getMessage(), e);
             return CompletableFuture.completedFuture(
                 new AIAnalysisResult(
                     "Unexpected error during enhanced user query analysis: " + e.getMessage(),

@@ -220,9 +220,7 @@ public class TriagePanelView {
      * This method is called by the CucumberTestExecutionListener when onTestingStarted() fires.
      */
     public void onTestRunStarted() {
-        LOG.info("=== TRIAGE PANEL: TEST RUN STARTED ===");
-        LOG.info("Previous Test Run ID: " + currentTestRunId);
-        LOG.info("Clearing test run tracking and chat history");
+        LOG.debug("Test run started, clearing previous run (ID: " + currentTestRunId + ")");
         
         // Clear test run tracking
         currentTestRunId = null;
@@ -243,7 +241,6 @@ public class TriagePanelView {
             LOG.error("Error clearing chat history: " + e.getMessage());
         }
         
-        LOG.info("=== END TRIAGE PANEL: TEST RUN STARTED ===");
     }
     
     /**

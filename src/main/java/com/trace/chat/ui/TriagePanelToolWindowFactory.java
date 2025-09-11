@@ -184,7 +184,7 @@ public class TriagePanelToolWindowFactory implements ToolWindowFactory, Disposab
             throw new IllegalArgumentException("Project cannot be null");
         }
         
-        LOG.info("=== CLEANUP: removePanelForProject called for project: " + project.getName() + " ===");
+        LOG.debug("Cleaning up panel for project: " + project.getName());
         
         // Dispose MessageBusConnection first
         com.intellij.util.messages.MessageBusConnection connection = messageBusConnections.remove(project);

@@ -80,12 +80,12 @@ public class TestOutputCaptureListener {
             // Capture error message (includes both error message and stack trace)
             String errorMessage = testProxy.getErrorMessage();
             if (errorMessage != null && !errorMessage.trim().isEmpty()) {
-                output.append("=== FULL ERROR OUTPUT ===\n");
+                output.append("ERROR OUTPUT:\n");
                 output.append(errorMessage);
                 if (!errorMessage.endsWith("\n")) {
                     output.append("\n");
                 }
-                output.append("=== END ERROR OUTPUT ===\n\n");
+                output.append("\n");
                 if (LOG.isDebugEnabled()) {
                     LOG.debug("Captured error output for test: " + testProxy.getName());
                 }
@@ -116,20 +116,20 @@ public class TestOutputCaptureListener {
             // Capture the error message from the test proxy
             String errorMessage = testProxy.getErrorMessage();
             if (errorMessage != null && !errorMessage.trim().isEmpty()) {
-                comprehensiveOutput.append("=== ERROR MESSAGE ===\n");
+                comprehensiveOutput.append("ERROR:\n");
                 comprehensiveOutput.append(errorMessage).append("\n");
             }
             
             // Capture any existing output we've already collected
             String existingOutput = getCapturedOutput(testProxy);
             if (existingOutput != null && !existingOutput.trim().isEmpty()) {
-                comprehensiveOutput.append("=== CAPTURED OUTPUT ===\n");
+                comprehensiveOutput.append("OUTPUT:\n");
                 comprehensiveOutput.append(existingOutput).append("\n");
             }
             
             // Try to capture additional error details from children
             if (testProxy.getChildren() != null && !testProxy.getChildren().isEmpty()) {
-                comprehensiveOutput.append("=== CHILD TEST OUTPUT ===\n");
+                comprehensiveOutput.append("CHILD TESTS:\n");
                 for (SMTestProxy child : testProxy.getChildren()) {
                     String childError = child.getErrorMessage();
                     if (childError != null && !childError.trim().isEmpty()) {
@@ -147,7 +147,7 @@ public class TestOutputCaptureListener {
             }
             
             // Capture test metadata
-            comprehensiveOutput.append("=== TEST METADATA ===\n");
+            comprehensiveOutput.append("TEST INFO:\n");
             comprehensiveOutput.append("Test Name: ").append(testProxy.getName()).append("\n");
             
             String locationUrl = testProxy.getLocationUrl();

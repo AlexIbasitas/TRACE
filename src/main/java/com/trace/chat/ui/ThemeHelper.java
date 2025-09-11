@@ -301,9 +301,7 @@ public class ThemeHelper {
             messageBusConnection.subscribe(LafManagerListener.TOPIC, source -> {
                 ApplicationManager.getApplication().invokeLater(() -> {
                         try {
-                            LOG.info("=== THEME CHANGE DETECTED (via MessageBus) ===");
-                            LOG.info("Current theme: " + UIManager.getLookAndFeel().getName());
-                            LOG.info("Panel background: " + UIManager.getColor("Panel.background"));
+                            LOG.debug("Theme changed to: " + UIManager.getLookAndFeel().getName());
                             LOG.info("Label foreground: " + UIManager.getColor("Label.foreground"));
                             LOG.info("Text field background: " + UIManager.getColor("TextField.background"));
                             
@@ -322,7 +320,7 @@ public class ThemeHelper {
                                 LOG.info("Restored scroll position to: " + currentScrollValue);
                             }
                             
-                            LOG.info("=== THEME CHANGE COMPLETED ===");
+                            LOG.debug("Theme refresh completed");
                         } catch (Exception ex) {
                             LOG.error("Error during theme change refresh: " + ex.getMessage(), ex);
                         }
@@ -333,10 +331,9 @@ public class ThemeHelper {
             mainPanel.addPropertyChangeListener("UI", evt -> {
                 ApplicationManager.getApplication().invokeLater(() -> {
                     try {
-                        LOG.info("=== THEME CHANGE DETECTED (via property change backup) ===");
-                        LOG.info("Property change: " + evt.getPropertyName() + " = " + evt.getNewValue());
+                        LOG.debug("Theme property changed: " + evt.getPropertyName());
                         refreshTheme();
-                        LOG.info("=== THEME CHANGE COMPLETED ===");
+                        LOG.debug("Theme refresh completed");
                     } catch (Exception ex) {
                         LOG.error("Error during theme change refresh: " + ex.getMessage(), ex);
                     }
@@ -348,10 +345,9 @@ public class ThemeHelper {
                 if ("defaultFont".equals(evt.getPropertyName())) {
                     ApplicationManager.getApplication().invokeLater(() -> {
                         try {
-                            LOG.info("=== FONT CHANGE DETECTED ===");
-                            LOG.info("Font change: " + evt.getPropertyName() + " = " + evt.getNewValue());
+                            LOG.debug("Font changed: " + evt.getPropertyName());
                             refreshTheme();
-                            LOG.info("=== FONT CHANGE COMPLETED ===");
+                            LOG.debug("Font refresh completed");
                         } catch (Exception ex) {
                             LOG.error("Error during font change refresh: " + ex.getMessage(), ex);
                         }

@@ -221,7 +221,7 @@ public class CucumberTestExecutionListener implements SMTRunnerEventsListener {
             }
             
             // Initialize output capture for this test
-            TestOutputCaptureListener.captureTestOutput(test, "=== Test Started ===\n");
+            TestOutputCaptureListener.captureTestOutput(test, "Test started\n");
             TestUtilityHelper.setupTestOutputCapture(test);
         }
     }
@@ -237,7 +237,7 @@ public class CucumberTestExecutionListener implements SMTRunnerEventsListener {
             TestUtilityHelper.captureTestStreams(test);
             
             // Add final output marker
-            TestOutputCaptureListener.captureTestOutput(test, "=== Test Finished ===\n");
+            TestOutputCaptureListener.captureTestOutput(test, "Test finished\n");
         }
     }
 
