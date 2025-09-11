@@ -34,6 +34,14 @@
         
         <p><b>Requirements:</b> OpenAI API key or Google Gemini API key for AI analysis features.</p>
         <p><b>Compatibility:</b> IntelliJ IDEA 2025.2+ | <b>Version:</b> 1.0.0</p>
+        
+        <h3>Important:</h3>
+        <ul>
+            <li><b>Data Processing:</b> Local analysis of stack traces, step definitions, and scenarios (configurable)</li>
+            <li><b>Network Usage:</b> AI analysis sends test failure context to configured services (OpenAI/Gemini) - optional</li>
+            <li><b>Storage:</b> Includes 1.1MB embedded database with testing best practices and documentation</li>
+        </ul>
+        
         <p><b>Privacy Policy:</b> <a href="https://alexibasitas.github.io/TRACE/PRIVACY.html">View our privacy policy</a></p>
         <p><b>Support:</b> <a href="https://github.com/alexibasitas/trace">GitHub Repository</a></p>
     ]]></description>

@@ -85,8 +85,6 @@ public final class InputPanelFactory {
      * <p>The input area is configured with multi-line support, proper keyboard
      * event handling, and consistent styling that matches the chat interface.</p>
      * 
-     * <p>This method implements defensive programming - if sendActionListener is null,
-     * it creates a text area without keyboard event handling.</p>
      *
      * @param sendActionListener The action listener for send functionality (can be null)
      * @return The configured input text area with proper naming for identification
@@ -166,8 +164,6 @@ public final class InputPanelFactory {
      * event handling for hover and press effects. It includes proper tooltips
      * and accessibility features.</p>
      * 
-     * <p>This method implements defensive programming - if sendActionListener is null,
-     * it creates a button without action listener but with visual styling.</p>
      *
      * @param sendActionListener The action listener for button clicks (can be null)
      * @return The configured send button with proper naming for identification
@@ -265,8 +261,6 @@ public final class InputPanelFactory {
      *   <li>All components are properly named for identification and testing</li>
      * </ul>
      * 
-     * <p>This method implements defensive programming - if sendActionListener is null,
-     * it creates components with limited functionality but still returns valid objects.</p>
      *
      * @param sendActionListener The action listener for send functionality (can be null)
      * @return An array containing [inputPanel, inputContainer, inputArea, buttonContainer, sendButton]
@@ -321,8 +315,6 @@ public final class InputPanelFactory {
      * <p>This method creates a minimal input panel setup with just the essential
      * components for basic functionality.</p>
      * 
-     * <p>This method implements defensive programming - if sendActionListener is null,
-     * it creates a panel with limited functionality but still returns a valid object.</p>
      *
      * @param sendActionListener The action listener for send functionality (can be null)
      * @return The configured input panel
@@ -343,8 +335,6 @@ public final class InputPanelFactory {
      * <p>This method clears the text content of the input area and resets
      * the caret position to the beginning.</p>
      * 
-     * <p>This method implements defensive programming - if inputArea is null,
-     * it logs a warning and returns early without throwing an exception.</p>
      *
      * @param inputArea The input text area to clear (can be null)
      */
@@ -365,8 +355,6 @@ public final class InputPanelFactory {
      * <p>This method retrieves the current text content and trims any
      * leading or trailing whitespace.</p>
      * 
-     * <p>This method implements defensive programming - if inputArea is null,
-     * it returns an empty string instead of throwing an exception.</p>
      *
      * @param inputArea The input text area to get text from (can be null)
      * @return The trimmed text content, or empty string if inputArea is null
@@ -387,8 +375,6 @@ public final class InputPanelFactory {
      * <p>This method checks if the input area contains any non-empty text
      * after trimming whitespace.</p>
      * 
-     * <p>This method implements defensive programming - if inputArea is null,
-     * it returns false instead of throwing an exception.</p>
      *
      * @param inputArea The input text area to check (can be null)
      * @return true if the input area has content, false otherwise or if inputArea is null
@@ -408,8 +394,6 @@ public final class InputPanelFactory {
      * 
      * <p>This method controls whether the input area can accept user input.</p>
      * 
-     * <p>This method implements defensive programming - if inputArea is null,
-     * it logs a warning and returns early without throwing an exception.</p>
      *
      * @param inputArea The input text area to configure (can be null)
      * @param enabled Whether the input area should be enabled
@@ -429,8 +413,6 @@ public final class InputPanelFactory {
      * 
      * <p>This method controls whether the send button can be clicked.</p>
      * 
-     * <p>This method implements defensive programming - if sendButton is null,
-     * it logs a warning and returns early without throwing an exception.</p>
      *
      * @param sendButton The send button to configure (can be null)
      * @param enabled Whether the send button should be enabled

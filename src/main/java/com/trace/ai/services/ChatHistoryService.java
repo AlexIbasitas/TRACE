@@ -18,18 +18,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
  * Service for managing chat history with sliding window approach.
  * 
  * <p>This service maintains a conversation context using a sliding window approach
- * that stores only user messages (not AI responses) to keep context focused and relevant.
- * It uses IntelliJ's persistence API for project-specific storage and follows
- * Gemini best practices for context building.</p>
- * 
- * <p>Key features:</p>
- * <ul>
- *   <li>Sliding window with configurable size (default: 3 user messages)</li>
- *   <li>Always preserves initial test failure context</li>
- *   <li>Builds context strings with query at the end (Gemini best practice)</li>
- *   <li>Project-specific persistence using IntelliJ's state management</li>
- *   <li>Thread-safe operations with CopyOnWriteArrayList</li>
- * </ul>
+ * that stores only user messages (not AI responses) to keep context focused and relevant.</p>
  * 
  * <p>Usage:</p>
  * <ul>
@@ -169,11 +158,7 @@ public final class ChatHistoryService implements PersistentStateComponent<ChatHi
     }
     
     /**
-     * Builds a context string for AI analysis following Gemini best practices.
-     * 
-     * <p>This method constructs a context string that puts the current query
-     * at the end, as recommended by Gemini documentation. The context includes
-     * the failure context (if available) and recent user queries.</p>
+     * Builds a context string for AI analysis.
      * 
      * @param currentQuery the current query to append at the end
      * @return a formatted context string suitable for AI analysis

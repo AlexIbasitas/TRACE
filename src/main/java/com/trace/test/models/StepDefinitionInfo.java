@@ -174,9 +174,8 @@ public class StepDefinitionInfo {
     /**
      * Fluent builder for creating StepDefinitionInfo instances.
      * 
-     * <p>This builder provides a clean, readable API for constructing StepDefinitionInfo
-     * objects with optional fields. It's particularly useful when some information
-     * may not be available during construction.</p>
+     * <p>This builder provides a fluent API for constructing StepDefinitionInfo
+     * objects with optional fields.</p>
      * 
      * <p>Example usage:</p>
      * <pre>{@code

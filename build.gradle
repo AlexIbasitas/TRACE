@@ -9,9 +9,7 @@ plugins {
 group = 'com.trace'
 version = '1.0.0'
 
-// ============================================================================
-// REPOSITORIES
-// ============================================================================
+// Repositories
 
 repositories {
     mavenCentral()
@@ -20,9 +18,7 @@ repositories {
     }
 }
 
-// ============================================================================
-// DEPENDENCIES
-// ============================================================================
+// Dependencies
 
 dependencies {
     // IntelliJ Platform dependencies
@@ -73,9 +69,7 @@ dependencies {
     testImplementation 'io.cucumber:cucumber-junit:7.15.0'
 }
 
-// ============================================================================
-// CUSTOM TASKS
-// ============================================================================
+// Custom tasks
 
 // Simple task to run the document store refresher
 task refreshDocumentStore(type: JavaExec) {
@@ -105,11 +99,7 @@ task refreshDocumentStore(type: JavaExec) {
     }
 }
 
-// ============================================================================
-// INTELLIJ PLATFORM CONFIGURATION
-// ============================================================================
-
-// IntelliJ Platform configuration - simplified for compilation
+// IntelliJ Platform configuration
 intellijPlatform {
     pluginConfiguration {
         name = 'TRACE'
@@ -156,18 +146,14 @@ tasks.named('runIde') {
     environment 'IDEA_JDK', '/Library/Java/JavaVirtualMachines/temurin-17.jdk/Contents/Home'
 }
 
-// ============================================================================
-// JAVA CONFIGURATION
-// ============================================================================
+// Java configuration
 
 java {
     sourceCompatibility = JavaVersion.VERSION_21
     targetCompatibility = JavaVersion.VERSION_21
 }
 
-// ============================================================================
-// CLEANUP TASKS (JetBrains Best Practice)
-// ============================================================================
+// Cleanup tasks
 
 /**
  * Clean IntelliJ test temp directories to prevent "file name too long" errors.
@@ -204,9 +190,7 @@ task cleanTestTempDirs {
 }
 
 
-// ============================================================================
-// TEST CONFIGURATION
-// ============================================================================
+// Test configuration
 
 // Configure test source sets to include only unit tests
 sourceSets {

@@ -216,7 +216,7 @@ public class GherkinScenarioInfo {
     /**
      * Gets the complete content of the feature file.
      * 
-     * <p>This provides the full feature file content for comprehensive analysis,
+     * <p>This provides the full feature file content,
      * including all scenarios, background, and feature-level information.</p>
      * 
      * @return the complete feature file content, or null if not available
@@ -230,9 +230,8 @@ public class GherkinScenarioInfo {
     /**
      * Fluent builder for creating GherkinScenarioInfo instances.
      * 
-     * <p>This builder provides a clean, readable API for constructing GherkinScenarioInfo
-     * objects with optional fields. It's particularly useful when some information
-     * may not be available during construction.</p>
+     * <p>This builder provides a fluent API for constructing GherkinScenarioInfo
+     * objects with optional fields.</p>
      * 
      * <p>Example usage:</p>
      * <pre>{@code

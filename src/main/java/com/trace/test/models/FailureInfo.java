@@ -161,8 +161,8 @@ public class FailureInfo {
     /**
      * Gets complete Gherkin scenario context and metadata.
      * 
-     * <p>This provides rich structured data including scenario steps, tags, background,
-     * and full feature context for comprehensive analysis.</p>
+     * <p>This provides structured data including scenario steps, tags, background,
+     * and full feature context.</p>
      * 
      * @return GherkinScenarioInfo object with complete scenario details, or null if not available
      */
@@ -215,7 +215,7 @@ public class FailureInfo {
     /**
      * Fluent builder for creating FailureInfo instances.
      * 
-     * <p>This builder provides a clean, readable API for constructing FailureInfo
+     * <p>This builder provides a fluent API for constructing FailureInfo
      * objects with optional fields.</p>
      * 
      * <p>Example usage:</p>

@@ -32,11 +32,7 @@ public final class TriagePanelConstants {
     // --- Theme-aware color constants ---
     
     /**
-     * Gets the theme-aware panel background color using dynamic resolution.
-     * 
-     * <p>This method returns a JBColor that automatically adapts to the current
-     * IDE theme. It first attempts to use the UIManager's Panel.background color,
-     * falling back to appropriate light/dark theme defaults if not available.</p>
+     * Returns theme-aware panel background color.
      * 
      * @return The theme-aware panel background color
      */
@@ -48,11 +44,7 @@ public final class TriagePanelConstants {
     }
     
     /**
-     * Gets the theme-aware input container background color using dynamic resolution.
-     * 
-     * <p>This method returns a JBColor that automatically adapts to the current
-     * IDE theme. It first attempts to use the UIManager's TextField.background color,
-     * falling back to appropriate light/dark theme defaults if not available.</p>
+     * Returns theme-aware input container background color.
      * 
      * @return The theme-aware input container background color
      */
@@ -71,11 +63,7 @@ public final class TriagePanelConstants {
     }
     
     /**
-     * Gets the theme-aware input container border color using dynamic resolution.
-     * 
-     * <p>This method returns a JBColor that automatically adapts to the current
-     * IDE theme. It first attempts to use the UIManager's Component.borderColor,
-     * falling back to appropriate light/dark theme defaults if not available.</p>
+     * Returns theme-aware input container border color.
      * 
      * @return The theme-aware input container border color
      */
@@ -94,11 +82,7 @@ public final class TriagePanelConstants {
     }
     
     /**
-     * Gets the theme-aware header border color using dynamic resolution.
-     * 
-     * <p>This method returns a JBColor that automatically adapts to the current
-     * IDE theme. It first attempts to use the UIManager's Component.borderColor,
-     * falling back to appropriate light/dark theme defaults if not available.</p>
+     * Returns theme-aware header border color.
      * 
      * @return The theme-aware header border color
      */
@@ -110,10 +94,7 @@ public final class TriagePanelConstants {
     }
     
     /**
-     * Gets the theme-aware header text color using dynamic resolution.
-     * 
-     * <p>This method returns a JBColor that automatically adapts to the current
-     * IDE theme using the Label.foreground color with appropriate fallbacks.</p>
+     * Returns theme-aware header text color.
      * 
      * @return The theme-aware header text color
      */
@@ -136,10 +117,7 @@ public final class TriagePanelConstants {
     }
     
     /**
-     * Gets the theme-aware timestamp text color using dynamic resolution.
-     * 
-     * <p>This method returns a JBColor that automatically adapts to the current
-     * IDE theme using the Label.infoForeground color with appropriate fallbacks.</p>
+     * Returns theme-aware timestamp text color.
      * 
      * @return The theme-aware timestamp text color
      */
@@ -521,9 +499,6 @@ public final class TriagePanelConstants {
     /**
      * Gets the default panel background color using dynamic theme resolution.
      * 
-     * <p>This method provides a fallback mechanism for panel background color
-     * resolution. It first attempts to get the color from UIManager, then
-     * falls back to the theme-aware getPanelBackground() method.</p>
      * 
      * @return The panel background color
      */

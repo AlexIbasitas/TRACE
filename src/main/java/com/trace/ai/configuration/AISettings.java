@@ -14,9 +14,7 @@ import java.time.LocalDateTime;
 /**
  * Persistent settings service for TRACE AI features.
  * 
- * <p>This service manages user preferences, consent, and configuration for AI analysis
- * features. It follows IntelliJ Platform best practices for persistent state management
- * using a separate State class for data storage.</p>
+ * <p>This service manages user preferences, consent, and configuration for AI analysis features.</p>
  * 
  * <p>The service provides:</p>
  * <ul>
@@ -38,11 +36,7 @@ public final class AISettings implements PersistentStateComponent<AISettings.Sta
     private static final Logger LOG = Logger.getInstance(AISettings.class);
     
     /**
-     * State class containing all persistent settings data.
-     * 
-     * <p>This class holds all the configuration data that needs to be persisted
-     * between IDE sessions. All fields are public to allow automatic serialization
-     * by the IntelliJ Platform.</p>
+     * Persistent settings data.
      */
     public static class State {
         // User consent and preferences
@@ -363,13 +357,6 @@ public final class AISettings implements PersistentStateComponent<AISettings.Sta
     /**
      * Checks if AI analysis is properly configured and ready to use.
      * 
-     * <p>This method checks that:</p>
-     * <ul>
-     *   <li>AI features are enabled</li>
-     *   <li>User has given consent</li>
-     *   <li>A preferred AI service is set</li>
-     * </ul>
-     * 
      * @return true if AI analysis is configured and ready, false otherwise
      */
     public boolean isConfigured() {
@@ -383,8 +370,6 @@ public final class AISettings implements PersistentStateComponent<AISettings.Sta
     
     /**
      * Resets all settings to their default values.
-     * 
-     * <p>This method is useful for testing or when users want to start fresh.</p>
      */
     public void resetToDefaults() {
         LOG.info("Resetting AISettings to defaults");

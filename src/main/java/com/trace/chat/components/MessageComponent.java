@@ -18,14 +18,7 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 
 /**
- * Dedicated message component for consistent message rendering in the TRACE chat interface.
- * 
- * <p>This Swing component handles the visual representation of individual chat messages,
- * including user messages, AI responses, and system messages. It provides a consistent
- * layout with proper styling, icons, timestamps, and support for collapsible AI thinking sections.</p>
- * 
- * <p>The component automatically adapts its appearance based on the message role and content,
- * displaying appropriate icons, colors, and layout elements for different message types.</p>
+ * Message component for the TRACE chat interface.
  * 
  * @author Alex Ibasitas
  * @version 1.0
