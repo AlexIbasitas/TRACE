@@ -193,7 +193,7 @@ public class PrivacyConsentPanel extends JBPanel<PrivacyConsentPanel> implements
                 
                 addHyperlinkListener(e -> {
                     if (e.getEventType() == HyperlinkEvent.EventType.ACTIVATED) {
-                        BrowserUtil.browse("https://alexibasitas.github.io/TRACE/PRIVACY.html");
+                        BrowserUtil.browse("https://alexibasitas.github.io/trace/PRIVACY.html");
                     }
                 });
             }
@@ -544,7 +544,7 @@ public class PrivacyConsentPanel extends JBPanel<PrivacyConsentPanel> implements
                 "</ul>" +
                 "<p style='margin: 12px 0;'>By accepting, you agree to allow TRACE to send test failure " +
                 "data to AI services for analysis and debugging assistance.</p>" +
-                "<p style='margin: 8px 0;'>For complete details, see our <a href=\"https://alexibasitas.github.io/TRACE/PRIVACY.html\">Privacy Policy</a>.</p>" +
+                "<p style='margin: 8px 0;'>For complete details, see our <a href=\"https://alexibasitas.github.io/trace/PRIVACY.html\">Privacy Policy</a>.</p>" +
                 "</body></html>"
             );
             

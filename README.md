@@ -72,7 +72,7 @@ The TRACE tool window provides:
 
 - Test failure information is only sent to your chosen AI service
 - No data is stored on external servers beyond the AI service
-- See our [Privacy Policy](docs/PRIVACY.html) for detailed information
+- See our [Privacy Policy](https://alexibasitas.github.io/trace/PRIVACY.html) for detailed information
 
 ## Development
 
@@ -132,7 +132,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ## Links
 
 - [GitHub Repository](https://github.com/alexibasitas/trace)
-- [Privacy Policy](docs/PRIVACY.html)
+- [Privacy Policy](https://alexibasitas.github.io/trace/PRIVACY.html)
 - [JetBrains Marketplace](https://plugins.jetbrains.com/plugin/trace)
 - [Documentation](docs/)
 
