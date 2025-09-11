@@ -29,13 +29,19 @@ dependencies {
     intellijPlatform {
         intellijIdeaCommunity('2025.2')
         bundledPlugin('com.intellij.java')
+        
+        // Plugin verification
+        pluginVerifier()
     }
     
     // JSON serialization for backend communication
     implementation 'com.google.code.gson:gson:2.10.1'
     
-    // Professional markdown rendering with Flexmark Java
-    implementation 'com.vladsch.flexmark:flexmark-all:0.64.8'
+    // Professional markdown rendering with Flexmark Java - only needed extensions
+    implementation 'com.vladsch.flexmark:flexmark:0.64.8'
+    implementation 'com.vladsch.flexmark:flexmark-ext-tables:0.64.8'
+    implementation 'com.vladsch.flexmark:flexmark-ext-autolink:0.64.8'
+    implementation 'com.vladsch.flexmark:flexmark-ext-gfm-strikethrough:0.64.8'
 
     // SQLite JDBC driver for frozen vector store
     implementation('org.xerial:sqlite-jdbc:3.44.1.0') {
@@ -45,9 +51,6 @@ dependencies {
     // For Gradle task execution
     implementation 'org.jetbrains:annotations:24.0.1'
 
-    // SLF4J for logging (industry standard) - Commented out to use IntelliJ Platform logger
-    // implementation 'org.slf4j:slf4j-api:2.0.9'
-    // runtimeOnly 'org.slf4j:slf4j-simple:2.0.9'
         
     // JUnit 5 for unit tests
     testImplementation 'org.junit.jupiter:junit-jupiter-api:5.10.2'
@@ -112,11 +115,19 @@ intellijPlatform {
         name = 'TRACE'
     }
     instrumentCode = true
+    
+    // Configure plugin verification for 2.x
+    pluginVerification {
+        ides {
+            // Verify against IntelliJ IDEA Community Edition 2025.2
+            recommended()
+        }
+    }
 }
 
 patchPluginXml {
     sinceBuild = '252'  // 2025.2 (your local installation version)
-    untilBuild = '259.*'  // 2025.x series (conservative compatibility)
+    untilBuild = '253.*'  // 2025.3 (next stable release)
     changeNotes = """
       <ul>
         <li>Migrated to IntelliJ Platform Gradle Plugin 2.x</li>
@@ -218,6 +229,10 @@ def configureTestTask(Test task) {
     task.systemProperty 'idea.log.debug.categories', 'com.trace'
     task.systemProperty 'idea.split.test.logs', 'true'
     
+    // Suppress IntelliJ Platform warnings
+    task.systemProperty 'idea.suppress.warnings', 'true'
+    task.systemProperty 'java.awt.headless', 'true'
+    
     // Additional properties to help with temporary directory issues
     task.systemProperty 'java.io.tmpdir', System.getProperty('java.io.tmpdir')
     
@@ -225,20 +240,23 @@ def configureTestTask(Test task) {
     task.forkEvery = 1
     task.maxParallelForks = 1
     
+    // Suppress verbose JVM warnings for cleaner output
+    task.jvmArgs '-Xlog:cds=error'  // Suppress CDS warnings
+    
     // Use shorter temp directory paths to prevent "file name too long" errors
     task.systemProperty 'idea.test.tmp.dir', "${buildDir}/test-tmp/${task.name}"
     
     task.testLogging {
-        events "passed", "skipped", "failed", "started"
-        exceptionFormat = 'full'
-        showStandardStreams = true
+        // Only show failures and summary - much cleaner output
+        events "failed"
+        exceptionFormat = 'short'
+        showStandardStreams = false
         showExceptions = true
         showCauses = true
         showStackTraces = true
         
-        // Show test results in console
+        // Show only test class level results
         displayGranularity = 2
-        showExceptions = true
     }
     
     // Ensure cleanup happens before tests run

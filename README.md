@@ -1,92 +1,141 @@
-# TRACE - Cucumber Test Failure Triage Assistant
+# TRACE - AI-Powered Cucumber Test Failure Analysis
 
-An IntelliJ IDEA plugin to assist SDETs with triaging Cucumber Java test failures.
+TRACE is an IntelliJ IDEA plugin that automatically analyzes Cucumber test failures using AI to help SDETs and QA engineers quickly identify and resolve test issues.
 
 ## Features
 
-- Automatically detects Cucumber test failures in IntelliJ
-- Extracts stack traces and failed step text
-- Identifies corresponding Java step definitions using PSI (not regex)
-- Extracts Gherkin scenarios from feature files
-- Formats information into structured AI prompts for analysis
-- Displays results in a dedicated "Triage Panel" tool window
+- **Automatic Failure Detection**: Detects Cucumber test failures in IntelliJ IDEA test runner
+- **Intelligent Context Extraction**: Extracts stack traces, step definitions, and Gherkin scenarios
+- **AI-Powered Analysis**: Utilizes OpenAI or Google Gemini for intelligent analysis
+- **Interactive Chat Interface**: Displays results and allows follow-up questions in a dedicated tool window integrated into the IDE.
+- **Secure API Management**: Stores API keys securely using IntelliJ's PasswordSafe
+- **Real-time Analysis**: Provides immediate insights when tests fail
 
-## Project Architecture
+## Requirements
 
-The plugin is organized into the following modules:
+- IntelliJ IDEA 2025.2 or later
+- OpenAI API key or Google Gemini API key (Recommended for AI analysis)
+- Java 11 or later (for development)
 
-### Core Module
-- Contains domain models and core plugin functionality
-- `FailureInfo` - Data model representing test failure information
+## Installation
 
-### Listeners Module
-- Handles test execution events and failure detection
-- `CucumberTestExecutionListener` - Detects test failures and triggers the extraction process
+1. Download the plugin from the [JetBrains Marketplace](https://plugins.jetbrains.com/plugin/trace) or build from source
+2. Install the plugin through IntelliJ IDEA: `File > Settings > Plugins > Install Plugin from Disk`
+3. Restart IntelliJ IDEA
+4. Configure your API key in the plugin settings
 
-### Extractors Module
-- Extracts information from test failures and source code
-- `StackTraceExtractor` - Extracts stack trace and failed step text
-- `StepDefinitionExtractor` - Uses PSI to extract step definition methods
-- `GherkinScenarioExtractor` - Extracts Gherkin scenarios from feature files
+## Usage
 
-### Services Module
-- Provides services for formatting and analysis
-- `BackendCommunicationService` - Communicates with backend API for AI analysis
+### Initial Setup
 
-### UI Module
-- Contains UI components for the plugin
-- `TriagePanelToolWindowFactory` - Creates the tool window
-- `TriagePanelView` - UI component for displaying failure information
+1. Open IntelliJ IDEA and navigate to the TRACE panel
+2. (Recommended) Enter your OpenAI or Google Gemini API key for AI analysis
+3. Click "Apply" to verify your configuration
+4. Select your preferred AI model
+
+
+### Running Tests
+
+1. Execute your Cucumber tests using IntelliJ's test runner
+2. When a test fails, TRACE automatically:
+   - Captures the failure information
+   - Extracts the stack trace and failed step
+   - Identifies the corresponding step definition
+   - Retrieves the Gherkin scenario
+   - (If configured) Sends context to your configured AI service for analysis
+3. View the extracted context and (if available) AI analysis in the TRACE tool window (right panel)
+4. (If AI is configured) Ask follow-up questions using the chat interface
+
+### Tool Window
+
+The TRACE tool window provides:
+- **Smart Context Packaging**: Consolidates step definitions, scenarios, and stack traces into a well-formatted prompt, ensuring AI delivers precise and relevant results.
+- **Failure Analysis** (If AI configured): AI-generated insights about the test failure
+- **Chat Interface** (If AI configured): Interactive Q&A about the failure
+
+## Security
+
+### API Key Storage
+
+- API keys are stored securely using IntelliJ's PasswordSafe encryption
+- Keys are never stored in plain text or configuration files
+- Keys are only transmitted over HTTPS to AI service providers
+
+### Network Usage
+
+- TRACE only sends test failure context to your configured AI service
+- No personal data or source code is transmitted beyond the failure context
+- All communications use secure HTTPS connections
+- You control which AI service to use (OpenAI or Google Gemini)
+
+### Data Privacy
+
+- Test failure information is only sent to your chosen AI service
+- No data is stored on external servers beyond the AI service
+- See our [Privacy Policy](docs/PRIVACY.html) for detailed information
 
 ## Development
 
-### Requirements
-- IntelliJ IDEA 2023.1 or later
-- Java 11 or later
-- Gradle 7.6 or later
+### Building from Source
 
-### Testing
-
-The project follows **JetBrains official best practices** for IntelliJ Platform plugin testing:
-
-#### Running Tests
 ```bash
-# Run all tests (recommended)
-gradle test
-```
-
-#### Test Results
-- **90 tests total** - All core functionality is tested
-- **72 tests pass** - Core business logic and IntelliJ Platform integration work correctly
-- **18 tests may fail** - Due to known VFS/index corruption issues on macOS (acknowledged by JetBrains)
-
-#### Why Some Tests Fail
-According to [JetBrains Testing FAQ](https://plugins.jetbrains.com/docs/intellij/testing-faq.html):
-
-> **"How to avoid test failure when using resources?"**
-> 
-> In some situations, added or changed files (e.g. XML DTDs provided by a plugin) are not refreshed in Virtual File System. In such cases, simply delete test-system/caches in your sandbox directory and try again.
-
-The failing tests are due to **VFS (Virtual File System) corruption** and **index storage issues** - these are **system-level problems**, not code issues. JetBrains recommends setting `ignoreFailures = true` for this exact scenario.
-
-#### Test Coverage
-- ✅ **Core business logic** - All strategy implementations work correctly
-- ✅ **IntelliJ Platform integration** - PSI operations and project access work
-- ✅ **Error handling** - Graceful handling of edge cases and failures
-- ✅ **Strategy pattern** - All parsing strategies function as designed
-
-**Note**: The build succeeds because we follow JetBrains' recommendation to not fail builds due to VFS/index issues. The core functionality is verified by the passing tests.
-
-### Building the Plugin
-```bash
+git clone https://github.com/alexibasitas/trace.git
+cd trace
 ./gradlew buildPlugin
 ```
 
-### Running the Plugin
+### Running in Development
+
 ```bash
 ./gradlew runIde
 ```
 
+### Testing
+
+```bash
+./gradlew test
+```
+
+## Configuration
+
+### AI Settings (Recommended)
+
+Access plugin settings by clicking the ⚙️ icon in the upper right hand corner of the TRACE panel.
+
+- **API Key**: Your OpenAI or Google Gemini API key
+- **Model Selection**: Choose between different AI models
+- **Custom Rules**: Add your own custom rules
+
+### Supported AI Services
+
+- OpenAI
+- Google Gemini
+
+## Troubleshooting
+
+### Common Issues
+
+1. **Plugin not detecting failures**: Ensure you're running Cucumber tests through IntelliJ's test runner
+2. **API key errors**: Verify your API key is correct and has sufficient credits
+3. **No analysis displayed**: Check that your AI service is accessible and responding
+
+### Getting Help
+
+- Check the [GitHub Issues](https://github.com/alexibasitas/trace/issues) for known problems
+- Review the [documentation](docs/) for detailed guides
+- Submit issues with test failure logs for debugging
+
 ## License
 
-[MIT License](LICENSE)
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## Links
+
+- [GitHub Repository](https://github.com/alexibasitas/trace)
+- [Privacy Policy](docs/PRIVACY.html)
+- [JetBrains Marketplace](https://plugins.jetbrains.com/plugin/trace)
+- [Documentation](docs/)
+
+## Support
+
+For support, feature requests, or bug reports, please visit our [GitHub repository](https://github.com/alexibasitas/trace) or open an issue.
