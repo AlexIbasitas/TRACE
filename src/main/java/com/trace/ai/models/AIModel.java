@@ -94,9 +94,7 @@ public class AIModel {
         this.lastModified = lastModified;
     }
     
-    // ============================================================================
-    // GETTERS AND SETTERS
-    // ============================================================================
+    // --- Getters and setters ---
     
     /**
      * Gets the unique identifier for this model.
@@ -205,9 +203,7 @@ public class AIModel {
         return lastModified;
     }
     
-    // ============================================================================
-    // OPTIMAL SETTINGS (HARD-CODED FOR SIMPLICITY)
-    // ============================================================================
+    // --- AI model settings ---
     
     /**
      * Gets the optimal max tokens for this model.
@@ -236,9 +232,7 @@ public class AIModel {
         return getOptimalConfidenceScores(serviceType, modelId);
     }
     
-    // ============================================================================
-    // DISPLAY METHODS
-    // ============================================================================
+    // --- Display methods ---
     
     /**
      * Gets the display name for this model.
@@ -260,9 +254,7 @@ public class AIModel {
         return String.format("%s (%s - %s)", name, serviceType.getDisplayName(), modelId);
     }
     
-    // ============================================================================
-    // UTILITY METHODS
-    // ============================================================================
+    // --- Utility methods ---
     
     /**
      * Creates a copy of this model with a new name.
@@ -287,9 +279,7 @@ public class AIModel {
                modelId != null && !modelId.trim().isEmpty();
     }
     
-    // ============================================================================
-    // STATIC UTILITY METHODS
-    // ============================================================================
+    // --- Static utility methods ---
     
     /**
      * Gets the optimal max tokens for a given service and model.
@@ -406,9 +396,7 @@ public class AIModel {
         }
     }
     
-    // ============================================================================
-    // OBJECT METHODS
-    // ============================================================================
+    // --- Object methods ---
     
     @Override
     public boolean equals(Object obj) {

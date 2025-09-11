@@ -5,6 +5,7 @@ import com.intellij.openapi.ui.Messages;
 import com.intellij.ui.components.JBLabel;
 import com.intellij.ui.components.JBPasswordField;
 import com.intellij.util.ui.UIUtil;
+import com.intellij.icons.AllIcons;
 import com.trace.security.SecureAPIKeyManager;
 import com.trace.ai.configuration.AIServiceType;
 import com.trace.common.constants.TriagePanelConstants;
@@ -80,8 +81,9 @@ public class APIKeyManagerHelper {
                         boolean saved = SecureAPIKeyManager.storeAPIKey(AIServiceType.OPENAI, apiKey);
                         ApplicationManager.getApplication().invokeLater(() -> {
                             if (saved) {
-                                openaiStatusLabel.setText("✅ Connected");
+                                openaiStatusLabel.setText("Connected");
                                 openaiStatusLabel.setForeground(UIUtil.getLabelSuccessForeground());
+                                openaiStatusLabel.setIcon(AllIcons.General.InspectionsOK);
                                 showSuccess("OpenAI API key applied successfully", parentComponent);
                                 
                                 // Call success callback for model discovery
@@ -154,8 +156,9 @@ public class APIKeyManagerHelper {
                         boolean saved = SecureAPIKeyManager.storeAPIKey(AIServiceType.GEMINI, apiKey);
                         ApplicationManager.getApplication().invokeLater(() -> {
                             if (saved) {
-                                geminiStatusLabel.setText("✅ Connected");
+                                geminiStatusLabel.setText("Connected");
                                 geminiStatusLabel.setForeground(UIUtil.getLabelSuccessForeground());
+                                geminiStatusLabel.setIcon(AllIcons.General.InspectionsOK);
                                 showSuccess("Gemini API key applied successfully", parentComponent);
                                 
                                 // Call success callback for model discovery
@@ -279,8 +282,9 @@ public class APIKeyManagerHelper {
             // Update UI on EDT after operation completes
             ApplicationManager.getApplication().invokeLater(() -> {
                 if (cleared) {
-                    openaiStatusLabel.setText("Not configured");
-                    openaiStatusLabel.setForeground(UIUtil.getLabelForeground());
+                    openaiStatusLabel.setText("Not Connected");
+                    openaiStatusLabel.setForeground(TriagePanelConstants.ERROR_FOREGROUND);
+                    openaiStatusLabel.setIcon(AllIcons.General.Error);
                     LOG.info("OpenAI API key cleared successfully");
                 } else {
                     openaiStatusLabel.setText("Failed to clear");
@@ -312,8 +316,9 @@ public class APIKeyManagerHelper {
             // Update UI on EDT after operation completes
             ApplicationManager.getApplication().invokeLater(() -> {
                 if (cleared) {
-                    geminiStatusLabel.setText("Not configured");
-                    geminiStatusLabel.setForeground(UIUtil.getLabelForeground());
+                    geminiStatusLabel.setText("Not Connected");
+                    geminiStatusLabel.setForeground(TriagePanelConstants.ERROR_FOREGROUND);
+                    geminiStatusLabel.setIcon(AllIcons.General.Error);
                     LOG.info("Gemini API key cleared successfully");
                 } else {
                     geminiStatusLabel.setText("Failed to clear");
@@ -338,8 +343,9 @@ public class APIKeyManagerHelper {
             openaiStatusLabel.setText("API key entered (click Apply to test & save)");
             openaiStatusLabel.setForeground(UIUtil.getLabelInfoForeground());
         } else {
-            openaiStatusLabel.setText("Not configured");
-            openaiStatusLabel.setForeground(UIUtil.getLabelForeground());
+            openaiStatusLabel.setText("Not Connected");
+            openaiStatusLabel.setForeground(TriagePanelConstants.ERROR_FOREGROUND);
+            openaiStatusLabel.setIcon(AllIcons.General.Error);
         }
     }
     
@@ -352,8 +358,9 @@ public class APIKeyManagerHelper {
             geminiStatusLabel.setText("API key entered (click Apply to test & save)");
             geminiStatusLabel.setForeground(UIUtil.getLabelInfoForeground());
         } else {
-            geminiStatusLabel.setText("Not configured");
-            geminiStatusLabel.setForeground(UIUtil.getLabelForeground());
+            geminiStatusLabel.setText("Not Connected");
+            geminiStatusLabel.setForeground(TriagePanelConstants.ERROR_FOREGROUND);
+            geminiStatusLabel.setIcon(AllIcons.General.Error);
         }
     }
     

@@ -306,9 +306,7 @@ public final class ChatHistoryService implements PersistentStateComponent<ChatHi
             .toList());
     }
     
-    // ============================================================================
-    // PERSISTENCE IMPLEMENTATION
-    // ============================================================================
+    // --- Persistence implementation ---
     
     @Override
     public State getState() {

@@ -68,9 +68,7 @@ public class AIModelSelector extends JBPanel<AIModelSelector> {
         refreshModelList();
     }
     
-    // ============================================================================
-    // UI SETUP
-    // ============================================================================
+    // --- UI setup ---
     
     /**
      * Sets up the UI layout and components.
@@ -121,9 +119,7 @@ public class AIModelSelector extends JBPanel<AIModelSelector> {
         });
     }
     
-    // ============================================================================
-    // MODEL MANAGEMENT
-    // ============================================================================
+    // --- Model management ---
     
     /**
      * Refreshes the model list in the combo box.
@@ -215,9 +211,7 @@ public class AIModelSelector extends JBPanel<AIModelSelector> {
         return comboBoxModel.getSize();
     }
     
-    // ============================================================================
-    // UI STATE MANAGEMENT
-    // ============================================================================
+    // --- UI state management ---
     
     /**
      * Sets whether the selector is enabled.

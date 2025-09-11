@@ -126,7 +126,7 @@ public class ScrollHelper {
         return distance <= Math.max(0, thresholdPx);
     }
 
-    // ===== Align-newest-to-top helpers =====
+    // --- Align-newest-to-top helpers ---
 
     public int computeAlignTopTarget(JScrollPane sp, JComponent row) {
         if (sp == null || row == null) return 0;

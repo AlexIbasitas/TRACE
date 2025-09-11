@@ -32,9 +32,7 @@ public final class TriagePanelEventHandlers {
     
     private static final Logger LOG = Logger.getInstance(TriagePanelEventHandlers.class);
     
-    // ============================================================================
-    // THEME-AWARE COLOR CONSTANTS
-    // ============================================================================
+    // --- Theme-aware color constants ---
     
     /** Theme-aware hover overlay color - light overlay for dark theme, dark overlay for light theme */
     private static final JBColor HOVER_OVERLAY_COLOR = new JBColor(
@@ -54,9 +52,7 @@ public final class TriagePanelEventHandlers {
         new Color(0, 0, 0, 0)
     );
     
-    // ============================================================================
-    // COLOR STATE MANAGEMENT
-    // ============================================================================
+    // --- Color state management ---
     
     /** ConcurrentHashMap to store original component colors with proper lifecycle management */
     private static final Map<Component, Color> originalColors = new ConcurrentHashMap<>();
@@ -110,9 +106,7 @@ public final class TriagePanelEventHandlers {
         throw new UnsupportedOperationException("This is a utility class and cannot be instantiated");
     }
     
-    // ============================================================================
-    // COLOR MANAGEMENT UTILITY METHODS
-    // ============================================================================
+    // --- Color management utility methods ---
     
     /**
      * Captures and stores the original colors of a component for later restoration.

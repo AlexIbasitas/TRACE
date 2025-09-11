@@ -44,9 +44,7 @@ public final class SecureAPIKeyManager {
         throw new UnsupportedOperationException("Utility class cannot be instantiated");
     }
     
-    // ============================================================================
-    // API KEY STORAGE METHODS
-    // ============================================================================
+    // --- API key storage methods ---
     
     /**
      * Stores an API key securely for the specified AI service.
@@ -160,9 +158,7 @@ public final class SecureAPIKeyManager {
         return apiKey != null && !apiKey.trim().isEmpty();
     }
     
-    // ============================================================================
-    // UTILITY METHODS
-    // ============================================================================
+    // --- Utility methods ---
     
     /**
      * Gets the service-specific key for PasswordSafe storage.

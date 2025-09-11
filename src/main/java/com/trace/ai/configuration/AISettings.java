@@ -99,9 +99,7 @@ public final class AISettings implements PersistentStateComponent<AISettings.Sta
         myState = state;
     }
     
-    // ============================================================================
-    // USER CONSENT MANAGEMENT
-    // ============================================================================
+    // --- User consent management ---
     
     /**
      * Checks if AI features are enabled.
@@ -184,9 +182,7 @@ public final class AISettings implements PersistentStateComponent<AISettings.Sta
         }
     }
     
-    // ============================================================================
-    // AI SERVICE CONFIGURATION
-    // ============================================================================
+    // --- AI service configuration ---
     
     /**
      * Gets the preferred AI service type.
@@ -276,9 +272,7 @@ public final class AISettings implements PersistentStateComponent<AISettings.Sta
         myState.showConfidenceScores = show;
     }
     
-    // ============================================================================
-    // CHAT SETTINGS
-    // ============================================================================
+    // --- Chat settings ---
     
     /**
      * Checks if chat history should be persisted.
@@ -323,9 +317,7 @@ public final class AISettings implements PersistentStateComponent<AISettings.Sta
         myState.maxChatHistorySize = clampedSize;
     }
     
-    // ============================================================================
-    // ADVANCED FEATURES
-    // ============================================================================
+    // --- Advanced features ---
     
     /**
      * Checks if custom rules are enabled.
@@ -366,9 +358,7 @@ public final class AISettings implements PersistentStateComponent<AISettings.Sta
         myState.customRule = rule;
     }
     
-    // ============================================================================
-    // VALIDATION AND UTILITY METHODS
-    // ============================================================================
+    // --- Validation and utility methods ---
     
     /**
      * Checks if AI analysis is properly configured and ready to use.

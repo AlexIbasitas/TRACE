@@ -7,6 +7,7 @@ import com.intellij.ui.components.JBPanel;
 import com.intellij.ui.components.JBPasswordField;
 import com.intellij.ui.components.JBList;
 import com.intellij.ui.components.JBScrollPane;
+import com.intellij.icons.AllIcons;
 import javax.swing.JComboBox;
 import javax.swing.JButton;
 import javax.swing.DefaultListModel;
@@ -241,25 +242,29 @@ public class AIServiceConfigPanel extends JBPanel<AIServiceConfigPanel> {
                 // Always load stored keys into UI (this is what user expects when reopening settings)
                 if (storedOpenAIKey != null && !storedOpenAIKey.trim().isEmpty()) {
                     openaiApiKeyField.setText(storedOpenAIKey);
-                    openaiStatusLabel.setText("✅ Connected");
+                    openaiStatusLabel.setText("Connected");
                     openaiStatusLabel.setForeground(UIUtil.getLabelSuccessForeground());
+                    openaiStatusLabel.setIcon(AllIcons.General.InspectionsOK);
                     LOG.debug("Loaded OpenAI API key into UI");
                 } else {
                     openaiApiKeyField.setText("");
-                    openaiStatusLabel.setText("Not configured");
-                    openaiStatusLabel.setForeground(UIUtil.getLabelForeground());
+                    openaiStatusLabel.setText("Not Connected");
+                    openaiStatusLabel.setForeground(TriagePanelConstants.ERROR_FOREGROUND);
+                    openaiStatusLabel.setIcon(AllIcons.General.Error);
                     LOG.debug("No OpenAI API key found in storage");
                 }
                 
                 if (storedGeminiKey != null && !storedGeminiKey.trim().isEmpty()) {
                     geminiApiKeyField.setText(storedGeminiKey);
-                    geminiStatusLabel.setText("✅ Connected");
+                    geminiStatusLabel.setText("Connected");
                     geminiStatusLabel.setForeground(UIUtil.getLabelSuccessForeground());
+                    geminiStatusLabel.setIcon(AllIcons.General.InspectionsOK);
                     LOG.debug("Loaded Gemini API key into UI");
                 } else {
                     geminiApiKeyField.setText("");
-                    geminiStatusLabel.setText("Not configured");
-                    geminiStatusLabel.setForeground(UIUtil.getLabelForeground());
+                    geminiStatusLabel.setText("Not Connected");
+                    geminiStatusLabel.setForeground(TriagePanelConstants.ERROR_FOREGROUND);
+                    geminiStatusLabel.setIcon(AllIcons.General.Error);
                     LOG.debug("No Gemini API key found in storage");
                 }
                 

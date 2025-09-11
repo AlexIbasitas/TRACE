@@ -408,9 +408,7 @@ public class AIModelService implements PersistentStateComponent<AIModelService.S
         }
     }
     
-    // ============================================================================
-    // DEFAULT MODEL MANAGEMENT
-    // ============================================================================
+    // --- Default model management ---
     
     /**
      * Gets the default model with time-based caching to prevent logging spam.
@@ -502,9 +500,7 @@ public class AIModelService implements PersistentStateComponent<AIModelService.S
         return true;
     }
     
-    // ============================================================================
-    // MODEL SELECTION
-    // ============================================================================
+    // --- Model selection ---
     
     /**
      * Gets the best available model based on current configuration.
@@ -544,9 +540,7 @@ public class AIModelService implements PersistentStateComponent<AIModelService.S
         return AIModelSelectionHelper.autoSelectBestModel(modelCache);
     }
     
-    // ============================================================================
-    // VALIDATION AND UTILITY
-    // ============================================================================
+    // --- Validation and utility ---
     
     /**
      * Checks if a model with the given name already exists.
@@ -607,9 +601,7 @@ public class AIModelService implements PersistentStateComponent<AIModelService.S
         }
     }
     
-    // ============================================================================
-    // PERSISTENCE
-    // ============================================================================
+    // --- Persistence ---
     
     @Override
     @Nullable

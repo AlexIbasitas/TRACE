@@ -525,9 +525,7 @@ public class MessageComponent extends JPanel {
         return collapsiblePanel != null;
     }
 
-    // =========================================================================
-    // Copy helpers
-    // =========================================================================
+    // --- Copy helpers ---
 
     /**
      * Checks if the message is an initial failure analysis message.

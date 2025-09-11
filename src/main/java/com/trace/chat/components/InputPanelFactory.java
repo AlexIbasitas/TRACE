@@ -445,9 +445,7 @@ public final class InputPanelFactory {
         sendButton.setEnabled(enabled);
     }
     
-    // ============================================================================
-    // HELPER METHODS FOR COMPONENT ACCESS AND IDENTIFICATION
-    // ============================================================================
+    // --- Helper methods for component access and identification ---
     
     /**
      * Gets the main input panel from a component array returned by createCompleteInputPanelSetup.

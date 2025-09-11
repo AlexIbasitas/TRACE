@@ -26,9 +26,7 @@ import java.util.List;
  */
 public class StepDefinitionInfo {
     
-    // ============================================================================
-    // Method Information
-    // ============================================================================
+    // --- Method information ---
     
     /** The name of the step definition method (e.g., "clickLoginButton") */
     private final String methodName;
@@ -45,9 +43,7 @@ public class StepDefinitionInfo {
     /** Line number of the method in the source file */
     private final int lineNumber;
     
-    // ============================================================================
-    // Step Definition Information
-    // ============================================================================
+    // --- Step definition information ---
     
     /** The Cucumber step pattern (e.g., "^I click the (.*?) button$") */
     private final String stepPattern;
@@ -58,9 +54,7 @@ public class StepDefinitionInfo {
     /** The complete method text including signature and implementation */
     private final String methodText;
     
-    // ============================================================================
-    // Constructor
-    // ============================================================================
+    // --- Constructor ---
     
     /**
      * Creates a new StepDefinitionInfo instance with complete method details.
@@ -90,9 +84,7 @@ public class StepDefinitionInfo {
         this.methodText = methodText;
     }
     
-    // ============================================================================
-    // Method Information Getters
-    // ============================================================================
+    // --- Method information getters ---
     
     /**
      * Gets the name of the step definition method.
@@ -139,9 +131,7 @@ public class StepDefinitionInfo {
         return lineNumber;
     }
     
-    // ============================================================================
-    // Step Definition Information Getters
-    // ============================================================================
+    // --- Step definition information getters ---
     
     /**
      * Gets the Cucumber step pattern.
@@ -179,9 +169,7 @@ public class StepDefinitionInfo {
         return methodText;
     }
     
-    // ============================================================================
-    // Builder Pattern
-    // ============================================================================
+    // --- Builder pattern ---
     
     /**
      * Fluent builder for creating StepDefinitionInfo instances.
@@ -218,9 +206,7 @@ public class StepDefinitionInfo {
         private List<String> parameters;
         private String methodText;
         
-        // ========================================================================
-        // Method Information Builders
-        // ========================================================================
+        // --- Method information builders ---
         
         /**
          * Sets the method name.
@@ -277,9 +263,7 @@ public class StepDefinitionInfo {
             return this;
         }
         
-        // ========================================================================
-        // Step Definition Information Builders
-        // ========================================================================
+        // --- Step definition information builders ---
         
         /**
          * Sets the step pattern.
@@ -314,9 +298,7 @@ public class StepDefinitionInfo {
             return this;
         }
         
-        // ========================================================================
-        // Build Method
-        // ========================================================================
+        // --- Build method ---
         
         /**
          * Builds a new StepDefinitionInfo instance with the configured values.

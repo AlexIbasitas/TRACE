@@ -29,9 +29,7 @@ public final class TriagePanelConstants {
         throw new UnsupportedOperationException("This is a utility class and cannot be instantiated");
     }
     
-    // ============================================================================
-    // THEME-AWARE COLOR CONSTANTS
-    // ============================================================================
+    // --- Theme-aware color constants ---
     
     /**
      * Gets the theme-aware panel background color using dynamic resolution.
@@ -210,9 +208,7 @@ public final class TriagePanelConstants {
         new Color(0, 0, 0, 40)   // Dark overlay for dark theme
     );
     
-    // ============================================================================
-    // FONT CONSTANTS
-    // ============================================================================
+    // --- Font constants ---
     
     /** Default font family */
     public static final String FONT_FAMILY = "Segoe UI";
@@ -331,9 +327,7 @@ public final class TriagePanelConstants {
         return baseFont.deriveFont(baseFont.getSize() - 1f); // Slightly smaller than base
     }
     
-    // ============================================================================
-    // DIMENSION CONSTANTS
-    // ============================================================================
+    // --- Dimension constants ---
     
     /** Button container size - accommodates button (40x40) plus border padding (2px each side) */
     public static final Dimension BUTTON_CONTAINER_SIZE = new Dimension(44, 44);
@@ -356,9 +350,7 @@ public final class TriagePanelConstants {
     /** Maximum dimension for expandable components */
     public static final Dimension MAX_EXPANDABLE_SIZE = new Dimension(Integer.MAX_VALUE, Short.MAX_VALUE);
     
-    // ============================================================================
-    // ICON PATH CONSTANTS
-    // ============================================================================
+    // --- Icon path constants ---
     
     /** User profile icon path */
     public static final String USER_ICON_PATH = "/icons/user_profile_24.png";
@@ -369,9 +361,7 @@ public final class TriagePanelConstants {
     /** Send button icon path */
     public static final String SEND_ICON_PATH = "/icons/send_24.png";
     
-    // ============================================================================
-    // BORDER CONSTANTS
-    // ============================================================================
+    // --- Border constants ---
     
     /** Empty border for general spacing */
     public static final Border EMPTY_BORDER = BorderFactory.createEmptyBorder();
@@ -427,9 +417,7 @@ public final class TriagePanelConstants {
         BorderFactory.createEmptyBorder(8, 8, 8, 8)
     );
     
-    // ============================================================================
-    // SPACING CONSTANTS
-    // ============================================================================
+    // --- Spacing constants ---
     
     /** Small spacing (4px) */
     public static final int SPACING_SMALL = 4;
@@ -455,9 +443,7 @@ public final class TriagePanelConstants {
     /** Content indent for collapsible panels */
     public static final int CONTENT_INDENT = 16;
     
-    // ============================================================================
-    // TEXT CONSTANTS
-    // ============================================================================
+    // --- Text constants ---
     
     /** Unknown scenario text */
     public static final String UNKNOWN_SCENARIO = "Unknown Scenario";
@@ -516,9 +502,7 @@ public final class TriagePanelConstants {
     /** Input placeholder text */
     public static final String INPUT_PLACEHOLDER_TEXT = "Ask anything about the test failure...";
     
-    // ============================================================================
-    // LAYOUT CONSTANTS
-    // ============================================================================
+    // --- Layout constants ---
     
     /** Estimated line height for text */
     public static final int ESTIMATED_LINE_HEIGHT = 18;
@@ -532,9 +516,7 @@ public final class TriagePanelConstants {
     /** Input area rows */
     public static final int INPUT_AREA_ROWS = 3;
     
-    // ============================================================================
-    // UTILITY METHODS
-    // ============================================================================
+    // --- Utility methods ---
     
     /**
      * Gets the default panel background color using dynamic theme resolution.

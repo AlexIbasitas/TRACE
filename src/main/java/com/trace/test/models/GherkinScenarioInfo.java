@@ -27,9 +27,7 @@ import java.util.List;
  */
 public class GherkinScenarioInfo {
     
-    // ============================================================================
-    // Scenario Information
-    // ============================================================================
+    // --- Scenario information ---
     
     /** The name of the feature (e.g., "User Authentication") */
     private final String featureName;
@@ -55,9 +53,7 @@ public class GherkinScenarioInfo {
     /** Whether this is a scenario outline (parameterized scenario) */
     private final boolean isScenarioOutline;
     
-    // ============================================================================
-    // File Information
-    // ============================================================================
+    // --- File information ---
     
     /** Path to the feature file containing this scenario */
     private final String sourceFilePath;
@@ -68,9 +64,7 @@ public class GherkinScenarioInfo {
     /** The complete content of the feature file */
     private final String featureFileContent;
     
-    // ============================================================================
-    // Constructor
-    // ============================================================================
+    // --- Constructor ---
     
     /**
      * Creates a new GherkinScenarioInfo instance with complete scenario details.
@@ -107,9 +101,7 @@ public class GherkinScenarioInfo {
         this.featureFileContent = featureFileContent;
     }
     
-    // ============================================================================
-    // Scenario Information Getters
-    // ============================================================================
+    // --- Scenario information getters ---
     
     /**
      * Gets the name of the feature.
@@ -201,9 +193,7 @@ public class GherkinScenarioInfo {
         return isScenarioOutline;
     }
     
-    // ============================================================================
-    // File Information Getters
-    // ============================================================================
+    // --- File information getters ---
     
     /**
      * Gets the path to the feature file containing this scenario.
@@ -235,9 +225,7 @@ public class GherkinScenarioInfo {
         return featureFileContent;
     }
     
-    // ============================================================================
-    // Builder Pattern
-    // ============================================================================
+    // --- Builder pattern ---
     
     /**
      * Fluent builder for creating GherkinScenarioInfo instances.
@@ -282,9 +270,7 @@ public class GherkinScenarioInfo {
         private int lineNumber = -1;
         private String featureFileContent;
         
-        // ========================================================================
-        // Scenario Information Builders
-        // ========================================================================
+        // --- Scenario information builders ---
         
         /**
          * Sets the feature name.
@@ -374,9 +360,7 @@ public class GherkinScenarioInfo {
             return this;
         }
         
-        // ========================================================================
-        // File Information Builders
-        // ========================================================================
+        // --- File information builders ---
         
         /**
          * Sets the source file path.
@@ -411,9 +395,7 @@ public class GherkinScenarioInfo {
             return this;
         }
         
-        // ========================================================================
-        // Build Method
-        // ========================================================================
+        // --- Build method ---
         
         /**
          * Builds a new GherkinScenarioInfo instance with the configured values.

@@ -20,9 +20,7 @@ package com.trace.test.models;
  */
 public class FailureInfo {
     
-    // ============================================================================
-    // Core Failure Information
-    // ============================================================================
+    // --- Core failure information ---
     
     /** The name of the failed scenario (e.g., "User login with valid credentials") */
     private final String scenarioName;
@@ -39,9 +37,7 @@ public class FailureInfo {
     /** Line number of the step definition in the source file */
     private final int lineNumber;
     
-    // ============================================================================
-    // Rich Structured Data (Composed Objects)
-    // ============================================================================
+    // --- Rich structured data (composed objects) ---
     
     /** Detailed information about the step definition method */
     private final StepDefinitionInfo stepDefinitionInfo;
@@ -49,9 +45,7 @@ public class FailureInfo {
     /** Complete Gherkin scenario context and metadata */
     private final GherkinScenarioInfo gherkinScenarioInfo;
     
-    // ============================================================================
-    // Assertion Details (Extracted from Test Output)
-    // ============================================================================
+    // --- Assertion details (extracted from test output) ---
     
     /** Expected value from the assertion (e.g., "true", "User logged in") */
     private final String expectedValue;
@@ -62,16 +56,11 @@ public class FailureInfo {
     /** Error message from the assertion failure */
     private final String errorMessage;
     
-    // ============================================================================
-    // Parsing Metadata (Debugging and Performance)
-    // ============================================================================
+    // --- Parsing metadata (debugging and performance) ---
     
     /** Time taken to parse the test output in milliseconds */
     private final long parsingTime;
     
-    // ============================================================================
-    // Constructor
-    // ============================================================================
     
     /**
      * Creates a new FailureInfo instance with all failure context.
@@ -108,9 +97,7 @@ public class FailureInfo {
         this.parsingTime = parsingTime;
     }
     
-    // ============================================================================
-    // Core Failure Information Getters
-    // ============================================================================
+    // --- Core failure information getters ---
     
     /**
      * Gets the name of the failed scenario.
@@ -157,9 +144,7 @@ public class FailureInfo {
         return lineNumber;
     }
     
-    // ============================================================================
-    // Rich Structured Data Getters
-    // ============================================================================
+    // --- Rich structured data getters ---
     
     /**
      * Gets detailed information about the step definition method.
@@ -185,9 +170,7 @@ public class FailureInfo {
         return gherkinScenarioInfo;
     }
     
-    // ============================================================================
-    // Assertion Details Getters
-    // ============================================================================
+    // --- Assertion details getters ---
     
     /**
      * Gets the expected value from the assertion.
@@ -216,9 +199,7 @@ public class FailureInfo {
         return errorMessage;
     }
     
-    // ============================================================================
-    // Parsing Metadata Getters
-    // ============================================================================
+    // --- Parsing metadata getters ---
     
     /**
      * Gets the time taken to parse the test output.
@@ -229,9 +210,7 @@ public class FailureInfo {
         return parsingTime;
     }
     
-    // ============================================================================
-    // Builder Pattern
-    // ============================================================================
+    // --- Builder pattern ---
     
     /**
      * Fluent builder for creating FailureInfo instances.
@@ -271,9 +250,7 @@ public class FailureInfo {
         // Parsing metadata
         private long parsingTime;
         
-        // ========================================================================
-        // Core Failure Information Builders
-        // ========================================================================
+        // --- Core failure information builders ---
         
         /**
          * Sets the scenario name.
@@ -330,9 +307,7 @@ public class FailureInfo {
             return this;
         }
         
-        // ========================================================================
-        // Rich Structured Data Builders
-        // ========================================================================
+        // --- Rich structured data builders ---
         
         /**
          * Sets the step definition information.
@@ -356,9 +331,7 @@ public class FailureInfo {
             return this;
         }
         
-        // ========================================================================
-        // Assertion Details Builders
-        // ========================================================================
+        // --- Assertion details builders ---
         
         /**
          * Sets the expected value from the assertion.
@@ -393,9 +366,7 @@ public class FailureInfo {
             return this;
         }
         
-        // ========================================================================
-        // Parsing Metadata Builders
-        // ========================================================================
+        // --- Parsing metadata builders ---
         
         /**
          * Sets the parsing time.
@@ -408,9 +379,7 @@ public class FailureInfo {
             return this;
         }
         
-        // ========================================================================
-        // Build Method
-        // ========================================================================
+        // --- Build method ---
         
         /**
          * Builds a new FailureInfo instance with the configured values.
