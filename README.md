@@ -1,4 +1,4 @@
-# TRACE - AI-Powered Cucumber Test Failure Analysis
+# TRACE - AI-Powered Test Result Analysis and Content Extraction
 
 TRACE is an IntelliJ IDEA plugin that automatically analyzes Cucumber test failures using AI to help SDETs and QA engineers quickly identify and resolve test issues.
 
