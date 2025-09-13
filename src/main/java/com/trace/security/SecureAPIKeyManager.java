@@ -1,15 +1,15 @@
 package com.trace.security;
 
 import com.intellij.credentialStore.CredentialAttributes;
+import com.intellij.credentialStore.CredentialAttributesKt;
 import com.intellij.credentialStore.Credentials;
 import com.intellij.ide.passwordSafe.PasswordSafe;
+import com.intellij.openapi.application.ApplicationInfo;
 import com.intellij.openapi.diagnostic.Logger;
 import com.trace.ai.configuration.AIServiceType;
 
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-
-import java.util.concurrent.CompletableFuture;
 
 /**
  * Secure API key management service using IntelliJ's PasswordSafe.
@@ -64,17 +64,19 @@ public final class SecureAPIKeyManager {
         }
         
         try {
+            PasswordSafe passwordSafe = PasswordSafe.getInstance();
             String serviceKey = getServiceKey(serviceType);
-            CredentialAttributes attributes = new CredentialAttributes(serviceKey);
-            Credentials credentials = new Credentials(serviceKey, apiKey);
+            CredentialAttributes attributes = createCredentialAttributes(serviceKey);
+            Credentials credentials = new Credentials(null, apiKey);
             
-            PasswordSafe.getInstance().set(attributes, credentials);
+            passwordSafe.set(attributes, credentials);
             
             LOG.info("API key stored for service: " + serviceType.getDisplayName());
             return true;
             
         } catch (Exception e) {
-            LOG.warn("Failed to store API key for service: " + serviceType.getDisplayName(), e);
+            LOG.error("Failed to store API key for service: " + serviceType.getDisplayName() + 
+                     " (IDE: " + ApplicationInfo.getInstance().getVersionName() + ")", e);
             return false;
         }
     }
@@ -92,18 +94,17 @@ public final class SecureAPIKeyManager {
     public static @Nullable String getAPIKey(@NotNull AIServiceType serviceType) {
         try {
             String serviceKey = getServiceKey(serviceType);
-            CredentialAttributes attributes = new CredentialAttributes(serviceKey);
+            CredentialAttributes attributes = createCredentialAttributes(serviceKey);
+            String apiKey = PasswordSafe.getInstance().getPassword(attributes);
             
-            Credentials credentials = PasswordSafe.getInstance().get(attributes);
-            if (credentials == null) {
+            if (apiKey == null) {
                 if (LOG.isDebugEnabled()) {
                     LOG.debug("No API key found for service: " + serviceType.getDisplayName());
                 }
                 return null;
             }
             
-            String apiKey = credentials.getPasswordAsString();
-            if (apiKey == null || apiKey.trim().isEmpty()) {
+            if (apiKey.trim().isEmpty()) {
                 LOG.warn("Retrieved empty API key for service: " + serviceType.getDisplayName());
                 return null;
             }
@@ -131,7 +132,7 @@ public final class SecureAPIKeyManager {
     public static boolean clearAPIKey(@NotNull AIServiceType serviceType) {
         try {
             String serviceKey = getServiceKey(serviceType);
-            CredentialAttributes attributes = new CredentialAttributes(serviceKey);
+            CredentialAttributes attributes = createCredentialAttributes(serviceKey);
             
             PasswordSafe.getInstance().set(attributes, null);
             
@@ -159,6 +160,21 @@ public final class SecureAPIKeyManager {
     }
     
     // --- Utility methods ---
+    
+    /**
+     * Creates CredentialAttributes using the official IntelliJ pattern.
+     * 
+     * <p>This method uses CredentialAttributesKt.generateServiceName to ensure
+     * consistent service key formatting across different environments.</p>
+     * 
+     * @param key the service-specific key
+     * @return properly formatted CredentialAttributes
+     */
+    private static CredentialAttributes createCredentialAttributes(@NotNull String key) {
+        return new CredentialAttributes(
+            CredentialAttributesKt.generateServiceName("TRACE", key)
+        );
+    }
     
     /**
      * Gets the service-specific key for PasswordSafe storage.

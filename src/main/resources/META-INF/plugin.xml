@@ -4,17 +4,10 @@
     <name>TRACE</name>
     <version>1.0.0</version>
     <vendor email="aibasitas1@gmail.com" url="https://github.com/alexibasitas">Alex Ibasitas</vendor>
+    <pluginDescription url="https://github.com/alexibasitas/trace"/>
     <change-notes><![CDATA[
         <h3>Version 1.0.0 - Initial Release</h3>
         <p>First release of TRACE, an AI-powered test failure analysis assistant for Cucumber tests in IntelliJ IDEA.</p>
-        
-        <p><b>What's New:</b></p>
-        <ul>
-            <li>Initial release with core functionality</li>
-            <li>OpenAI and Google Gemini AI integration</li>
-            <li>Automatic Cucumber test failure capture and analysis</li>
-            <li>Interactive chat interface for test failure triage</li>
-        </ul>
         
         <p><b>Setup:</b></p>
         <ol>
@@ -83,7 +76,7 @@
         <toolWindow id="AI Assistant"
                    name="TRACE"
                    secondary="false" 
-                   icon="icons/logo_13.png" 
+                   icon="icons/t_logo.png" 
                    anchor="right" 
                    factoryClass="com.trace.chat.ui.TriagePanelToolWindowFactory"/>
         
