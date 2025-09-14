@@ -206,4 +206,55 @@ public class TestUtilityHelper {
             LOG.error("Error capturing test streams: " + e.getMessage(), e);
         }
     }
+    
+    /**
+     * Cleans up static resources to prevent memory leaks and ensure consistent startup behavior.
+     * 
+     * <p>This method should be called during plugin shutdown or when resources need to be reset.
+     * It clears the static test output and error stream maps to prevent memory leaks.</p>
+     */
+    public static void cleanup() {
+        LOG.info("Starting cleanup of TestUtilityHelper static resources");
+        
+        int outputStreamsCleaned = 0;
+        int errorStreamsCleaned = 0;
+        
+        try {
+            // Close and clear test output streams
+            for (ByteArrayOutputStream stream : testOutputStreams.values()) {
+                if (stream != null) {
+                    try {
+                        stream.close();
+                    } catch (Exception e) {
+                        LOG.warn("Error closing test output stream: " + e.getMessage());
+                    }
+                }
+                outputStreamsCleaned++;
+            }
+            testOutputStreams.clear();
+            
+            // Close and clear test error streams
+            for (ByteArrayOutputStream stream : testErrorStreams.values()) {
+                if (stream != null) {
+                    try {
+                        stream.close();
+                    } catch (Exception e) {
+                        LOG.warn("Error closing test error stream: " + e.getMessage());
+                    }
+                }
+                errorStreamsCleaned++;
+            }
+            testErrorStreams.clear();
+            
+            // Clear static PrintStream references to prevent memory leaks
+            originalOut = null;
+            originalErr = null;
+            
+            LOG.info("TestUtilityHelper cleanup completed - cleared " + outputStreamsCleaned + 
+                    " output streams and " + errorStreamsCleaned + " error streams");
+                    
+        } catch (Exception e) {
+            LOG.error("Error during TestUtilityHelper cleanup: " + e.getMessage(), e);
+        }
+    }
 }

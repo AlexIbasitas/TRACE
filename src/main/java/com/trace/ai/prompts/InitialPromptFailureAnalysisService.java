@@ -1,6 +1,7 @@
 package com.trace.ai.prompts;
 
 import com.intellij.openapi.components.Service;
+import com.intellij.openapi.Disposable;
 import com.trace.test.models.FailureInfo;
 import com.trace.test.models.GherkinScenarioInfo;
 import com.trace.test.models.StepDefinitionInfo;
@@ -27,7 +28,7 @@ import com.intellij.openapi.diagnostic.Logger;
  * chat history or user query context. For user query processing, see UserQueryPromptService.</p>
  */
 @Service
-public final class InitialPromptFailureAnalysisService {
+public final class InitialPromptFailureAnalysisService implements Disposable {
     
     private static final Logger LOG = Logger.getInstance(InitialPromptFailureAnalysisService.class);
     
@@ -424,5 +425,11 @@ public final class InitialPromptFailureAnalysisService {
         int lastBackslash = filePath.lastIndexOf('\\');
         int lastSeparator = Math.max(lastSlash, lastBackslash);
         return lastSeparator >= 0 ? filePath.substring(lastSeparator + 1) : filePath;
+    }
+    
+    @Override
+    public void dispose() {
+        LOG.info("Disposing InitialPromptFailureAnalysisService");
+        // No specific cleanup needed - this service is stateless
     }
 } 

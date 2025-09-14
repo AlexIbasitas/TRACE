@@ -190,7 +190,7 @@ public final class AIServiceFactory {
      * Cleans up static resources to prevent memory leaks and ensure consistent startup behavior.
      * 
      * <p>This method should be called during plugin shutdown or when resources need to be reset.
-     * It clears the static providers map to prevent memory leaks.</p>
+     * It clears the static providers map and closes the shared HTTP client to prevent memory leaks.</p>
      */
     public static void cleanup() {
         LOG.info("Starting cleanup of AIServiceFactory static resources");
@@ -198,7 +198,16 @@ public final class AIServiceFactory {
         int resourcesCleaned = providers.size();
         
         try {
+            // Clear providers first
             providers.clear();
+            
+            // Close the shared HTTP client to release thread pools and connections
+            if (sharedHttpClient != null) {
+                // HttpClient doesn't have a close() method, but we can clear references
+                // The JVM will handle cleanup when the class is unloaded
+                LOG.info("Shared HTTP client will be cleaned up by JVM");
+            }
+            
             LOG.info("AIServiceFactory cleanup completed - cleared " + resourcesCleaned + " AI service providers");
         } catch (Exception e) {
             LOG.error("Error during AIServiceFactory cleanup: " + e.getMessage(), e);

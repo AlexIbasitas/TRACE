@@ -6,6 +6,8 @@ import com.intellij.openapi.components.State;
 import com.intellij.openapi.components.Storage;
 import com.intellij.openapi.diagnostic.Logger;
 
+import com.intellij.openapi.Disposable;
+
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -31,7 +33,7 @@ import java.time.LocalDateTime;
     name = "com.trace.ai.configuration.ai-settings",
     storages = @Storage("trace-ai-settings.xml")
 )
-public final class AISettings implements PersistentStateComponent<AISettings.State> {
+public final class AISettings implements PersistentStateComponent<AISettings.State>, Disposable {
     
     private static final Logger LOG = Logger.getInstance(AISettings.class);
     
@@ -396,5 +398,11 @@ public final class AISettings implements PersistentStateComponent<AISettings.Sta
         
         return "Configured for " + myState.preferredAIService + 
                (myState.autoAnalyzeEnabled ? " with auto-analysis" : " with manual analysis");
+    }
+    
+    @Override
+    public void dispose() {
+        LOG.info("Disposing AISettings");
+        // No specific cleanup needed - settings are persisted automatically
     }
 } 

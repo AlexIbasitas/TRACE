@@ -69,9 +69,6 @@
     <depends>com.intellij.modules.java</depends>
 
     <extensions defaultExtensionNs="com.intellij">
-        <!-- Custom Icon -->
-        <icon path="/icons/trace_logo.png" id="TRACE.Icon"/>
-        
         <!-- Tool Window -->
         <toolWindow id="AI Assistant"
                    name="TRACE"

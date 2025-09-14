@@ -689,6 +689,7 @@ public class AIModelService implements PersistentStateComponent<AIModelService.S
             // Import the cleanup classes
             com.trace.test.listeners.CucumberTestExecutionListener.cleanup();
             com.trace.test.listeners.TestOutputCaptureListener.cleanup();
+            com.trace.test.listeners.TestUtilityHelper.cleanup();
             com.trace.chat.ui.TriagePanelToolWindowFactory.cleanup();
             com.trace.chat.handlers.TriagePanelEventHandlers.cleanup();
             com.trace.ai.services.AIServiceFactory.cleanup();

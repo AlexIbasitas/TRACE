@@ -2,6 +2,7 @@ package com.trace.ai.services;
 
 import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.openapi.project.Project;
+import com.intellij.openapi.Disposable;
 import com.trace.ai.models.AIAnalysisResult;
 import com.trace.ai.models.AIModel;
 import com.trace.ai.prompts.InitialPromptFailureAnalysisService;
@@ -42,7 +43,7 @@ import java.util.concurrent.CompletableFuture;
  * @author Alex Ibasitas
  * @since 1.0.0
  */
-public final class AINetworkService {
+public final class AINetworkService implements Disposable {
     
     private static final Logger LOG = Logger.getInstance(AINetworkService.class);
     
@@ -322,5 +323,11 @@ public final class AINetworkService {
         LOG.info("Shutting down AINetworkService");
         // No specific cleanup needed for the new architecture
         // HTTP client is shared and managed by the factory
+    }
+    
+    @Override
+    public void dispose() {
+        LOG.info("Disposing AINetworkService");
+        shutdown();
     }
 } 

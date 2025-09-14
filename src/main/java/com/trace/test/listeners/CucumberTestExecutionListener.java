@@ -612,6 +612,10 @@ public class CucumberTestExecutionListener implements SMTRunnerEventsListener {
             }
             testErrorStreams.clear();
             
+            // Clear static PrintStream references to prevent memory leaks
+            originalOut = null;
+            originalErr = null;
+            
             LOG.info("CucumberTestExecutionListener cleanup completed - cleared " + streamsCleaned + 
                     " output streams and " + errorStreamsCleaned + " error streams");
                     

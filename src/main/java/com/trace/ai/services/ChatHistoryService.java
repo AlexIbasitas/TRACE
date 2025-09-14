@@ -5,6 +5,7 @@ import com.intellij.openapi.components.State;
 import com.intellij.openapi.components.Storage;
 import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.openapi.project.Project;
+import com.intellij.openapi.Disposable;
 import com.trace.ai.models.UserQuery;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -35,7 +36,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
     name = "com.trace.ai.services.chat-history-service",
     storages = @Storage("trace-chat-history.xml")
 )
-public final class ChatHistoryService implements PersistentStateComponent<ChatHistoryService.State> {
+public final class ChatHistoryService implements PersistentStateComponent<ChatHistoryService.State>, Disposable {
     
     private static final Logger LOG = Logger.getInstance(ChatHistoryService.class);
     
@@ -320,5 +321,13 @@ public final class ChatHistoryService implements PersistentStateComponent<ChatHi
         userMessageWindowSize = state.userMessageWindowSize;
         
         LOG.info("Loaded " + userQueries.size() + " user queries from persistence");
+    }
+    
+    @Override
+    public void dispose() {
+        LOG.info("Disposing ChatHistoryService");
+        // Clear any cached data
+        userQueries.clear();
+        failureContext = null;
     }
 } 
