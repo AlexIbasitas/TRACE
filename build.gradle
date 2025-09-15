@@ -118,16 +118,6 @@ intellijPlatform {
 patchPluginXml {
     sinceBuild = '252'  // 2025.2 (your local installation version)
     untilBuild = '253.*'  // 2025.3 (next stable release)
-    changeNotes = """
-      <ul>
-        <li>Migrated to IntelliJ Platform Gradle Plugin 2.x</li>
-        <li>Enhanced compatibility with IntelliJ 2025.2+</li>
-        <li>Improved build configuration and dependency management</li>
-        <li>Enhanced Cucumber step definition extraction</li>
-        <li>Improved stack trace parsing strategies</li>
-        <li>Dynamic font sizing and theme responsiveness</li>
-      </ul>
-    """
 }
 
 // Configure IDE runtime for professional logging
