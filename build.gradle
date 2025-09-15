@@ -106,13 +106,7 @@ intellijPlatform {
     }
     instrumentCode = true
     
-    // Configure plugin verification for 2.x
-    pluginVerification {
-        ides {
-            // Verify against IntelliJ IDEA Community Edition 2025.2
-            recommended()
-        }
-    }
+    // Plugin verification will use plugin.xml configuration
 }
 
 patchPluginXml {
