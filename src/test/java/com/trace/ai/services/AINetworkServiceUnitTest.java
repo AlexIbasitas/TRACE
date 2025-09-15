@@ -192,12 +192,12 @@ class AINetworkServiceUnitTest {
         void shouldMockFactoryProviderRetrieval() {
             // Arrange
             try (var mockedFactory = org.mockito.Mockito.mockStatic(AIServiceFactory.class)) {
-                mockedFactory.when(() -> AIServiceFactory.getProvider(AIServiceType.OPENAI)).thenReturn(mockProvider);
-                mockedFactory.when(() -> AIServiceFactory.getProvider(AIServiceType.GEMINI)).thenReturn(null);
+                mockedFactory.when(() -> AIServiceFactory.getProviderStatic(AIServiceType.OPENAI)).thenReturn(mockProvider);
+                mockedFactory.when(() -> AIServiceFactory.getProviderStatic(AIServiceType.GEMINI)).thenReturn(null);
                 
                 // Act & Assert
-                assertThat(AIServiceFactory.getProvider(AIServiceType.OPENAI)).isEqualTo(mockProvider);
-                assertThat(AIServiceFactory.getProvider(AIServiceType.GEMINI)).isNull();
+                assertThat(AIServiceFactory.getProviderStatic(AIServiceType.OPENAI)).isEqualTo(mockProvider);
+                assertThat(AIServiceFactory.getProviderStatic(AIServiceType.GEMINI)).isNull();
             }
         }
         
@@ -206,12 +206,12 @@ class AINetworkServiceUnitTest {
         void shouldMockFactoryProviderExistenceCheck() {
             // Arrange
             try (var mockedFactory = org.mockito.Mockito.mockStatic(AIServiceFactory.class)) {
-                mockedFactory.when(() -> AIServiceFactory.hasProvider(AIServiceType.OPENAI)).thenReturn(true);
-                mockedFactory.when(() -> AIServiceFactory.hasProvider(AIServiceType.GEMINI)).thenReturn(false);
+                mockedFactory.when(() -> AIServiceFactory.hasProviderStatic(AIServiceType.OPENAI)).thenReturn(true);
+                mockedFactory.when(() -> AIServiceFactory.hasProviderStatic(AIServiceType.GEMINI)).thenReturn(false);
                 
                 // Act & Assert
-                assertThat(AIServiceFactory.hasProvider(AIServiceType.OPENAI)).isTrue();
-                assertThat(AIServiceFactory.hasProvider(AIServiceType.GEMINI)).isFalse();
+                assertThat(AIServiceFactory.hasProviderStatic(AIServiceType.OPENAI)).isTrue();
+                assertThat(AIServiceFactory.hasProviderStatic(AIServiceType.GEMINI)).isFalse();
             }
         }
         
@@ -221,10 +221,10 @@ class AINetworkServiceUnitTest {
             // Arrange
             AIServiceType[] expectedTypes = {AIServiceType.OPENAI, AIServiceType.GEMINI};
             try (var mockedFactory = org.mockito.Mockito.mockStatic(AIServiceFactory.class)) {
-                mockedFactory.when(() -> AIServiceFactory.getRegisteredServiceTypes()).thenReturn(expectedTypes);
+                mockedFactory.when(() -> AIServiceFactory.getRegisteredServiceTypesStatic()).thenReturn(expectedTypes);
                 
                 // Act
-                AIServiceType[] result = AIServiceFactory.getRegisteredServiceTypes();
+                AIServiceType[] result = AIServiceFactory.getRegisteredServiceTypesStatic();
                 
                 // Assert
                 assertThat(result).isEqualTo(expectedTypes);

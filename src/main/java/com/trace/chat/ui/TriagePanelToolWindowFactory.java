@@ -39,17 +39,30 @@ public class TriagePanelToolWindowFactory implements ToolWindowFactory, Disposab
     
     private static final Logger LOG = Logger.getInstance(TriagePanelToolWindowFactory.class);
     
+    // Singleton instance for external access (does not hold Project references)
+    private static volatile TriagePanelToolWindowFactory instance;
+    
     /**
      * Thread-safe registry of panel instances by project.
      * Ensures proper isolation between different project instances.
      */
-    private static final ConcurrentHashMap<Project, TriagePanelView> panelInstances = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<Project, TriagePanelView> panelInstances;
     
     /**
      * Thread-safe registry of MessageBusConnection instances by project.
      * Ensures proper cleanup of message bus connections.
      */
-    private static final ConcurrentHashMap<Project, com.intellij.util.messages.MessageBusConnection> messageBusConnections = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<Project, com.intellij.util.messages.MessageBusConnection> messageBusConnections;
+
+    /**
+     * Constructor initializes the instance maps for proper lifecycle management.
+     */
+    public TriagePanelToolWindowFactory() {
+        this.panelInstances = new ConcurrentHashMap<>();
+        this.messageBusConnections = new ConcurrentHashMap<>();
+        // Set singleton instance for external access
+        instance = this;
+    }
 
     /**
      * Creates the tool window content for the specified project.
@@ -155,7 +168,7 @@ public class TriagePanelToolWindowFactory implements ToolWindowFactory, Disposab
      * @throws IllegalArgumentException if project is null
      */
     @Nullable
-    public static TriagePanelView getPanelForProject(@NotNull Project project) {
+    public TriagePanelView getPanelForProject(@NotNull Project project) {
         if (project == null) {
             throw new IllegalArgumentException("Project cannot be null");
         }
@@ -170,16 +183,31 @@ public class TriagePanelToolWindowFactory implements ToolWindowFactory, Disposab
     }
     
     /**
+     * Static wrapper for getPanelForProject to maintain backward compatibility.
+     * 
+     * @param project The project to get the panel for
+     * @return The TriagePanel instance or null if not found
+     */
+    @Nullable
+    public static TriagePanelView getPanelForProjectStatic(@NotNull Project project) {
+        if (instance == null) {
+            LOG.debug("Factory instance not available");
+            return null;
+        }
+        return instance.getPanelForProject(project);
+    }
+    
+    /**
      * Removes the panel instance for the given project.
      * 
      * <p>This method is primarily used for cleanup purposes, such as during
      * testing or when a project is being closed. It removes the panel instance
-     * from the global registry and allows for proper resource cleanup.</p>
+     * from the instance registry and allows for proper resource cleanup.</p>
      * 
      * @param project The project to remove the panel for
      * @throws IllegalArgumentException if project is null
      */
-    public static void removePanelForProject(@NotNull Project project) {
+    public void removePanelForProject(@NotNull Project project) {
         if (project == null) {
             throw new IllegalArgumentException("Project cannot be null");
         }
@@ -222,6 +250,19 @@ public class TriagePanelToolWindowFactory implements ToolWindowFactory, Disposab
     }
     
     /**
+     * Static wrapper for removePanelForProject to maintain backward compatibility.
+     * 
+     * @param project The project to remove the panel for
+     */
+    public static void removePanelForProjectStatic(@NotNull Project project) {
+        if (instance == null) {
+            LOG.debug("Factory instance not available for cleanup");
+            return;
+        }
+        instance.removePanelForProject(project);
+    }
+    
+    /**
      * Gets the total number of active panel instances.
      * 
      * <p>This method is useful for monitoring and debugging purposes
@@ -229,7 +270,7 @@ public class TriagePanelToolWindowFactory implements ToolWindowFactory, Disposab
      * 
      * @return The number of active panel instances
      */
-    public static int getActivePanelCount() {
+    public int getActivePanelCount() {
         return panelInstances.size();
     }
     
@@ -240,7 +281,7 @@ public class TriagePanelToolWindowFactory implements ToolWindowFactory, Disposab
      * @return true if a panel instance exists for the project, false otherwise
      * @throws IllegalArgumentException if project is null
      */
-    public static boolean hasPanelForProject(@NotNull Project project) {
+    public boolean hasPanelForProject(@NotNull Project project) {
         if (project == null) {
             throw new IllegalArgumentException("Project cannot be null");
         }
@@ -248,26 +289,44 @@ public class TriagePanelToolWindowFactory implements ToolWindowFactory, Disposab
     }
     
     /**
-     * Cleans up static resources to prevent memory leaks and ensure consistent startup behavior.
+     * Cleans up instance resources to prevent memory leaks and ensure proper disposal.
      * 
      * <p>This method should be called during plugin shutdown or when resources need to be reset.
-     * It clears the static panel instances map to prevent memory leaks.</p>
+     * It clears the instance panel instances map to prevent memory leaks.</p>
      */
-    public static void cleanup() {
-        LOG.info("Starting cleanup of TriagePanelToolWindowFactory static resources");
+    public void cleanup() {
+        LOG.info("Starting cleanup of TriagePanelToolWindowFactory instance resources");
         
         int resourcesCleaned = panelInstances.size();
         
         try {
+            // Create a copy of the key set to avoid ConcurrentModificationException
+            java.util.Set<Project> projectsToCleanup = new java.util.HashSet<>(panelInstances.keySet());
+            
             // Dispose all panel instances and message bus connections
-            for (Project project : panelInstances.keySet()) {
+            for (Project project : projectsToCleanup) {
                 removePanelForProject(project);
             }
+            
+            // Clear the maps to ensure no lingering references
+            panelInstances.clear();
+            messageBusConnections.clear();
             
             LOG.info("TriagePanelToolWindowFactory cleanup completed - disposed " + resourcesCleaned + " panel instances");
         } catch (Exception e) {
             LOG.error("Error during TriagePanelToolWindowFactory cleanup: " + e.getMessage(), e);
         }
+    }
+    
+    /**
+     * Static wrapper for cleanup to maintain backward compatibility.
+     */
+    public static void cleanupStatic() {
+        if (instance == null) {
+            LOG.debug("Factory instance not available for cleanup");
+            return;
+        }
+        instance.cleanup();
     }
     
     /**
@@ -285,8 +344,11 @@ public class TriagePanelToolWindowFactory implements ToolWindowFactory, Disposab
         LOG.info("Disposing TriagePanelToolWindowFactory");
         
         try {
-            // Clean up all static resources
+            // Clean up all instance resources
             cleanup();
+            
+            // Clear singleton instance reference
+            instance = null;
             
             LOG.info("TriagePanelToolWindowFactory disposed successfully");
         } catch (Exception e) {

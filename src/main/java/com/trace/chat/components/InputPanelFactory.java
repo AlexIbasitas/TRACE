@@ -147,9 +147,9 @@ public final class InputPanelFactory {
         JPanel buttonContainer = new JPanel(new FlowLayout(FlowLayout.CENTER, 0, 0));
         buttonContainer.setOpaque(true);
         buttonContainer.setBackground(ThemeUtils.textFieldBackground());
-        buttonContainer.setPreferredSize(TriagePanelConstants.BUTTON_CONTAINER_SIZE);
-        buttonContainer.setMaximumSize(TriagePanelConstants.BUTTON_CONTAINER_SIZE);
-        buttonContainer.setMinimumSize(TriagePanelConstants.BUTTON_CONTAINER_SIZE);
+        buttonContainer.setPreferredSize(new TriagePanelConstants().buttonContainerSize);
+        buttonContainer.setMaximumSize(new TriagePanelConstants().buttonContainerSize);
+        buttonContainer.setMinimumSize(new TriagePanelConstants().buttonContainerSize);
         buttonContainer.setAlignmentX(Component.RIGHT_ALIGNMENT);
         buttonContainer.setAlignmentY(Component.CENTER_ALIGNMENT);
         buttonContainer.setName("buttonContainer");
@@ -175,7 +175,7 @@ public final class InputPanelFactory {
         // NATURAL SIZE: Let button size itself based on icon and IntelliJ scaling
         sendButton.setFont(TriagePanelConstants.getSendButtonFont());
         sendButton.setForeground(ThemeUtils.textForeground());
-        sendButton.setBackground(TriagePanelConstants.TRANSPARENT);
+        sendButton.setBackground(new TriagePanelConstants().transparent);
         // Rounded corner styling for modern appearance
         sendButton.setBorder(BorderFactory.createCompoundBorder(
             BorderFactory.createLineBorder(new JBColor(new Color(0, 0, 0, 0), new Color(0, 0, 0, 0)), 0, true),
@@ -210,22 +210,22 @@ public final class InputPanelFactory {
         sendButton.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseEntered(MouseEvent e) {
-                sendButton.setBackground(TriagePanelConstants.HOVER_OVERLAY);
+                sendButton.setBackground(new TriagePanelConstants().hoverOverlay);
             }
             
             @Override
             public void mouseExited(MouseEvent e) {
-                sendButton.setBackground(TriagePanelConstants.TRANSPARENT);
+                sendButton.setBackground(new TriagePanelConstants().transparent);
             }
             
             @Override
             public void mousePressed(MouseEvent e) {
-                sendButton.setBackground(TriagePanelConstants.PRESS_OVERLAY);
+                sendButton.setBackground(new TriagePanelConstants().pressOverlay);
             }
             
             @Override
             public void mouseReleased(MouseEvent e) {
-                sendButton.setBackground(TriagePanelConstants.HOVER_OVERLAY);
+                sendButton.setBackground(new TriagePanelConstants().hoverOverlay);
             }
         });
         

@@ -47,7 +47,7 @@ public class OpenAIProvider implements AIServiceProvider {
     private static final Duration REQUEST_TIMEOUT = Duration.ofSeconds(30);
     
     // JSON Processing
-    private static final Gson GSON = new Gson();
+    private final Gson gson = new Gson();
     
     // HTTP client for making requests
     private final HttpClient httpClient;
@@ -193,7 +193,7 @@ public class OpenAIProvider implements AIServiceProvider {
         message.addProperty("content", prompt);
         
         JsonObject messagesArray = new JsonObject();
-        messagesArray.add("messages", GSON.toJsonTree(new JsonObject[]{message}));
+        messagesArray.add("messages", gson.toJsonTree(new JsonObject[]{message}));
         
         request.add("messages", messagesArray.get("messages"));
         
@@ -209,7 +209,7 @@ public class OpenAIProvider implements AIServiceProvider {
      * @throws Exception if the request fails
      */
     private String executeOpenAIRequest(@NotNull JsonObject request, @NotNull String apiKey) throws Exception {
-        String requestBody = GSON.toJson(request);
+        String requestBody = gson.toJson(request);
         
         HttpRequest httpRequest = HttpRequest.newBuilder()
                 .uri(URI.create(API_URL))

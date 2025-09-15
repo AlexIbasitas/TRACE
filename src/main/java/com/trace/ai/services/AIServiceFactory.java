@@ -44,22 +44,37 @@ public final class AIServiceFactory {
     
     private static final Logger LOG = Logger.getInstance(AIServiceFactory.class);
     
-    // Provider registry
-    private static final Map<AIServiceType, AIServiceProvider> providers = new ConcurrentHashMap<>();
+    // Provider registry (instance-based to allow proper cleanup)
+    private final Map<AIServiceType, AIServiceProvider> providers = new ConcurrentHashMap<>();
     
-    // Shared HTTP client for efficient resource usage
-    private static final HttpClient sharedHttpClient = createSharedHttpClient();
+    // Shared HTTP client for efficient resource usage (lazy initialized)
+    private volatile HttpClient httpClient;
     
-    // Static initialization block to register default providers
-    static {
+    // Singleton instance for backward compatibility
+    private static volatile AIServiceFactory instance;
+    
+    /**
+     * Private constructor for singleton pattern.
+     */
+    private AIServiceFactory() {
         initializeDefaultProviders();
+        instance = this;
     }
     
     /**
-     * Private constructor to prevent instantiation.
+     * Gets the singleton instance.
+     * 
+     * @return the singleton instance
      */
-    private AIServiceFactory() {
-        throw new UnsupportedOperationException("Factory class cannot be instantiated");
+    public static AIServiceFactory getInstance() {
+        if (instance == null) {
+            synchronized (AIServiceFactory.class) {
+                if (instance == null) {
+                    instance = new AIServiceFactory();
+                }
+            }
+        }
+        return instance;
     }
     
     /**
@@ -69,12 +84,23 @@ public final class AIServiceFactory {
      * @return the provider, or null if not found
      */
     @Nullable
-    public static AIServiceProvider getProvider(@NotNull AIServiceType serviceType) {
+    public AIServiceProvider getProvider(@NotNull AIServiceType serviceType) {
         AIServiceProvider provider = providers.get(serviceType);
         if (provider == null) {
             LOG.warn("No provider found for service type: " + serviceType);
         }
         return provider;
+    }
+    
+    /**
+     * Static wrapper for backward compatibility.
+     * 
+     * @param serviceType the service type
+     * @return the provider, or null if not found
+     */
+    @Nullable
+    public static AIServiceProvider getProviderStatic(@NotNull AIServiceType serviceType) {
+        return getInstance().getProvider(serviceType);
     }
     
     /**
@@ -86,7 +112,7 @@ public final class AIServiceFactory {
      * @param serviceType the service type
      * @param provider the provider implementation
      */
-    public static void registerProvider(@NotNull AIServiceType serviceType, 
+    public void registerProvider(@NotNull AIServiceType serviceType, 
                                       @NotNull AIServiceProvider provider) {
         if (serviceType == null) {
             throw new IllegalArgumentException("Service type cannot be null");
@@ -100,12 +126,20 @@ public final class AIServiceFactory {
     }
     
     /**
+     * Static wrapper for backward compatibility.
+     */
+    public static void registerProviderStatic(@NotNull AIServiceType serviceType, 
+                                      @NotNull AIServiceProvider provider) {
+        getInstance().registerProvider(serviceType, provider);
+    }
+    
+    /**
      * Unregisters a provider for a service type.
      * 
      * @param serviceType the service type to unregister
      * @return true if provider was removed, false if not found
      */
-    public static boolean unregisterProvider(@NotNull AIServiceType serviceType) {
+    public boolean unregisterProvider(@NotNull AIServiceType serviceType) {
         AIServiceProvider removed = providers.remove(serviceType);
         if (removed != null) {
             LOG.info("Unregistered provider for service type: " + serviceType);
@@ -114,13 +148,21 @@ public final class AIServiceFactory {
         return false;
     }
     
+    public static boolean unregisterProviderStatic(@NotNull AIServiceType serviceType) {
+        return getInstance().unregisterProvider(serviceType);
+    }
+    
     /**
      * Gets all registered service types.
      * 
      * @return array of registered service types
      */
-    public static AIServiceType[] getRegisteredServiceTypes() {
+    public AIServiceType[] getRegisteredServiceTypes() {
         return providers.keySet().toArray(new AIServiceType[0]);
+    }
+    
+    public static AIServiceType[] getRegisteredServiceTypesStatic() {
+        return getInstance().getRegisteredServiceTypes();
     }
     
     /**
@@ -129,8 +171,12 @@ public final class AIServiceFactory {
      * @param serviceType the service type to check
      * @return true if a provider is registered, false otherwise
      */
-    public static boolean hasProvider(@NotNull AIServiceType serviceType) {
+    public boolean hasProvider(@NotNull AIServiceType serviceType) {
         return providers.containsKey(serviceType);
+    }
+    
+    public static boolean hasProviderStatic(@NotNull AIServiceType serviceType) {
+        return getInstance().hasProvider(serviceType);
     }
     
     /**
@@ -138,35 +184,52 @@ public final class AIServiceFactory {
      * 
      * @return the number of registered providers
      */
-    public static int getProviderCount() {
+    public int getProviderCount() {
         return providers.size();
+    }
+    
+    public static int getProviderCountStatic() {
+        return getInstance().getProviderCount();
     }
     
     /**
      * Gets the shared HTTP client used by all providers.
      * 
      * <p>This method provides access to the shared HTTP client for providers
-     * that need custom HTTP configuration.</p>
+     * that need custom HTTP configuration. Uses lazy initialization with
+     * double-checked locking for thread safety.</p>
      * 
      * @return the shared HTTP client
      */
-    public static HttpClient getSharedHttpClient() {
-        return sharedHttpClient;
+    public HttpClient getSharedHttpClient() {
+        if (httpClient == null) {
+            synchronized (this) {
+                if (httpClient == null) {
+                    httpClient = createSharedHttpClient();
+                    LOG.debug("Created shared HTTP client with lazy initialization");
+                }
+            }
+        }
+        return httpClient;
+    }
+    
+    public static HttpClient getSharedHttpClientStatic() {
+        return getInstance().getSharedHttpClient();
     }
     
     /**
      * Initializes the default providers.
      * 
      * <p>This method registers the built-in providers for OpenAI and Google Gemini.
-     * It's called during static initialization.</p>
+     * It's called during instance initialization.</p>
      */
-    private static void initializeDefaultProviders() {
+    private void initializeDefaultProviders() {
         try {
             // Register OpenAI provider
-            registerProvider(AIServiceType.OPENAI, new OpenAIProvider(sharedHttpClient));
+            registerProvider(AIServiceType.OPENAI, new OpenAIProvider(getSharedHttpClient()));
             
             // Register Google Gemini provider
-            registerProvider(AIServiceType.GEMINI, new GeminiProvider(sharedHttpClient));
+            registerProvider(AIServiceType.GEMINI, new GeminiProvider(getSharedHttpClient()));
             
             LOG.info("Initialized " + providers.size() + " default AI service providers");
             
@@ -180,20 +243,20 @@ public final class AIServiceFactory {
      * 
      * @return the configured HTTP client
      */
-    private static HttpClient createSharedHttpClient() {
+    private HttpClient createSharedHttpClient() {
         return HttpClient.newBuilder()
                 .connectTimeout(Duration.ofSeconds(10))
                 .build();
     }
     
     /**
-     * Cleans up static resources to prevent memory leaks and ensure consistent startup behavior.
+     * Cleans up instance resources to prevent memory leaks and ensure consistent startup behavior.
      * 
      * <p>This method should be called during plugin shutdown or when resources need to be reset.
-     * It clears the static providers map and closes the shared HTTP client to prevent memory leaks.</p>
+     * It clears the providers map and closes the shared HTTP client to prevent memory leaks.</p>
      */
-    public static void cleanup() {
-        LOG.info("Starting cleanup of AIServiceFactory static resources");
+    public void cleanup() {
+        LOG.info("Starting cleanup of AIServiceFactory instance resources");
         
         int resourcesCleaned = providers.size();
         
@@ -201,16 +264,31 @@ public final class AIServiceFactory {
             // Clear providers first
             providers.clear();
             
-            // Close the shared HTTP client to release thread pools and connections
-            if (sharedHttpClient != null) {
-                // HttpClient doesn't have a close() method, but we can clear references
-                // The JVM will handle cleanup when the class is unloaded
-                LOG.info("Shared HTTP client will be cleaned up by JVM");
+            // Clear the shared HTTP client reference
+            synchronized (this) {
+                if (httpClient != null) {
+                    try {
+                        httpClient = null;
+                        LOG.info("Cleared shared HTTP client reference - JVM will handle cleanup");
+                    } catch (Exception e) {
+                        LOG.warn("Error during HTTP client cleanup: " + e.getMessage(), e);
+                    }
+                }
             }
             
             LOG.info("AIServiceFactory cleanup completed - cleared " + resourcesCleaned + " AI service providers");
         } catch (Exception e) {
             LOG.error("Error during AIServiceFactory cleanup: " + e.getMessage(), e);
+        }
+    }
+    
+    /**
+     * Static wrapper for cleanup.
+     */
+    public static void cleanupStatic() {
+        if (instance != null) {
+            instance.cleanup();
+            instance = null;
         }
     }
 } 

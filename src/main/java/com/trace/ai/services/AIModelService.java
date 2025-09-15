@@ -687,12 +687,12 @@ public class AIModelService implements PersistentStateComponent<AIModelService.S
             LOG.info("Cleaning up static resources from plugin components");
             
             // Import the cleanup classes
-            com.trace.test.listeners.CucumberTestExecutionListener.cleanup();
-            com.trace.test.listeners.TestOutputCaptureListener.cleanup();
-            com.trace.test.listeners.TestUtilityHelper.cleanup();
-            com.trace.chat.ui.TriagePanelToolWindowFactory.cleanup();
-            com.trace.chat.handlers.TriagePanelEventHandlers.cleanup();
-            com.trace.ai.services.AIServiceFactory.cleanup();
+            com.trace.test.listeners.CucumberTestExecutionListener.cleanupStatic();
+            com.trace.test.listeners.TestOutputCaptureListener.cleanupStatic();
+            com.trace.test.listeners.TestUtilityHelper.cleanupStatic();
+            com.trace.chat.ui.TriagePanelToolWindowFactory.cleanupStatic();
+            com.trace.chat.handlers.TriagePanelEventHandlers.cleanupStatic();
+            com.trace.ai.services.AIServiceFactory.cleanupStatic();
             
             LOG.info("AIModelService disposal completed successfully - all plugin resources cleaned up");
             

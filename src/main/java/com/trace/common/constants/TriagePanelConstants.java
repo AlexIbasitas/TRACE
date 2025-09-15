@@ -24,9 +24,11 @@ import java.awt.*;
  */
 public final class TriagePanelConstants {
     
-    // Private constructor to prevent instantiation
-    private TriagePanelConstants() {
-        throw new UnsupportedOperationException("This is a utility class and cannot be instantiated");
+    /**
+     * Public constructor allows instantiation for proper lifecycle management.
+     */
+    public TriagePanelConstants() {
+        // Constructor allows instantiation for proper lifecycle management
     }
     
     // --- Theme-aware color constants ---
@@ -127,61 +129,61 @@ public final class TriagePanelConstants {
     }
     
     /** Theme-aware scenario label color (orange) */
-    public static final JBColor SCENARIO_COLOR = new JBColor(
+    public final JBColor scenarioColor = new JBColor(
         new Color(255, 152, 0),  // Material Design Orange
         new Color(255, 152, 0)
     );
     
     /** Theme-aware failure indicator color (red) */
-    public static final JBColor FAILURE_COLOR = new JBColor(
+    public final JBColor failureColor = new JBColor(
         JBColor.RED,
         JBColor.RED
     );
     
     /** Theme-aware error foreground color for error states */
-    public static final JBColor ERROR_FOREGROUND = new JBColor(
+    public final JBColor errorForeground = new JBColor(
         JBColor.RED,
         JBColor.RED
     );
     
     /** Theme-aware warning foreground color for warning states */
-    public static final JBColor WARNING_FOREGROUND = new JBColor(
+    public final JBColor warningForeground = new JBColor(
         new Color(255, 193, 7),  // Material Design Amber
         new Color(255, 193, 7)
     );
     
     /** Theme-aware collapsible panel content text color */
-    public static final JBColor COLLAPSIBLE_TEXT_COLOR = new JBColor(
+    public final JBColor collapsibleTextColor = new JBColor(
         new Color(31, 31, 31),  // Light theme label foreground
         new Color(255, 255, 255)  // Dark theme label foreground
     );
     
     /** Theme-aware collapsible panel content background color */
-    public static final JBColor COLLAPSIBLE_BACKGROUND = new JBColor(
+    public final JBColor collapsibleBackground = new JBColor(
         new Color(255, 255, 255),  // Light theme text field background
         new Color(50, 50, 50)      // Dark theme text field background
     );
     
     /** Theme-aware collapsible panel content border color */
-    public static final JBColor COLLAPSIBLE_BORDER = new JBColor(
+    public final JBColor collapsibleBorder = new JBColor(
         new Color(80, 80, 80),  // Light theme border
         new Color(80, 80, 80)   // Dark theme border
     );
     
     /** Theme-aware transparent color for buttons */
-    public static final JBColor TRANSPARENT = new JBColor(
+    public final JBColor transparent = new JBColor(
         new Color(0, 0, 0, 0),
         new Color(0, 0, 0, 0)
     );
     
     /** Theme-aware hover overlay color for buttons */
-    public static final JBColor HOVER_OVERLAY = new JBColor(
+    public final JBColor hoverOverlay = new JBColor(
         new Color(0, 0, 0, 30),  // Dark overlay for light theme
         new Color(255, 255, 255, 30)  // Light overlay for dark theme
     );
     
     /** Theme-aware press overlay color for buttons */
-    public static final JBColor PRESS_OVERLAY = new JBColor(
+    public final JBColor pressOverlay = new JBColor(
         new Color(0, 0, 0, 50),  // Darker overlay for light theme
         new Color(0, 0, 0, 40)   // Dark overlay for dark theme
     );
@@ -308,10 +310,10 @@ public final class TriagePanelConstants {
     // --- Dimension constants ---
     
     /** Button container size - accommodates button (40x40) plus border padding (2px each side) */
-    public static final Dimension BUTTON_CONTAINER_SIZE = new Dimension(44, 44);
+    public final Dimension buttonContainerSize = new Dimension(44, 44);
     
     /** Send button size */
-    public static final Dimension SEND_BUTTON_SIZE = new Dimension(32, 32);
+    public final Dimension sendButtonSize = new Dimension(32, 32);
     
     /** Maximum width for message text */
     public static final int MAX_MESSAGE_TEXT_WIDTH = 600;
@@ -326,7 +328,7 @@ public final class TriagePanelConstants {
     public static final int MAX_COLLAPSIBLE_CONTENT_WIDTH = 550;
     
     /** Maximum dimension for expandable components */
-    public static final Dimension MAX_EXPANDABLE_SIZE = new Dimension(Integer.MAX_VALUE, Short.MAX_VALUE);
+    public final Dimension maxExpandableSize = new Dimension(Integer.MAX_VALUE, Short.MAX_VALUE);
     
     // --- Icon path constants ---
     
@@ -391,7 +393,7 @@ public final class TriagePanelConstants {
     
     /** Collapsible text area border compound */
     public static final Border COLLAPSIBLE_TEXT_BORDER_COMPOUND = BorderFactory.createCompoundBorder(
-        BorderFactory.createLineBorder(COLLAPSIBLE_BORDER, 1),
+        BorderFactory.createLineBorder(new TriagePanelConstants().collapsibleBorder, 1),
         BorderFactory.createEmptyBorder(8, 8, 8, 8)
     );
     

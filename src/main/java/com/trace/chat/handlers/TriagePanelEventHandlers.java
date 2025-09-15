@@ -32,22 +32,25 @@ public final class TriagePanelEventHandlers {
     
     private static final Logger LOG = Logger.getInstance(TriagePanelEventHandlers.class);
     
+    // Singleton instance for external access (does not hold Component references)
+    private static volatile TriagePanelEventHandlers instance;
+    
     // --- Theme-aware color constants ---
     
     /** Theme-aware hover overlay color - light overlay for dark theme, dark overlay for light theme */
-    private static final JBColor HOVER_OVERLAY_COLOR = new JBColor(
+    private final JBColor hoverOverlayColor = new JBColor(
         new Color(0, 0, 0, 30),  // Dark overlay for light theme
         new Color(255, 255, 255, 30)  // Light overlay for dark theme
     );
     
     /** Theme-aware press overlay color - darker overlay for both themes */
-    private static final JBColor PRESS_OVERLAY_COLOR = new JBColor(
+    private final JBColor pressOverlayColor = new JBColor(
         new Color(0, 0, 0, 50),  // Darker overlay for light theme
         new Color(0, 0, 0, 40)   // Dark overlay for dark theme
     );
     
     /** Theme-aware transparent color that adapts to current theme */
-    private static final JBColor TRANSPARENT_COLOR = new JBColor(
+    private final JBColor transparentColor = new JBColor(
         new Color(0, 0, 0, 0),   // Transparent for both themes
         new Color(0, 0, 0, 0)
     );
@@ -55,10 +58,10 @@ public final class TriagePanelEventHandlers {
     // --- Color state management ---
     
     /** ConcurrentHashMap to store original component colors with proper lifecycle management */
-    private static final Map<Component, Color> originalColors = new ConcurrentHashMap<>();
+    private final Map<Component, Color> originalColors = new ConcurrentHashMap<>();
     
     /** ConcurrentHashMap to store component color states for tracking with proper lifecycle management */
-    private static final Map<Component, ColorState> componentColorStates = new ConcurrentHashMap<>();
+    private final Map<Component, ColorState> componentColorStates = new ConcurrentHashMap<>();
     
     /**
      * Color state tracking for components.
@@ -66,7 +69,7 @@ public final class TriagePanelEventHandlers {
      * <p>This class maintains the current visual state of components including
      * original colors, current colors, and interaction states (hovered, pressed).</p>
      */
-    private static class ColorState {
+    private class ColorState {
         private final Color originalBackground;
         private final Color originalForeground;
         private Color currentBackground;
@@ -101,9 +104,13 @@ public final class TriagePanelEventHandlers {
         public void setCurrentForeground(Color foreground) { this.currentForeground = foreground; }
     }
     
-    // Private constructor to prevent instantiation
-    private TriagePanelEventHandlers() {
-        throw new UnsupportedOperationException("This is a utility class and cannot be instantiated");
+    /**
+     * Constructor initializes the event handlers instance.
+     */
+    public TriagePanelEventHandlers() {
+        // Constructor allows instantiation for proper lifecycle management
+        // Set singleton instance for external access
+        instance = this;
     }
     
     // --- Color management utility methods ---
@@ -113,7 +120,7 @@ public final class TriagePanelEventHandlers {
      * 
      * @param component The component whose colors should be captured
      */
-    private static void captureOriginalColors(Component component) {
+    private void captureOriginalColors(Component component) {
         if (component == null) {
             LOG.warn("TriagePanelEventHandlers: captureOriginalColors called with null component");
             return;
@@ -137,7 +144,7 @@ public final class TriagePanelEventHandlers {
      * 
      * @param component The component whose background should be restored
      */
-    private static void restoreOriginalBackground(Component component) {
+    private void restoreOriginalBackground(Component component) {
         if (component == null) {
             LOG.warn("TriagePanelEventHandlers: restoreOriginalBackground called with null component");
             return;
@@ -167,7 +174,7 @@ public final class TriagePanelEventHandlers {
      * @param component The component to apply the overlay to
      * @param overlayColor The overlay color to apply
      */
-    private static void applyOverlayColor(Component component, JBColor overlayColor) {
+    private void applyOverlayColor(Component component, JBColor overlayColor) {
         if (component == null) {
             LOG.warn("TriagePanelEventHandlers: applyOverlayColor called with null component");
             return;
@@ -200,7 +207,7 @@ public final class TriagePanelEventHandlers {
      * @param overlayColor The overlay color to blend
      * @return The blended color
      */
-    private static Color blendColors(Color baseColor, Color overlayColor) {
+    private Color blendColors(Color baseColor, Color overlayColor) {
         if (baseColor == null || overlayColor == null) {
             return baseColor != null ? baseColor : overlayColor;
         }
@@ -229,7 +236,7 @@ public final class TriagePanelEventHandlers {
      * @param component The component to get the color state for
      * @return The color state, or null if not tracked
      */
-    public static ColorState getColorState(Component component) {
+    public ColorState getColorState(Component component) {
         return componentColorStates.get(component);
     }
     
@@ -237,7 +244,7 @@ public final class TriagePanelEventHandlers {
      * Clears all stored color states and original colors.
      * This should be called when the plugin is disposed to prevent memory leaks.
      */
-    public static void clearColorStates() {
+    public void clearColorStates() {
         originalColors.clear();
         componentColorStates.clear();
         LOG.debug("TriagePanelEventHandlers: Cleared all color states");
@@ -247,7 +254,7 @@ public final class TriagePanelEventHandlers {
      * Handles theme changes by updating all tracked components to use new theme colors.
      * This method should be called when the IDE theme changes.
      */
-    public static void handleThemeChange() {
+    public void handleThemeChange() {
         LOG.debug("TriagePanelEventHandlers: Handling theme change");
         
         // Update all tracked components to use new theme colors
@@ -261,9 +268,9 @@ public final class TriagePanelEventHandlers {
                 
                 // Restore appropriate state based on current interaction
                 if (colorState.isPressed()) {
-                    applyOverlayColor(component, PRESS_OVERLAY_COLOR);
+                    applyOverlayColor(component, pressOverlayColor);
                 } else if (colorState.isHovered()) {
-                    applyOverlayColor(component, HOVER_OVERLAY_COLOR);
+                    applyOverlayColor(component, hoverOverlayColor);
                 } else {
                     restoreOriginalBackground(component);
                 }
@@ -279,7 +286,7 @@ public final class TriagePanelEventHandlers {
      * Forces a refresh of all component colors to ensure they match the current theme.
      * This is useful for debugging or when theme changes aren't automatically detected.
      */
-    public static void refreshAllComponentColors() {
+    public void refreshAllComponentColors() {
         LOG.debug("TriagePanelEventHandlers: Refreshing all component colors");
         handleThemeChange();
     }
@@ -296,7 +303,7 @@ public final class TriagePanelEventHandlers {
      * @return The configured key adapter
      * @throws IllegalArgumentException if sendActionListener is null
      */
-    public static KeyAdapter createInputKeyAdapter(ActionListener sendActionListener) {
+    public KeyAdapter createInputKeyAdapter(ActionListener sendActionListener) {
         if (sendActionListener == null) {
             throw new IllegalArgumentException("Send action listener cannot be null");
         }
@@ -343,7 +350,7 @@ public final class TriagePanelEventHandlers {
      * @return The configured mouse adapter with proper color state management
      * @throws IllegalArgumentException if sendButton is null
      */
-    public static MouseAdapter createSendButtonMouseAdapter(JButton sendButton) {
+    public MouseAdapter createSendButtonMouseAdapter(JButton sendButton) {
         if (sendButton == null) {
             throw new IllegalArgumentException("Send button cannot be null");
         }
@@ -363,7 +370,7 @@ public final class TriagePanelEventHandlers {
                 }
                 
                 // Apply theme-aware hover overlay
-                applyOverlayColor(sendButton, HOVER_OVERLAY_COLOR);
+                applyOverlayColor(sendButton, hoverOverlayColor);
             }
             
             @Override
@@ -392,7 +399,7 @@ public final class TriagePanelEventHandlers {
                 }
                 
                 // Apply theme-aware press overlay
-                applyOverlayColor(sendButton, PRESS_OVERLAY_COLOR);
+                applyOverlayColor(sendButton, pressOverlayColor);
             }
             
             @Override
@@ -407,7 +414,7 @@ public final class TriagePanelEventHandlers {
                 
                 // If still hovering, apply hover overlay; otherwise restore original
                 if (colorState != null && colorState.isHovered()) {
-                    applyOverlayColor(sendButton, HOVER_OVERLAY_COLOR);
+                    applyOverlayColor(sendButton, hoverOverlayColor);
                 } else {
                     restoreOriginalBackground(sendButton);
                 }
@@ -426,7 +433,7 @@ public final class TriagePanelEventHandlers {
      * @return The configured action listener
      * @throws IllegalArgumentException if any parameter is null
      */
-    public static ActionListener createSendButtonActionListener(JBTextArea inputArea, ActionListener sendActionListener) {
+    public ActionListener createSendButtonActionListener(JBTextArea inputArea, ActionListener sendActionListener) {
         if (inputArea == null) {
             throw new IllegalArgumentException("Input area cannot be null");
         }
@@ -455,7 +462,7 @@ public final class TriagePanelEventHandlers {
      * @return The configured mouse adapter
      * @throws IllegalArgumentException if collapsiblePanel is null
      */
-    public static MouseAdapter createCollapsiblePanelMouseAdapter(CollapsiblePanel collapsiblePanel) {
+    public MouseAdapter createCollapsiblePanelMouseAdapter(CollapsiblePanel collapsiblePanel) {
         if (collapsiblePanel == null) {
             throw new IllegalArgumentException("Collapsible panel cannot be null");
         }
@@ -499,7 +506,7 @@ public final class TriagePanelEventHandlers {
      * @return The configured action listener
      * @throws IllegalArgumentException if settingsActionListener is null
      */
-    public static ActionListener createSettingsButtonActionListener(ActionListener settingsActionListener) {
+    public ActionListener createSettingsButtonActionListener(ActionListener settingsActionListener) {
         if (settingsActionListener == null) {
             throw new IllegalArgumentException("Settings action listener cannot be null");
         }
@@ -520,7 +527,7 @@ public final class TriagePanelEventHandlers {
      * @return The configured action listener
      * @throws IllegalArgumentException if backToChatActionListener is null
      */
-    public static ActionListener createBackToChatActionListener(ActionListener backToChatActionListener) {
+    public ActionListener createBackToChatActionListener(ActionListener backToChatActionListener) {
         if (backToChatActionListener == null) {
             throw new IllegalArgumentException("Back to chat action listener cannot be null");
         }
@@ -542,7 +549,7 @@ public final class TriagePanelEventHandlers {
      * @return The configured document listener
      * @throws IllegalArgumentException if any parameter is null
      */
-    public static javax.swing.event.DocumentListener createInputDocumentListener(JBTextArea inputArea, JButton sendButton) {
+    public javax.swing.event.DocumentListener createInputDocumentListener(JBTextArea inputArea, JButton sendButton) {
         if (inputArea == null) {
             throw new IllegalArgumentException("Input area cannot be null");
         }
@@ -583,7 +590,7 @@ public final class TriagePanelEventHandlers {
      *
      * @return The configured focus listener
      */
-    public static FocusAdapter createInputFocusAdapter() {
+    public FocusAdapter createInputFocusAdapter() {
         return new FocusAdapter() {
             @Override
             public void focusGained(FocusEvent e) {
@@ -606,7 +613,7 @@ public final class TriagePanelEventHandlers {
      * @param cleanupAction The action to perform during cleanup
      * @return The configured window listener
      */
-    public static WindowAdapter createWindowListener(Runnable cleanupAction) {
+    public WindowAdapter createWindowListener(Runnable cleanupAction) {
         return new WindowAdapter() {
             @Override
             public void windowClosing(WindowEvent e) {
@@ -627,7 +634,7 @@ public final class TriagePanelEventHandlers {
      * @param action The action to execute
      * @throws IllegalArgumentException if action is null
      */
-    public static void executeOnEDT(Runnable action) {
+    public void executeOnEDT(Runnable action) {
         if (action == null) {
             throw new IllegalArgumentException("Action cannot be null");
         }
@@ -649,7 +656,7 @@ public final class TriagePanelEventHandlers {
      * @throws IllegalArgumentException if action is null
      * @throws InterruptedException if the thread is interrupted while waiting
      */
-    public static void executeOnEDTAndWait(Runnable action) throws InterruptedException, InvocationTargetException {
+    public void executeOnEDTAndWait(Runnable action) throws InterruptedException, InvocationTargetException {
         if (action == null) {
             throw new IllegalArgumentException("Action cannot be null");
         }
@@ -672,7 +679,7 @@ public final class TriagePanelEventHandlers {
      * @param component The component to remove listeners from
      * @throws IllegalArgumentException if component is null
      */
-    public static void disposeListeners(Component component) {
+    public void disposeListeners(Component component) {
         if (component == null) {
             throw new IllegalArgumentException("Component cannot be null");
         }
@@ -720,8 +727,8 @@ public final class TriagePanelEventHandlers {
      * It clears all static maps to prevent memory leaks and ensure consistent behavior across
      * plugin restarts.</p>
      */
-    public static void cleanup() {
-        LOG.info("Starting cleanup of TriagePanelEventHandlers static resources");
+    public void cleanup() {
+        LOG.info("Starting cleanup of TriagePanelEventHandlers instance resources");
         
         int originalColorsCleaned = originalColors.size();
         int componentStatesCleaned = componentColorStates.size();
@@ -730,10 +737,202 @@ public final class TriagePanelEventHandlers {
             originalColors.clear();
             componentColorStates.clear();
             
+            // Clear singleton instance reference
+            instance = null;
+            
             LOG.info("TriagePanelEventHandlers cleanup completed - cleared " + originalColorsCleaned + 
                     " original colors and " + componentStatesCleaned + " component states");
         } catch (Exception e) {
             LOG.error("Error during TriagePanelEventHandlers cleanup: " + e.getMessage(), e);
         }
+    }
+    
+    // --- Static wrapper methods for backward compatibility ---
+    
+    /**
+     * Static wrapper for getColorState to maintain backward compatibility.
+     */
+    public static ColorState getColorStateStatic(Component component) {
+        if (instance == null) {
+            LOG.debug("Event handlers instance not available");
+            return null;
+        }
+        return instance.getColorState(component);
+    }
+    
+    /**
+     * Static wrapper for clearColorStates to maintain backward compatibility.
+     */
+    public static void clearColorStatesStatic() {
+        if (instance == null) {
+            LOG.debug("Event handlers instance not available for cleanup");
+            return;
+        }
+        instance.clearColorStates();
+    }
+    
+    /**
+     * Static wrapper for handleThemeChange to maintain backward compatibility.
+     */
+    public static void handleThemeChangeStatic() {
+        if (instance == null) {
+            LOG.debug("Event handlers instance not available");
+            return;
+        }
+        instance.handleThemeChange();
+    }
+    
+    /**
+     * Static wrapper for refreshAllComponentColors to maintain backward compatibility.
+     */
+    public static void refreshAllComponentColorsStatic() {
+        if (instance == null) {
+            LOG.debug("Event handlers instance not available");
+            return;
+        }
+        instance.refreshAllComponentColors();
+    }
+    
+    /**
+     * Static wrapper for createInputKeyAdapter to maintain backward compatibility.
+     */
+    public static KeyAdapter createInputKeyAdapterStatic(ActionListener sendActionListener) {
+        if (instance == null) {
+            LOG.debug("Event handlers instance not available");
+            return null;
+        }
+        return instance.createInputKeyAdapter(sendActionListener);
+    }
+    
+    /**
+     * Static wrapper for createSendButtonMouseAdapter to maintain backward compatibility.
+     */
+    public static MouseAdapter createSendButtonMouseAdapterStatic(JButton sendButton) {
+        if (instance == null) {
+            LOG.debug("Event handlers instance not available");
+            return null;
+        }
+        return instance.createSendButtonMouseAdapter(sendButton);
+    }
+    
+    /**
+     * Static wrapper for createSendButtonActionListener to maintain backward compatibility.
+     */
+    public static ActionListener createSendButtonActionListenerStatic(JBTextArea inputArea, ActionListener sendActionListener) {
+        if (instance == null) {
+            LOG.debug("Event handlers instance not available");
+            return null;
+        }
+        return instance.createSendButtonActionListener(inputArea, sendActionListener);
+    }
+    
+    /**
+     * Static wrapper for createCollapsiblePanelMouseAdapter to maintain backward compatibility.
+     */
+    public static MouseAdapter createCollapsiblePanelMouseAdapterStatic(CollapsiblePanel collapsiblePanel) {
+        if (instance == null) {
+            LOG.debug("Event handlers instance not available");
+            return null;
+        }
+        return instance.createCollapsiblePanelMouseAdapter(collapsiblePanel);
+    }
+    
+    /**
+     * Static wrapper for createSettingsButtonActionListener to maintain backward compatibility.
+     */
+    public static ActionListener createSettingsButtonActionListenerStatic(ActionListener settingsActionListener) {
+        if (instance == null) {
+            LOG.debug("Event handlers instance not available");
+            return null;
+        }
+        return instance.createSettingsButtonActionListener(settingsActionListener);
+    }
+    
+    /**
+     * Static wrapper for createBackToChatActionListener to maintain backward compatibility.
+     */
+    public static ActionListener createBackToChatActionListenerStatic(ActionListener backToChatActionListener) {
+        if (instance == null) {
+            LOG.debug("Event handlers instance not available");
+            return null;
+        }
+        return instance.createBackToChatActionListener(backToChatActionListener);
+    }
+    
+    /**
+     * Static wrapper for createInputDocumentListener to maintain backward compatibility.
+     */
+    public static javax.swing.event.DocumentListener createInputDocumentListenerStatic(JBTextArea inputArea, JButton sendButton) {
+        if (instance == null) {
+            LOG.debug("Event handlers instance not available");
+            return null;
+        }
+        return instance.createInputDocumentListener(inputArea, sendButton);
+    }
+    
+    /**
+     * Static wrapper for createInputFocusAdapter to maintain backward compatibility.
+     */
+    public static FocusAdapter createInputFocusAdapterStatic() {
+        if (instance == null) {
+            LOG.debug("Event handlers instance not available");
+            return null;
+        }
+        return instance.createInputFocusAdapter();
+    }
+    
+    /**
+     * Static wrapper for createWindowListener to maintain backward compatibility.
+     */
+    public static WindowAdapter createWindowListenerStatic(Runnable cleanupAction) {
+        if (instance == null) {
+            LOG.debug("Event handlers instance not available");
+            return null;
+        }
+        return instance.createWindowListener(cleanupAction);
+    }
+    
+    /**
+     * Static wrapper for executeOnEDT to maintain backward compatibility.
+     */
+    public static void executeOnEDTStatic(Runnable action) {
+        if (instance == null) {
+            LOG.debug("Event handlers instance not available");
+            return;
+        }
+        instance.executeOnEDT(action);
+    }
+    
+    /**
+     * Static wrapper for executeOnEDTAndWait to maintain backward compatibility.
+     */
+    public static void executeOnEDTAndWaitStatic(Runnable action) throws InterruptedException, InvocationTargetException {
+        if (instance == null) {
+            LOG.debug("Event handlers instance not available");
+            return;
+        }
+        instance.executeOnEDTAndWait(action);
+    }
+    
+    /**
+     * Static wrapper for disposeListeners to maintain backward compatibility.
+     */
+    public static void disposeListenersStatic(Component component) {
+        if (instance == null) {
+            LOG.debug("Event handlers instance not available");
+            return;
+        }
+        instance.disposeListeners(component);
+    }
+    
+    /**
+     * Static wrapper for cleanup to maintain backward compatibility.
+     */
+    public static void cleanupStatic() {
+        if (instance == null) {
+            LOG.debug("Event handlers instance not available for cleanup");
+            return;
+        }
+        instance.cleanup();
     }
 } 

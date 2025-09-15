@@ -94,7 +94,7 @@ public class CollapsiblePanel extends JPanel {
         setOpaque(true);
         setBackground(ThemeUtils.panelBackground());
         setBorder(TriagePanelConstants.COLLAPSIBLE_PANEL_BORDER);
-        setMaximumSize(TriagePanelConstants.MAX_EXPANDABLE_SIZE);
+        setMaximumSize(new TriagePanelConstants().maxExpandableSize);
         setAlignmentX(Component.LEFT_ALIGNMENT);
     }
     
@@ -119,7 +119,7 @@ public class CollapsiblePanel extends JPanel {
         contentPanel.setOpaque(true);
         contentPanel.setBackground(ThemeUtils.panelBackground());
         contentPanel.setBorder(TriagePanelConstants.COLLAPSIBLE_CONTENT_BORDER);
-        contentPanel.setMaximumSize(TriagePanelConstants.MAX_EXPANDABLE_SIZE);
+        contentPanel.setMaximumSize(new TriagePanelConstants().maxExpandableSize);
         
         if (content != null && !content.trim().isEmpty()) {
             addContentTextArea(content);

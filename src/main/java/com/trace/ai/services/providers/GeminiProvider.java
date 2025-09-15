@@ -48,7 +48,7 @@ public class GeminiProvider implements AIServiceProvider {
     private static final Duration REQUEST_TIMEOUT = Duration.ofSeconds(30);
     
     // JSON Processing
-    private static final Gson GSON = new Gson();
+    private final Gson gson = new Gson();
     
     // HTTP client for making requests
     private final HttpClient httpClient;
@@ -205,12 +205,12 @@ public class GeminiProvider implements AIServiceProvider {
         part.addProperty("text", prompt);
         
         JsonObject partsArray = new JsonObject();
-        partsArray.add("parts", GSON.toJsonTree(new JsonObject[]{part}));
+        partsArray.add("parts", gson.toJsonTree(new JsonObject[]{part}));
         
         content.add("parts", partsArray.get("parts"));
         
         JsonObject contentsArray = new JsonObject();
-        contentsArray.add("contents", GSON.toJsonTree(new JsonObject[]{content}));
+        contentsArray.add("contents", gson.toJsonTree(new JsonObject[]{content}));
         
         request.add("contents", contentsArray.get("contents"));
         
@@ -229,7 +229,7 @@ public class GeminiProvider implements AIServiceProvider {
     private String executeGeminiRequest(@NotNull JsonObject request, 
                                       @NotNull String modelId, 
                                       @NotNull String apiKey) throws Exception {
-        String requestBody = GSON.toJson(request);
+        String requestBody = gson.toJson(request);
         String url = API_BASE_URL + modelId + API_ENDPOINT + "?key=" + apiKey;
         
         HttpRequest httpRequest = HttpRequest.newBuilder()

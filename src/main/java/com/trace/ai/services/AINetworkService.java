@@ -144,12 +144,12 @@ public final class AINetworkService implements Disposable {
             
             // Get the provider for the model's service type
             LOG.info("Getting provider for service type: " + serviceType);
-            LOG.info("Available providers: " + java.util.Arrays.toString(AIServiceFactory.getRegisteredServiceTypes()));
-            LOG.info("Provider count: " + AIServiceFactory.getProviderCount());
-            AIServiceProvider provider = AIServiceFactory.getProvider(serviceType);
+            LOG.info("Available providers: " + java.util.Arrays.toString(AIServiceFactory.getRegisteredServiceTypesStatic()));
+            LOG.info("Provider count: " + AIServiceFactory.getProviderCountStatic());
+            AIServiceProvider provider = AIServiceFactory.getProviderStatic(serviceType);
             if (provider == null) {
                 LOG.error("No provider available for service: " + serviceType);
-                LOG.error("Available providers: " + java.util.Arrays.toString(AIServiceFactory.getRegisteredServiceTypes()));
+                LOG.error("Available providers: " + java.util.Arrays.toString(AIServiceFactory.getRegisteredServiceTypesStatic()));
                 throw new UnsupportedOperationException("No provider available for service: " + serviceType);
             }
             
@@ -260,7 +260,7 @@ public final class AINetworkService implements Disposable {
         
         try {
             // Get the provider for this service
-            AIServiceProvider provider = AIServiceFactory.getProvider(serviceType);
+            AIServiceProvider provider = AIServiceFactory.getProviderStatic(serviceType);
             if (provider == null) {
                 LOG.warn("No provider available for service: " + serviceType);
                 return CompletableFuture.completedFuture(false);
@@ -301,7 +301,7 @@ public final class AINetworkService implements Disposable {
      * @return true if a provider is registered, false otherwise
      */
     public boolean hasProvider(@NotNull AIServiceType serviceType) {
-        return AIServiceFactory.hasProvider(serviceType);
+        return AIServiceFactory.hasProviderStatic(serviceType);
     }
     
     /**
@@ -310,7 +310,7 @@ public final class AINetworkService implements Disposable {
      * @return array of registered service types
      */
     public AIServiceType[] getRegisteredServiceTypes() {
-        return AIServiceFactory.getRegisteredServiceTypes();
+        return AIServiceFactory.getRegisteredServiceTypesStatic();
     }
     
     /**

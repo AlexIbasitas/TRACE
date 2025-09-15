@@ -249,7 +249,7 @@ public class AIServiceConfigPanel extends JBPanel<AIServiceConfigPanel> {
                 } else {
                     openaiApiKeyField.setText("");
                     openaiStatusLabel.setText("Not Connected");
-                    openaiStatusLabel.setForeground(TriagePanelConstants.ERROR_FOREGROUND);
+                    openaiStatusLabel.setForeground(new TriagePanelConstants().errorForeground);
                     openaiStatusLabel.setIcon(AllIcons.General.Error);
                     LOG.debug("No OpenAI API key found in storage");
                 }
@@ -263,7 +263,7 @@ public class AIServiceConfigPanel extends JBPanel<AIServiceConfigPanel> {
                 } else {
                     geminiApiKeyField.setText("");
                     geminiStatusLabel.setText("Not Connected");
-                    geminiStatusLabel.setForeground(TriagePanelConstants.ERROR_FOREGROUND);
+                    geminiStatusLabel.setForeground(new TriagePanelConstants().errorForeground);
                     geminiStatusLabel.setIcon(AllIcons.General.Error);
                     LOG.debug("No Gemini API key found in storage");
                 }

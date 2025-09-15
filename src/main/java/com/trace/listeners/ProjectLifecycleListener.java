@@ -16,6 +16,6 @@ public class ProjectLifecycleListener implements ProjectManagerListener {
     @Override
     public void projectClosing(@NotNull Project project) {
         LOG.info("Project closing: " + project.getName() + " - cleaning up TRACE resources");
-        TriagePanelToolWindowFactory.removePanelForProject(project);
+        TriagePanelToolWindowFactory.removePanelForProjectStatic(project);
     }
 }

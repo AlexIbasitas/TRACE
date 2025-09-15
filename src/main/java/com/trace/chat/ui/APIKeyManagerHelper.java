@@ -94,7 +94,7 @@ public class APIKeyManagerHelper {
                                 LOG.info("OpenAI API key tested and saved successfully");
                             } else {
                                 openaiStatusLabel.setText("Failed to save API key");
-                                openaiStatusLabel.setForeground(TriagePanelConstants.ERROR_FOREGROUND);
+                                openaiStatusLabel.setForeground(new TriagePanelConstants().errorForeground);
                                 showError("Failed to save OpenAI API key", parentComponent);
                                 LOG.error("Failed to save OpenAI API key");
                             }
@@ -102,7 +102,7 @@ public class APIKeyManagerHelper {
                     });
                 } else {
                     openaiStatusLabel.setText("Connection failed");
-                    openaiStatusLabel.setForeground(TriagePanelConstants.ERROR_FOREGROUND);
+                    openaiStatusLabel.setForeground(new TriagePanelConstants().errorForeground);
                     showError("OpenAI API key is invalid or connection failed", parentComponent);
                     LOG.warn("OpenAI API key test failed");
                 }
@@ -169,7 +169,7 @@ public class APIKeyManagerHelper {
                                 LOG.info("Gemini API key tested and saved successfully");
                             } else {
                                 geminiStatusLabel.setText("Failed to save API key");
-                                geminiStatusLabel.setForeground(TriagePanelConstants.ERROR_FOREGROUND);
+                                geminiStatusLabel.setForeground(new TriagePanelConstants().errorForeground);
                                 showError("Failed to save Gemini API key", parentComponent);
                                 LOG.error("Failed to save Gemini API key");
                             }
@@ -177,7 +177,7 @@ public class APIKeyManagerHelper {
                     });
                 } else {
                     geminiStatusLabel.setText("Connection failed");
-                    geminiStatusLabel.setForeground(TriagePanelConstants.ERROR_FOREGROUND);
+                    geminiStatusLabel.setForeground(new TriagePanelConstants().errorForeground);
                     showError("Gemini API key is invalid or connection failed", parentComponent);
                     LOG.warn("Gemini API key test failed");
                 }
@@ -283,12 +283,12 @@ public class APIKeyManagerHelper {
             ApplicationManager.getApplication().invokeLater(() -> {
                 if (cleared) {
                     openaiStatusLabel.setText("Not Connected");
-                    openaiStatusLabel.setForeground(TriagePanelConstants.ERROR_FOREGROUND);
+                    openaiStatusLabel.setForeground(new TriagePanelConstants().errorForeground);
                     openaiStatusLabel.setIcon(AllIcons.General.Error);
                     LOG.info("OpenAI API key cleared successfully");
                 } else {
                     openaiStatusLabel.setText("Failed to clear");
-                    openaiStatusLabel.setForeground(TriagePanelConstants.ERROR_FOREGROUND);
+                    openaiStatusLabel.setForeground(new TriagePanelConstants().errorForeground);
                     LOG.error("Failed to clear OpenAI API key");
                 }
                 
@@ -317,12 +317,12 @@ public class APIKeyManagerHelper {
             ApplicationManager.getApplication().invokeLater(() -> {
                 if (cleared) {
                     geminiStatusLabel.setText("Not Connected");
-                    geminiStatusLabel.setForeground(TriagePanelConstants.ERROR_FOREGROUND);
+                    geminiStatusLabel.setForeground(new TriagePanelConstants().errorForeground);
                     geminiStatusLabel.setIcon(AllIcons.General.Error);
                     LOG.info("Gemini API key cleared successfully");
                 } else {
                     geminiStatusLabel.setText("Failed to clear");
-                    geminiStatusLabel.setForeground(TriagePanelConstants.ERROR_FOREGROUND);
+                    geminiStatusLabel.setForeground(new TriagePanelConstants().errorForeground);
                     LOG.error("Failed to clear Gemini API key");
                 }
                 
@@ -344,7 +344,7 @@ public class APIKeyManagerHelper {
             openaiStatusLabel.setForeground(UIUtil.getLabelInfoForeground());
         } else {
             openaiStatusLabel.setText("Not Connected");
-            openaiStatusLabel.setForeground(TriagePanelConstants.ERROR_FOREGROUND);
+            openaiStatusLabel.setForeground(new TriagePanelConstants().errorForeground);
             openaiStatusLabel.setIcon(AllIcons.General.Error);
         }
     }
@@ -359,7 +359,7 @@ public class APIKeyManagerHelper {
             geminiStatusLabel.setForeground(UIUtil.getLabelInfoForeground());
         } else {
             geminiStatusLabel.setText("Not Connected");
-            geminiStatusLabel.setForeground(TriagePanelConstants.ERROR_FOREGROUND);
+            geminiStatusLabel.setForeground(new TriagePanelConstants().errorForeground);
             geminiStatusLabel.setIcon(AllIcons.General.Error);
         }
     }

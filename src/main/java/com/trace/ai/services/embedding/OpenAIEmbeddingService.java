@@ -48,7 +48,7 @@ public class OpenAIEmbeddingService {
     private static final long MAX_BACKOFF_MS = 10000;
     
     // JSON Processing
-    private static final Gson GSON = new Gson();
+    private final Gson gson = new Gson();
     
     // HTTP client for making requests
     private final HttpClient httpClient;
@@ -126,7 +126,7 @@ public class OpenAIEmbeddingService {
         
         // Build the request
         JsonObject request = buildEmbeddingRequest(text);
-        String requestBody = GSON.toJson(request);
+        String requestBody = gson.toJson(request);
         
         // Request body logging removed for security
         

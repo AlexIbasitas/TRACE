@@ -51,11 +51,14 @@ public class CucumberTestExecutionListener implements SMTRunnerEventsListener {
     private final AISettings aiSettings;
     private AINetworkService aiNetworkService;
     
-    // Stream capture for test output analysis
-    private static final ConcurrentMap<SMTestProxy, ByteArrayOutputStream> testOutputStreams = new ConcurrentHashMap<>();
-    private static final ConcurrentMap<SMTestProxy, ByteArrayOutputStream> testErrorStreams = new ConcurrentHashMap<>();
+    // Stream capture for test output analysis (instance-based to allow proper cleanup)
+    private final ConcurrentMap<SMTestProxy, ByteArrayOutputStream> testOutputStreams = new ConcurrentHashMap<>();
+    private final ConcurrentMap<SMTestProxy, ByteArrayOutputStream> testErrorStreams = new ConcurrentHashMap<>();
     private static PrintStream originalOut;
     private static PrintStream originalErr;
+    
+    // Singleton instance for backward compatibility
+    private static volatile CucumberTestExecutionListener instance;
 
     /**
      * Default constructor for IntelliJ plugin registration.
@@ -69,6 +72,8 @@ public class CucumberTestExecutionListener implements SMTRunnerEventsListener {
         this.promptGenerationService = new InitialPromptFailureAnalysisService();
         this.aiSettings = AISettings.getInstance();
         this.aiNetworkService = null; // Will be initialized when project is available
+        instance = this;
+        LOG.debug("CucumberTestExecutionListener created without project context");
     }
 
     /**
@@ -108,7 +113,7 @@ public class CucumberTestExecutionListener implements SMTRunnerEventsListener {
             if (LOG.isDebugEnabled()) {
                 LOG.debug("Capturing test output for: " + test.getName());
             }
-            TestOutputCaptureListener.captureTestOutput(test, outputLine);
+            TestOutputCaptureListener.captureTestOutputStatic(test, outputLine);
         }
     }
 
@@ -122,7 +127,7 @@ public class CucumberTestExecutionListener implements SMTRunnerEventsListener {
     public void captureTestOutputWithContext(SMTestProxy test, String outputLine, String context) {
         if (test != null && outputLine != null) {
             String contextualOutput = "[" + context + "] " + outputLine;
-            TestOutputCaptureListener.captureTestOutput(test, contextualOutput);
+            TestOutputCaptureListener.captureTestOutputStatic(test, contextualOutput);
             if (LOG.isDebugEnabled()) {
                 LOG.debug("Captured contextual output for: " + test.getName() + " - " + context);
             }
@@ -221,8 +226,8 @@ public class CucumberTestExecutionListener implements SMTRunnerEventsListener {
             }
             
             // Initialize output capture for this test
-            TestOutputCaptureListener.captureTestOutput(test, "Test started\n");
-            TestUtilityHelper.setupTestOutputCapture(test);
+            TestOutputCaptureListener.captureTestOutputStatic(test, "Test started\n");
+            TestUtilityHelper.setupTestOutputCaptureStatic(test);
         }
     }
 
@@ -234,10 +239,10 @@ public class CucumberTestExecutionListener implements SMTRunnerEventsListener {
             }
             
             // Capture any streams before finishing
-            TestUtilityHelper.captureTestStreams(test);
+            TestUtilityHelper.captureTestStreamsStatic(test);
             
             // Add final output marker
-            TestOutputCaptureListener.captureTestOutput(test, "Test finished\n");
+            TestOutputCaptureListener.captureTestOutputStatic(test, "Test finished\n");
         }
     }
 
@@ -249,7 +254,7 @@ public class CucumberTestExecutionListener implements SMTRunnerEventsListener {
         
         // Capture comprehensive test output for failed test
         if (test != null) {
-            TestOutputCaptureListener.captureComprehensiveTestOutput(test);
+            TestOutputCaptureListener.captureComprehensiveTestOutputStatic(test);
         }
         
         // Check if this is a Cucumber test
@@ -440,7 +445,7 @@ public class CucumberTestExecutionListener implements SMTRunnerEventsListener {
      * @return The TriagePanel instance or null if not found
      */
     private TriagePanelView getTriagePanelForProject(Project project) {
-        return TriagePanelToolWindowFactory.getPanelForProject(project);
+        return TriagePanelToolWindowFactory.getPanelForProjectStatic(project);
     }
     
     /**
@@ -574,13 +579,13 @@ public class CucumberTestExecutionListener implements SMTRunnerEventsListener {
     }
     
     /**
-     * Cleans up static resources to prevent memory leaks and ensure consistent startup behavior.
+     * Cleans up instance resources to prevent memory leaks and ensure consistent startup behavior.
      * 
      * <p>This method should be called during plugin shutdown or when resources need to be reset.
-     * It clears all static maps and closes any open streams to prevent memory leaks.</p>
+     * It clears all instance maps and closes any open streams to prevent memory leaks.</p>
      */
-    public static void cleanup() {
-        LOG.info("Starting cleanup of CucumberTestExecutionListener static resources");
+    public void cleanup() {
+        LOG.info("Starting cleanup of CucumberTestExecutionListener instance resources");
         
         int streamsCleaned = 0;
         int errorStreamsCleaned = 0;
@@ -621,6 +626,16 @@ public class CucumberTestExecutionListener implements SMTRunnerEventsListener {
                     
         } catch (Exception e) {
             LOG.error("Error during CucumberTestExecutionListener cleanup: " + e.getMessage(), e);
+        }
+    }
+    
+    /**
+     * Static wrapper for cleanup.
+     */
+    public static void cleanupStatic() {
+        if (instance != null) {
+            instance.cleanup();
+            instance = null;
         }
     }
 } 

@@ -425,10 +425,10 @@ public class CustomRulePanel extends JBPanel<CustomRulePanel> {
         
         // Update color based on length
         if (length > maxLength) {
-            characterCounterLabel.setForeground(TriagePanelConstants.ERROR_FOREGROUND);
+            characterCounterLabel.setForeground(new TriagePanelConstants().errorForeground);
             saveCustomRuleButton.setEnabled(false);
         } else if (length > maxLength * 0.8) {
-            characterCounterLabel.setForeground(TriagePanelConstants.WARNING_FOREGROUND);
+            characterCounterLabel.setForeground(new TriagePanelConstants().warningForeground);
             saveCustomRuleButton.setEnabled(true);
         } else {
             characterCounterLabel.setForeground(UIUtil.getLabelDisabledForeground());

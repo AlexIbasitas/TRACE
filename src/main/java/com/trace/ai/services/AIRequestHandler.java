@@ -133,7 +133,7 @@ public final class AIRequestHandler {
             }
             
             // Get the provider for this service
-            AIServiceProvider provider = AIServiceFactory.getProvider(serviceType);
+            AIServiceProvider provider = AIServiceFactory.getProviderStatic(serviceType);
             if (provider == null) {
                 LOG.error("No provider available for service: " + serviceType);
                 return CompletableFuture.completedFuture(
@@ -200,7 +200,7 @@ public final class AIRequestHandler {
             }
             
             // Get the provider for this service
-            AIServiceProvider provider = AIServiceFactory.getProvider(serviceType);
+            AIServiceProvider provider = AIServiceFactory.getProviderStatic(serviceType);
             if (provider == null) {
                 LOG.warn("No provider available for service: " + serviceType);
                 return CompletableFuture.completedFuture(false);
@@ -234,7 +234,7 @@ public final class AIRequestHandler {
             return false;
         }
         
-        return AIServiceFactory.hasProvider(serviceType);
+        return AIServiceFactory.hasProviderStatic(serviceType);
     }
     
     /**
@@ -243,7 +243,7 @@ public final class AIRequestHandler {
      * @return array of registered service types
      */
     public AIServiceType[] getRegisteredServiceTypes() {
-        return AIServiceFactory.getRegisteredServiceTypes();
+        return AIServiceFactory.getRegisteredServiceTypesStatic();
     }
     
     /**

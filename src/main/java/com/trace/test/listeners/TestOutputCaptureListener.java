@@ -24,8 +24,34 @@ public class TestOutputCaptureListener {
     
     private static final Logger LOG = Logger.getInstance(TestOutputCaptureListener.class);
     
-    // Thread-safe storage for test output by test proxy
-    private static final ConcurrentMap<SMTestProxy, StringBuilder> testOutputMap = new ConcurrentHashMap<>();
+    // Thread-safe storage for test output by test proxy (instance-based to allow proper cleanup)
+    private final ConcurrentMap<SMTestProxy, StringBuilder> testOutputMap = new ConcurrentHashMap<>();
+    
+    // Singleton instance for backward compatibility
+    private static volatile TestOutputCaptureListener instance;
+    
+    /**
+     * Private constructor for singleton pattern.
+     */
+    private TestOutputCaptureListener() {
+        instance = this;
+    }
+    
+    /**
+     * Gets the singleton instance.
+     * 
+     * @return the singleton instance
+     */
+    public static TestOutputCaptureListener getInstance() {
+        if (instance == null) {
+            synchronized (TestOutputCaptureListener.class) {
+                if (instance == null) {
+                    instance = new TestOutputCaptureListener();
+                }
+            }
+        }
+        return instance;
+    }
     
     /**
      * Captures a single line of test output for a specific test proxy.
@@ -36,7 +62,7 @@ public class TestOutputCaptureListener {
      * @param testProxy The test proxy to capture output for
      * @param outputLine The output line to capture (null or empty lines are ignored)
      */
-    public static void captureTestOutput(SMTestProxy testProxy, String outputLine) {
+    public void captureTestOutput(SMTestProxy testProxy, String outputLine) {
         try {
             if (testProxy == null) {
                 LOG.debug("Received test output line with null test proxy");
@@ -69,7 +95,7 @@ public class TestOutputCaptureListener {
      * 
      * @param testProxy The test proxy to capture error output for
      */
-    public static void captureTestErrorOutput(SMTestProxy testProxy) {
+    public void captureTestErrorOutput(SMTestProxy testProxy) {
         try {
             if (testProxy == null) {
                 return;
@@ -105,7 +131,7 @@ public class TestOutputCaptureListener {
      *
      * @param testProxy The test proxy to capture comprehensive output for
      */
-    public static void captureComprehensiveTestOutput(SMTestProxy testProxy) {
+    public void captureComprehensiveTestOutput(SMTestProxy testProxy) {
         if (testProxy == null) {
             return;
         }
@@ -181,7 +207,7 @@ public class TestOutputCaptureListener {
      * @param testProxy The test proxy to get output for
      * @return The captured output as a string, or null if not found
      */
-    public static String getCapturedOutput(SMTestProxy testProxy) {
+    public String getCapturedOutput(SMTestProxy testProxy) {
         if (testProxy == null) {
             return null;
         }
@@ -204,7 +230,7 @@ public class TestOutputCaptureListener {
      * @param testProxy The test proxy to get output for
      * @return The captured output as a string including children, or null if not found
      */
-    public static String getCapturedOutputWithChildren(SMTestProxy testProxy) {
+    public String getCapturedOutputWithChildren(SMTestProxy testProxy) {
         if (testProxy == null) {
             return null;
         }
@@ -239,7 +265,7 @@ public class TestOutputCaptureListener {
      * 
      * @param testProxy The test proxy to clear output for
      */
-    public static void clearCapturedOutput(SMTestProxy testProxy) {
+    public void clearCapturedOutput(SMTestProxy testProxy) {
         if (testProxy != null) {
             testOutputMap.remove(testProxy);
             if (LOG.isDebugEnabled()) {
@@ -255,7 +281,7 @@ public class TestOutputCaptureListener {
      * all memory used for output storage. It's essential for preventing
      * memory leaks in long-running test sessions.</p>
      */
-    public static void clearAllCapturedOutput() {
+    public void clearAllCapturedOutput() {
         int size = testOutputMap.size();
         testOutputMap.clear();
         LOG.info("Cleared all captured test output (" + size + " entries)");
@@ -270,7 +296,7 @@ public class TestOutputCaptureListener {
      * 
      * @return The number of tests with captured output
      */
-    public static int getCapturedOutputCount() {
+    public int getCapturedOutputCount() {
         return testOutputMap.size();
     }
     
@@ -280,8 +306,8 @@ public class TestOutputCaptureListener {
      * <p>This method should be called during plugin shutdown or when resources need to be reset.
      * It clears the static test output map to prevent memory leaks.</p>
      */
-    public static void cleanup() {
-        LOG.info("Starting cleanup of TestOutputCaptureListener static resources");
+    public void cleanup() {
+        LOG.info("Starting cleanup of TestOutputCaptureListener instance resources");
         
         int resourcesCleaned = testOutputMap.size();
         
@@ -290,6 +316,46 @@ public class TestOutputCaptureListener {
             LOG.info("TestOutputCaptureListener cleanup completed - cleared " + resourcesCleaned + " test output entries");
         } catch (Exception e) {
             LOG.error("Error during TestOutputCaptureListener cleanup: " + e.getMessage(), e);
+        }
+    }
+    
+    // Static wrapper methods for backward compatibility
+    public static void captureTestOutputStatic(SMTestProxy testProxy, String outputLine) {
+        getInstance().captureTestOutput(testProxy, outputLine);
+    }
+    
+    public static void captureTestErrorOutputStatic(SMTestProxy testProxy) {
+        getInstance().captureTestErrorOutput(testProxy);
+    }
+    
+    public static void captureComprehensiveTestOutputStatic(SMTestProxy testProxy) {
+        getInstance().captureComprehensiveTestOutput(testProxy);
+    }
+    
+    public static String getCapturedOutputStatic(SMTestProxy testProxy) {
+        return getInstance().getCapturedOutput(testProxy);
+    }
+    
+    public static String getCapturedOutputWithChildrenStatic(SMTestProxy testProxy) {
+        return getInstance().getCapturedOutputWithChildren(testProxy);
+    }
+    
+    public static void clearCapturedOutputStatic(SMTestProxy testProxy) {
+        getInstance().clearCapturedOutput(testProxy);
+    }
+    
+    public static void clearAllCapturedOutputStatic() {
+        getInstance().clearAllCapturedOutput();
+    }
+    
+    public static int getCapturedOutputCountStatic() {
+        return getInstance().getCapturedOutputCount();
+    }
+    
+    public static void cleanupStatic() {
+        if (instance != null) {
+            instance.cleanup();
+            instance = null;
         }
     }
 } 

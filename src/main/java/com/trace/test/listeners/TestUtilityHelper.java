@@ -23,11 +23,37 @@ public class TestUtilityHelper {
     
     private static final Logger LOG = Logger.getInstance(TestUtilityHelper.class);
     
-    // Stream capture for test output analysis
-    private static final ConcurrentMap<SMTestProxy, ByteArrayOutputStream> testOutputStreams = new ConcurrentHashMap<>();
-    private static final ConcurrentMap<SMTestProxy, ByteArrayOutputStream> testErrorStreams = new ConcurrentHashMap<>();
+    // Stream capture for test output analysis (instance-based to allow proper cleanup)
+    private final ConcurrentMap<SMTestProxy, ByteArrayOutputStream> testOutputStreams = new ConcurrentHashMap<>();
+    private final ConcurrentMap<SMTestProxy, ByteArrayOutputStream> testErrorStreams = new ConcurrentHashMap<>();
     private static PrintStream originalOut;
     private static PrintStream originalErr;
+    
+    // Singleton instance for backward compatibility
+    private static volatile TestUtilityHelper instance;
+    
+    /**
+     * Private constructor for singleton pattern.
+     */
+    private TestUtilityHelper() {
+        instance = this;
+    }
+    
+    /**
+     * Gets the singleton instance.
+     * 
+     * @return the singleton instance
+     */
+    public static TestUtilityHelper getInstance() {
+        if (instance == null) {
+            synchronized (TestUtilityHelper.class) {
+                if (instance == null) {
+                    instance = new TestUtilityHelper();
+                }
+            }
+        }
+        return instance;
+    }
 
     /**
      * Determines if a test is a Cucumber test using multiple detection methods.
@@ -116,7 +142,7 @@ public class TestUtilityHelper {
      * 
      * @param test The test to capture output for
      */
-    public static void setupTestOutputCapture(SMTestProxy test) {
+    public void setupTestOutputCapture(SMTestProxy test) {
         if (test == null) return;
         
         try {
@@ -169,7 +195,7 @@ public class TestUtilityHelper {
      * 
      * @param test The test to capture streams for
      */
-    public static void captureTestStreams(SMTestProxy test) {
+    public void captureTestStreams(SMTestProxy test) {
         if (test == null) return;
         
         try {
@@ -179,14 +205,14 @@ public class TestUtilityHelper {
             if (outputStream != null) {
                 String capturedOutput = outputStream.toString();
                 if (!capturedOutput.trim().isEmpty()) {
-                    TestOutputCaptureListener.captureTestOutput(test, "STDOUT:\n" + capturedOutput);
+                    TestOutputCaptureListener.captureTestOutputStatic(test, "STDOUT:\n" + capturedOutput);
                 }
             }
             
             if (errorStream != null) {
                 String capturedError = errorStream.toString();
                 if (!capturedError.trim().isEmpty()) {
-                    TestOutputCaptureListener.captureTestOutput(test, "STDERR:\n" + capturedError);
+                    TestOutputCaptureListener.captureTestOutputStatic(test, "STDERR:\n" + capturedError);
                 }
             }
             
@@ -208,13 +234,13 @@ public class TestUtilityHelper {
     }
     
     /**
-     * Cleans up static resources to prevent memory leaks and ensure consistent startup behavior.
+     * Cleans up instance resources to prevent memory leaks and ensure consistent startup behavior.
      * 
      * <p>This method should be called during plugin shutdown or when resources need to be reset.
-     * It clears the static test output and error stream maps to prevent memory leaks.</p>
+     * It clears the instance test output and error stream maps to prevent memory leaks.</p>
      */
-    public static void cleanup() {
-        LOG.info("Starting cleanup of TestUtilityHelper static resources");
+    public void cleanup() {
+        LOG.info("Starting cleanup of TestUtilityHelper instance resources");
         
         int outputStreamsCleaned = 0;
         int errorStreamsCleaned = 0;
@@ -255,6 +281,25 @@ public class TestUtilityHelper {
                     
         } catch (Exception e) {
             LOG.error("Error during TestUtilityHelper cleanup: " + e.getMessage(), e);
+        }
+    }
+    
+    // Static wrapper methods for backward compatibility
+    public static void setupTestOutputCaptureStatic(SMTestProxy test) {
+        getInstance().setupTestOutputCapture(test);
+    }
+    
+    public static void captureTestStreamsStatic(SMTestProxy test) {
+        getInstance().captureTestStreams(test);
+    }
+    
+    /**
+     * Static wrapper for cleanup.
+     */
+    public static void cleanupStatic() {
+        if (instance != null) {
+            instance.cleanup();
+            instance = null;
         }
     }
 }
