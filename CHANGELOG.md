@@ -21,3 +21,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Initial release of TRACE plugin for IntelliJ IDEA
 - Established secure credential management system
 - Implemented comprehensive test failure analysis workflow
+
+## [1.0.1] - 2025-09-16
+
+### Changed
+- Minor bug fixes
