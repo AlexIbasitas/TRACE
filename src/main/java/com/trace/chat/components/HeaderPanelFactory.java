@@ -339,7 +339,7 @@ public final class HeaderPanelFactory {
                 for (Component subComponent : panel.getComponents()) {
                     if (subComponent instanceof JButton) {
                         JButton button = (JButton) subComponent;
-                        if (TriagePanelConstants.SETTINGS_BUTTON_TEXT.equals(button.getText())) {
+                        if ("Settings".equals(button.getToolTipText())) {
                             button.setEnabled(enabled);
                             return;
                         }

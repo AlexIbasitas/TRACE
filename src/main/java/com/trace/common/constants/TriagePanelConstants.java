@@ -458,8 +458,8 @@ public final class TriagePanelConstants {
     /** Collapse tooltip */
     public static final String TOOLTIP_COLLAPSE = "Click to hide AI thinking";
     
-    /** Settings button text */
-    public static final String SETTINGS_BUTTON_TEXT = "⚙";
+    /** Settings button text - using icon instead of text */
+    public static final String SETTINGS_BUTTON_TEXT = "";
     
     /** Settings button tooltip */
     public static final String SETTINGS_BUTTON_TOOLTIP = "Settings";

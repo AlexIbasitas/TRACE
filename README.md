@@ -100,7 +100,7 @@ cd trace
 
 ### AI Settings (Recommended)
 
-Access plugin settings by clicking the ⚙️ icon in the upper right hand corner of the TRACE panel.
+Access plugin settings by clicking the settings icon in the upper right hand corner of the TRACE panel.
 
 - **API Key**: Your OpenAI or Google Gemini API key
 - **Model Selection**: Choose between different AI models

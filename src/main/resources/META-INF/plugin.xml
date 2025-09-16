@@ -10,8 +10,8 @@
         
         <p><b>Setup:</b></p>
         <ol>
-            <li>Turn TRACE on via the ⏻ icon in the toolbar</li>
-            <li>Open settings by clicking the ⚙︎ icon, and enable “AI Analysis” (recommended)</li>
+            <li>Turn TRACE on via the power icon in the toolbar</li>
+            <li>Open settings by clicking the settings icon, and enable "AI Analysis" (recommended)</li>
             <li>Add your Open AI or Gemini API key (recommended)</li>
         </ol>
     ]]></change-notes>

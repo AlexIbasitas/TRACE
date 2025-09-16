@@ -1,5 +1,6 @@
 package com.trace.chat.ui;
 
+import com.intellij.icons.AllIcons;
 import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.util.IconLoader;
@@ -34,13 +35,62 @@ public class UIComponentHelper {
     private static final String ANALYSIS_MODE_FULL = "Full Analysis";
     
     /**
+     * Determines if the current theme is dark mode.
+     *
+     * @return true if dark theme is active, false otherwise
+     */
+    private static boolean isDarkTheme() {
+        try {
+            // Use ThemeUtils to check if we're in dark mode
+            Color bgColor = ThemeUtils.panelBackground();
+            // Dark themes typically have darker background colors
+            // Check if the background is darker than a threshold
+            int brightness = (bgColor.getRed() + bgColor.getGreen() + bgColor.getBlue()) / 3;
+            return brightness < 128; // Threshold for dark vs light
+        } catch (Exception e) {
+            LOG.warn("Could not determine theme, defaulting to light mode: " + e.getMessage());
+            return false; // Default to light mode
+        }
+    }
+
+    /**
+     * Applies the correct settings icon for the current theme and locks size to 16x16.
+     */
+    private static void applySettingsIcon(JButton settingsButton) {
+        try {
+            String iconPath = isDarkTheme() ? "/icons/settings_white_16.png" : "/icons/settings_grey_16.png";
+            ImageIcon settingsIcon = new ImageIcon(UIComponentHelper.class.getResource(iconPath));
+            Image img = settingsIcon.getImage();
+            Image scaledImg = img.getScaledInstance(16, 16, Image.SCALE_SMOOTH);
+            settingsButton.setIcon(new ImageIcon(scaledImg));
+            settingsButton.setText("");
+        } catch (Exception e) {
+            LOG.warn("Could not apply theme-aware settings icon, using fallback: " + e.getMessage());
+            settingsButton.setIcon(AllIcons.General.Settings);
+        }
+    }
+    
+    /**
      * Creates the AI toggle button with proper styling and functionality.
      *
      * @return The configured AI toggle button
      */
     public static JButton createAIToggleButton() {
-        JButton aiToggleButton = new JButton("⏻");
-        aiToggleButton.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        JButton aiToggleButton = new JButton();
+        
+        // Load custom power icon with locked 16x16 size
+        try {
+            ImageIcon powerIcon = new ImageIcon(UIComponentHelper.class.getResource("/icons/power.png"));
+            // Lock icon size at 16x16 regardless of zoom
+            Image img = powerIcon.getImage();
+            Image scaledImg = img.getScaledInstance(16, 16, Image.SCALE_SMOOTH);
+            aiToggleButton.setIcon(new ImageIcon(scaledImg));
+            aiToggleButton.setText(""); // Remove text, use icon only
+        } catch (Exception e) {
+            LOG.warn("Could not load power icon, falling back to built-in icon: " + e.getMessage());
+            aiToggleButton.setIcon(AllIcons.Actions.Suspend);
+        }
+        
         aiToggleButton.setBorderPainted(false);
         aiToggleButton.setFocusPainted(false);
         aiToggleButton.setContentAreaFilled(false);
@@ -49,8 +99,8 @@ public class UIComponentHelper {
         // Zero padding on the toggle button
         aiToggleButton.setBorder(BorderFactory.createEmptyBorder(0, 0, 0, 0));
         
-        // Set minimum and preferred sizes to be compact
-        Dimension buttonSize = new Dimension(20, 20);
+        // Set fixed size to accommodate 16x16 icon with minimal padding
+        Dimension buttonSize = new Dimension(18, 18);
         aiToggleButton.setMinimumSize(buttonSize);
         aiToggleButton.setPreferredSize(buttonSize);
         aiToggleButton.setMaximumSize(buttonSize);
@@ -116,9 +166,11 @@ public class UIComponentHelper {
      * @return The configured settings button
      */
     public static JButton createSettingsButton() {
-        JButton settingsButton = new JButton("⚙");
-        settingsButton.setFont(new Font("Segoe UI", Font.PLAIN, 16)); // Increased from 14 to 16
-        settingsButton.setForeground(ThemeUtils.textForeground());
+        JButton settingsButton = new JButton();
+        
+        // Apply theme-aware icon and lock 16x16 size
+        applySettingsIcon(settingsButton);
+        
         settingsButton.setBorderPainted(false);
         settingsButton.setFocusPainted(false);
         settingsButton.setContentAreaFilled(false);
@@ -128,11 +180,21 @@ public class UIComponentHelper {
         // Zero padding on the button
         settingsButton.setBorder(BorderFactory.createEmptyBorder(0, 0, 0, 0));
         
-        // Set minimum and preferred sizes to be compact - matching size
-        Dimension buttonSize = new Dimension(20, 20);
+        // Set fixed size to accommodate 16x16 icon with minimal padding
+        Dimension buttonSize = new Dimension(18, 18);
         settingsButton.setMinimumSize(buttonSize);
         settingsButton.setPreferredSize(buttonSize);
         settingsButton.setMaximumSize(buttonSize);
+
+        // Listen for theme (look and feel) changes and update icon immediately
+        UIManager.addPropertyChangeListener(evt -> {
+            if ("lookAndFeel".equals(evt.getPropertyName())) {
+                try {
+                    SwingUtilities.invokeLater(() -> applySettingsIcon(settingsButton));
+                } catch (Exception ignore) {
+                }
+            }
+        });
         
         return settingsButton;
     }
@@ -242,15 +304,33 @@ public class UIComponentHelper {
         }
         
         if (aiEnabled) {
-            // TRACE is enabled - green color
-            button.setForeground(new JBColor(new Color(76, 175, 80), new Color(76, 175, 80))); // Material Design Green
+            // TRACE is enabled - green icon
+            try {
+                ImageIcon greenIcon = new ImageIcon(UIComponentHelper.class.getResource("/icons/power_green.png"));
+                // Lock icon size at 16x16 regardless of zoom
+                Image img = greenIcon.getImage();
+                Image scaledImg = img.getScaledInstance(16, 16, Image.SCALE_SMOOTH);
+                button.setIcon(new ImageIcon(scaledImg));
+            } catch (Exception e) {
+                LOG.warn("Could not load green power icon, using fallback: " + e.getMessage());
+                button.setIcon(AllIcons.Actions.Suspend);
+            }
             button.setToolTipText("Disable TRACE");
             LOG.debug("TRACE toggle button set to enabled state (green)");
         } else {
-            // TRACE is disabled - gray color
-            button.setForeground(new JBColor(new Color(158, 158, 158), new Color(158, 158, 158))); // Material Design Gray
-            button.setToolTipText("Enable TRACE - Parse test failures locally for AI analysis");
-            LOG.debug("TRACE toggle button set to disabled state (gray)");
+            // TRACE is disabled - white icon
+            try {
+                ImageIcon whiteIcon = new ImageIcon(UIComponentHelper.class.getResource("/icons/power.png"));
+                // Lock icon size at 16x16 regardless of zoom
+                Image img = whiteIcon.getImage();
+                Image scaledImg = img.getScaledInstance(16, 16, Image.SCALE_SMOOTH);
+                button.setIcon(new ImageIcon(scaledImg));
+            } catch (Exception e) {
+                LOG.warn("Could not load white power icon, using fallback: " + e.getMessage());
+                button.setIcon(AllIcons.Actions.Suspend);
+            }
+            button.setToolTipText("Enable TRACE");
+            LOG.debug("TRACE toggle button set to disabled state (white)");
         }
     }
     
