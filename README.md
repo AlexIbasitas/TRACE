@@ -1,6 +1,10 @@
 # TRACE - AI-Powered Test Result Analysis and Content Extraction
 
-TRACE is an IntelliJ IDEA plugin that automatically analyzes Cucumber test failures using AI to help SDETs and QA engineers quickly identify and resolve test issues.
+TRACE is an IntelliJ IDEA plugin that automatically analyzes Cucumber test failures using AI to help developers and QA engineers quickly identify and resolve test issues.
+
+## Get Started
+
+[![Download from JetBrains Marketplace](https://img.shields.io/badge/Download-JetBrains%20Marketplace-blue?style=for-the-badge&logo=intellij-idea)](https://plugins.jetbrains.com/plugin/28481-trace)
 
 ## Features
 
@@ -10,6 +14,28 @@ TRACE is an IntelliJ IDEA plugin that automatically analyzes Cucumber test failu
 - **Interactive Chat Interface**: Displays results and allows follow-up questions in a dedicated tool window integrated into the IDE.
 - **Secure API Management**: Stores API keys securely using IntelliJ's PasswordSafe
 - **Real-time Analysis**: Provides immediate insights when tests fail
+
+## Screenshots
+
+### Test Failure Capture
+![Test Failure Capture](docs/screenshots/TestCapture.gif)
+*Automatic detection and capture of test failures*
+
+### Failure Analysis
+![Sample Failure Analysis](docs/screenshots/TestFailureAnalysis.png)
+*AI-powered analysis of test failures with detailed insights*
+
+### User Query
+![User Query Interface](docs/screenshots/UserQuery.png)
+*Interactive chat interface for follow-up questions*
+
+### Settings Configuration
+![Settings Page - Part 1](docs/screenshots/AISettings.png)
+*Configure AI services, manage API keys, and add custom analysis rules*
+
+
+### Demo Video
+*[Demo video placeholder - coming soon]*
 
 ## Requirements
 
@@ -132,8 +158,8 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ## Links
 
 - [GitHub Repository](https://github.com/alexibasitas/trace)
-- [Privacy Policy](https://alexibasitas.github.io/TRACE/PRIVACY.html)
 - [JetBrains Marketplace](https://plugins.jetbrains.com/plugin/trace)
+- [Privacy Policy](https://alexibasitas.github.io/TRACE/PRIVACY.html)
 - [Documentation](docs/)
 
 ## Support
