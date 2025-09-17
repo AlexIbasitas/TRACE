@@ -24,13 +24,13 @@ TRACE is an IntelliJ IDEA plugin that automatically analyzes Cucumber test failu
 
 
 ### Chat with AI
-<img src="docs/screenshots/UserQuery.png" alt="User Query Interface" width="450">
+<img src="docs/screenshots/UserQuery.png" alt="User Query Interface" width="500">
 
 *Interactive chat interface for follow-up questions*
 
 
 ### Settings Configuration
-<img src="docs/screenshots/AISettings.png" alt="Settings Configuration" width="450">
+<img src="docs/screenshots/AISettings.png" alt="Settings Configuration" width="500">
 
 *Configure AI services, manage API keys, and add custom analysis rules*
 
