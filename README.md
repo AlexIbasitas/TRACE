@@ -8,12 +8,13 @@ TRACE is an IntelliJ IDEA plugin that automatically analyzes Cucumber test failu
 
 ## Features
 
-- **Automatic Failure Detection**: Detects Cucumber test failures in IntelliJ IDEA test runner
-- **Intelligent Context Extraction**: Extracts stack traces, step definitions, and Gherkin scenarios
+- **Automatic Failure Detection**: Hooks into IDE test runner events to detect failed scenarios in real time, capturing failure metadata and stack traces
+- **Intelligent Context Extraction**: Parses the failure stack trace, maps the failed step to the implementing step-definition using IntelliJ's AST/PSI and project indices, and retrieves the surrounding Gherkin scenario
+- **Smart Document Retrieval**: Vector similarity search (SQLite + FAISS) to extract relevant context from a curated knowledge base of failure patterns and remediation best practices
 - **AI-Powered Analysis**: Utilizes OpenAI or Google Gemini for intelligent analysis
 - **Interactive Chat Interface**: Displays results and allows follow-up questions in a dedicated tool window integrated into the IDE.
 - **Secure API Management**: Stores API keys securely using IntelliJ's PasswordSafe
-- **Real-time Analysis**: Provides immediate insights when tests fail
+
 
 ## Showcase
 
