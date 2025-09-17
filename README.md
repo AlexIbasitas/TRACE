@@ -15,22 +15,23 @@ TRACE is an IntelliJ IDEA plugin that automatically analyzes Cucumber test failu
 - **Secure API Management**: Stores API keys securely using IntelliJ's PasswordSafe
 - **Real-time Analysis**: Provides immediate insights when tests fail
 
-## Screenshots
+## Showcase
 
 ### Test Failure Capture
-![Test Failure Capture](docs/screenshots/TestCapture.gif)
+<img src="docs/screenshots/TestCapture.gif" alt="User Query Interface" width="750">
+
 *Automatic detection and capture of test failures*
 
-### Failure Analysis
-![Sample Failure Analysis](docs/screenshots/TestFailureAnalysis.png)
-*AI-powered analysis of test failures with detailed insights*
 
-### User Query
-![User Query Interface](docs/screenshots/UserQuery.png)
+### Chat with AI
+<img src="docs/screenshots/UserQuery.png" alt="User Query Interface" width="450">
+
 *Interactive chat interface for follow-up questions*
 
+
 ### Settings Configuration
-![Settings Page - Part 1](docs/screenshots/AISettings.png)
+<img src="docs/screenshots/AISettings.png" alt="Settings Configuration" width="450">
+
 *Configure AI services, manage API keys, and add custom analysis rules*
 
 
