@@ -36,7 +36,7 @@ TRACE is an IntelliJ IDEA plugin that automatically analyzes test failures using
 
 
 ### Demo Video
-[![Watch the TRACE Demo Video](https://img.youtube.com/vi/IFOzMl-r0Z4/0.jpg)](https://www.youtube.com/watch?v=IFOzMl-r0Z4)
+[![Watch the TRACE Demo Video](https://img.youtube.com/vi/IFOzMl-r0Z4/maxresdefault.jpg)](https://www.youtube.com/watch?v=IFOzMl-r0Z4)
 
 *Complete TRACE demo showing test failure detection and AI analysis*
 
