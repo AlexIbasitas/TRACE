@@ -1,6 +1,6 @@
 # TRACE - AI-Powered Test Result Analysis and Content Extraction
 
-TRACE is an IntelliJ IDEA plugin that automatically analyzes Cucumber test failures using AI to help developers and QA engineers quickly identify and resolve test issues.
+TRACE is an IntelliJ IDEA plugin that automatically analyzes test failures using AI to help developers and QA engineers quickly identify and resolve test issues.
 
 ## Get Started
 
@@ -8,15 +8,14 @@ TRACE is an IntelliJ IDEA plugin that automatically analyzes Cucumber test failu
 
 ## Features
 
-- **Automatic Failure Detection**: Hooks into IDE test runner events to detect failed scenarios in real time, capturing failure metadata and stack traces
-- **Intelligent Context Extraction**: Parses the failure stack trace, maps the failed step to the implementing step-definition using IntelliJ's AST/PSI and project indices, and retrieves the surrounding Gherkin scenario
-- **Smart Document Retrieval**: Vector similarity search (SQLite + FAISS) to extract relevant context from a curated knowledge base of failure patterns and remediation best practices
-- **AI-Powered Analysis**: Utilizes OpenAI or Google Gemini for intelligent analysis
-- **Interactive Chat Interface**: Displays results and allows follow-up questions in a dedicated tool window integrated into the IDE.
-- **Secure API Management**: Stores API keys securely using IntelliJ's PasswordSafe
+- **Automatic Failure Detection**: Automatically captures test failures when they occur
+- **Smart Context Extraction**: Extracts relevant code, scenarios, and error details
+- **AI-Powered Analysis**: Uses AI to analyze failures and suggest solutions
+- **Interactive Chat**: Ask follow-up questions about test failures
+- **Secure Setup**: API keys stored safely using IntelliJ's built-in security
 
 
-## Showcase
+## Screenshots
 
 ### Test Failure Capture
 <img src="docs/screenshots/TestCapture.gif" alt="User Query Interface" width="750">
@@ -37,7 +36,19 @@ TRACE is an IntelliJ IDEA plugin that automatically analyzes Cucumber test failu
 
 
 ### Demo Video
-*[Demo video placeholder - coming soon]*
+<video width="750" controls>
+  <source src="docs/screenshots/TRACE Demo.mp4" type="video/mp4">
+  Watch the TRACE demo video to see AI-powered test failure analysis in action.
+</video>
+
+*Complete TRACE demo showing test failure detection and AI analysis*
+
+## Architecture
+
+### RAG (Retrieval-Augmented Generation) System
+<img src="docs/screenshots/RAG_light.png" alt="RAG Architecture Diagram" width="750">
+
+*How TRACE uses vector similarity search to retrieve relevant context for AI analysis*
 
 ## Requirements
 
@@ -47,10 +58,9 @@ TRACE is an IntelliJ IDEA plugin that automatically analyzes Cucumber test failu
 
 ## Installation
 
-1. Download the plugin from the [JetBrains Marketplace](https://plugins.jetbrains.com/plugin/trace) or build from source
+1. Download the plugin from the [JetBrains Marketplace](https://plugins.jetbrains.com/plugin/28481-trace) or build from source
 2. Install the plugin through IntelliJ IDEA: `File > Settings > Plugins > Install Plugin from Disk`
 3. Restart IntelliJ IDEA
-4. Configure your API key in the plugin settings
 
 ## Usage
 
